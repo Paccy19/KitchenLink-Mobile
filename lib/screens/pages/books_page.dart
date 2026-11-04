@@ -46,6 +46,8 @@ class _BooksPageState extends State<BooksPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final wide = MediaQuery.sizeOf(context).width >= 1024;
     return QueryView<Json>(
       query: query,
       builder: (context, data) {
@@ -55,13 +57,14 @@ class _BooksPageState extends State<BooksPage> {
         final transactions = jlist(data['transactions']);
         return PageBody(onRefresh: query.load, children: [
           const PageHeader(title: 'Platform Books', description: "The marketplace's money: what the account holds and every ledger entry behind it."),
-          ResponsiveGrid(children: [
-            StatCard(label: 'Cash in account', value: formatRwf(account['cash_balance_rwf']), hint: 'Should be in the real account', tone: balanced ? Tone.green : Tone.red),
+          // `grid-cols-2 lg:grid-cols-3 gap-3`.
+          ResponsiveGrid(minWidth: 1, maxColumns: wide ? 3 : 2, children: [
+            StatCard(label: 'Cash in account', value: formatRwf(account['cash_balance_rwf']), hint: 'Should be in the real account'),
             StatCard(label: 'Held', value: formatRwf(account['held_balance_rwf']), hint: 'Orders in progress'),
             StatCard(label: 'Refunds owed', value: formatRwf(account['refunds_owed_rwf'])),
             StatCard(label: 'Owed to vendors', value: formatRwf(account['vendor_payable_rwf'])),
             StatCard(label: 'Owed to delivery workers', value: formatRwf(account['driver_payable_rwf'])),
-            StatCard(label: 'Commission balance', value: formatRwf(account['commission_balance_rwf']), tone: Tone.violet),
+            StatCard(label: 'Commission balance', value: formatRwf(account['commission_balance_rwf'])),
           ]),
           SectionCard(
             title: 'Reconciliation',
@@ -69,7 +72,8 @@ class _BooksPageState extends State<BooksPage> {
                 ? const ToneBadge('Balanced', tone: Tone.green)
                 : ToneBadge('Off by ${formatRwf(reconciliation['unreconciled_rwf'])}', tone: Tone.red),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              ResponsiveGrid(children: [
+              // `grid-cols-2 lg:grid-cols-4 gap-3`.
+              ResponsiveGrid(minWidth: 1, maxColumns: wide ? 4 : 2, children: [
                 StatCard(label: 'Collected', value: formatRwf(account['total_collected_rwf'])),
                 StatCard(label: 'Refunded', value: formatRwf(account['total_refunded_rwf'])),
                 StatCard(label: 'Commission earned', value: formatRwf(account['total_commission_rwf'])),
@@ -78,15 +82,19 @@ class _BooksPageState extends State<BooksPage> {
                   value: formatRwf(jnum(account['total_vendor_payouts_rwf']) + jnum(account['total_driver_payouts_rwf'])),
                 ),
               ]),
-              if (account['computed_at'] != null) ...[const SizedBox(height: 8), Hint('Recomputed ${formatDate(account['computed_at'])}')],
+              if (account['computed_at'] != null) ...[
+                const SizedBox(height: 12),
+                Text('Recomputed ${formatDate(account['computed_at'])}', style: TextStyle(fontSize: 11, color: p.faint)),
+              ],
             ]),
           ),
           SectionCard(
             title: 'Ledger',
             description: 'Every money movement on the platform, newest first.',
-            padding: const EdgeInsets.all(10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-              Dropdown<String>(
+            // `w-48` select in the card header.
+            action: SizedBox(
+              width: 192,
+              child: WebSelect<String>(
                 value: type,
                 options: {'': 'All types', for (final t in _transactionTypes) t: toTitle(t)},
                 onChanged: (value) {
@@ -97,33 +105,48 @@ class _BooksPageState extends State<BooksPage> {
                   query.load(silent: true);
                 },
               ),
-              if (transactions.isEmpty)
-                const EmptyState(
-                  icon: Icons.menu_book_outlined,
-                  title: 'No ledger entries',
-                  description: 'Money movements will appear here as orders are paid and settled.',
-                )
-              else
-                RecordList(
-                  footer: Pager.of(data, onPage: (next) {
-                    setState(() => page = next);
-                    query.load(silent: true);
-                  }),
-                  children: [
-                    for (final entry in transactions)
-                      RecordTile(
-                        title: toTitle(entry['type']),
-                        subtitle: jstr(entry['description']),
-                        trailing: '${entry['direction'] == 'debit' ? '−' : '+'}${formatRwf(entry['amount_rwf'])}',
-                        badges: [ToneBadge(entry['direction'] == 'credit' ? 'Credit' : 'Debit', tone: entry['direction'] == 'credit' ? Tone.green : Tone.amber)],
-                        lines: [
-                          'Order ${jstr(entry['order_number'], '—')} · Ref ${jstr(entry['reference'], '—')}',
-                          formatDate(entry['created_at']),
-                        ],
-                      ),
-                  ],
-                ),
-            ])),
+            ),
+            child: transactions.isEmpty
+                ? const EmptyState(
+                    icon: Icons.menu_book_outlined,
+                    title: 'No ledger entries',
+                    description: 'Money movements will appear here as orders are paid and settled.',
+                  )
+                : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    WebTable(
+                      columns: const [
+                        WebColumn('Type'),
+                        WebColumn('Amount', nowrap: true),
+                        WebColumn('Order', nowrap: true),
+                        WebColumn('Reference'),
+                        WebColumn('When'),
+                      ],
+                      rows: [
+                        for (final entry in transactions)
+                          [
+                            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                              ToneBadge(toTitle(entry['type']), tone: entry['direction'] == 'credit' ? Tone.green : Tone.amber),
+                              if (jstr(entry['description']).isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(jstr(entry['description']), style: TextStyle(fontSize: 11, color: p.faint)),
+                                ),
+                            ]),
+                            Text(
+                              '${entry['direction'] == 'debit' ? '−' : '+'}${formatRwf(entry['amount_rwf'])}',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text),
+                            ),
+                            Text(jstr(entry['order_number'], '—'), style: TextStyle(fontSize: 12, color: p.textSecondary)),
+                            Text(jstr(entry['reference'], '—'), style: TextStyle(fontSize: 12, color: p.muted)),
+                            Text(formatDate(entry['created_at']), style: TextStyle(fontSize: 12, color: p.muted)),
+                          ],
+                      ],
+                    ),
+                    Pager.of(data, onPage: (next) {
+                      setState(() => page = next);
+                      query.load(silent: true);
+                    }),
+                  ]),
           ),
         ]);
       },

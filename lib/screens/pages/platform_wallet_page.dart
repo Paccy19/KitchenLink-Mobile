@@ -44,20 +44,154 @@ class _PlatformWalletPageState extends State<PlatformWalletPage> {
   Widget build(BuildContext context) {
     return QueryView<Json>(
       query: query,
-      builder: (context, data) => PageBody(onRefresh: query.load, children: [
-        const PageHeader(
-          title: 'Platform Wallet',
-          description: 'Your commission: what you can withdraw, where it goes, and whether the books match the real account.',
-        ),
-        _SecurityChecklist(security: jmap(data['security'])),
-        _BooksCard(books: jmap(data['books'])),
-        _WithdrawCard(data: data, sweepAmount: widget.sweepAmount),
-        _HistoryCard(withdrawals: jlist(data['withdrawals'])),
-        _PayoutSettingsCard(settings: jmap(data['payout_settings']), sweep: jmap(data['sweep'])),
-        _DestinationsCard(destinations: jlist(data['destinations'])),
-        _ReconciliationCard(books: jmap(data['books']), checks: jlist(data['reconciliations'])),
-      ]),
+      builder: (context, data) {
+        final left = [_WithdrawCard(data: data, sweepAmount: widget.sweepAmount), _HistoryCard(withdrawals: jlist(data['withdrawals']))];
+        final right = [
+          _PayoutSettingsCard(settings: jmap(data['payout_settings']), sweep: jmap(data['sweep'])),
+          _DestinationsCard(destinations: jlist(data['destinations'])),
+        ];
+        return PageBody(onRefresh: query.load, children: [
+          const PageHeader(
+            title: 'Platform Wallet',
+            description: 'Your commission: what you can withdraw, where it goes, and whether the books match the real account.',
+          ),
+          _SecurityChecklist(security: jmap(data['security'])),
+          _BooksCard(books: jmap(data['books'])),
+          // `grid xl:grid-cols-3 gap-5`: withdrawals take two columns, settings one.
+          if (MediaQuery.sizeOf(context).width >= 1280)
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(left, 20))),
+              const SizedBox(width: 20),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(right, 20))),
+            ])
+          else
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([...left, ...right], 20)),
+          _ReconciliationCard(books: jmap(data['books']), checks: jlist(data['reconciliations'])),
+        ]);
+      },
     );
+  }
+}
+
+/// Tailwind's `md:` breakpoint (768px and wider).
+bool _isMd(BuildContext context) => MediaQuery.sizeOf(context).width >= 768;
+
+/// `grid md:grid-cols-2 gap-3`: side by side from 768px, stacked below.
+class _TwoColumns extends StatelessWidget {
+  const _TwoColumns({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isMd(context)) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(children, 12));
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i += 2) {
+      rows.add(Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: children[i]),
+        const SizedBox(width: 12),
+        Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox.shrink()),
+      ]));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(rows, 12));
+  }
+}
+
+/// The website's `Button variant="secondary"`: white, bordered, `text-xs font-bold`.
+class _SecondaryButton extends StatelessWidget {
+  const _SecondaryButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Material(
+      color: p.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: p.border)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textSecondary)),
+        ),
+      ),
+    );
+  }
+}
+
+/// The method toggle in Payout settings: the active one has a brown border and tint.
+class _MethodButton extends StatelessWidget {
+  const _MethodButton({required this.label, required this.active, required this.onTap});
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Material(
+      color: active ? const Color(0xFFFAF6F2) : p.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: active ? const Color(0xFF542813) : p.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: active ? const Color(0xFF3D1B0C) : p.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A saved account: `rounded-xl border bg-stone-50 p-3`.
+class _AccountBox extends StatelessWidget {
+  const _AccountBox({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: p.stone50, borderRadius: BorderRadius.circular(12), border: Border.all(color: p.border)),
+      child: child,
+    );
+  }
+}
+
+Widget _readyBadge(Json account) =>
+    account['ready'] == true ? const ToneBadge('Ready', tone: Tone.green) : ToneBadge('Unlocks ${formatDate(account['activates_at'])}', tone: Tone.amber);
+
+/// `grid md:grid-cols-5 gap-3 items-end`: four fields and the button on one
+/// row from 768px, stacked below.
+class _ReconciliationForm extends StatelessWidget {
+  const _ReconciliationForm({required this.fields, required this.button});
+
+  final List<Widget> fields;
+  final Widget button;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isMd(context)) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([...fields, Align(alignment: Alignment.centerLeft, child: button)], 12));
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      for (final field in fields) ...[Expanded(child: field), const SizedBox(width: 12)],
+      Expanded(child: Align(alignment: Alignment.centerLeft, child: button)),
+    ]);
   }
 }
 
@@ -74,30 +208,29 @@ class _SecurityChecklist extends StatelessWidget {
       (security['default_jwt_secret'] != true, 'Server secret (JWT_SECRET) set', 'Set JWT_SECRET in the backend .env'),
     ];
     if (items.every((item) => item.$1)) return const SizedBox.shrink();
+    final p = Palette.of(context);
+    // `space-y-2` rows: icon, `text-sm` label, then the fix as a small link.
     return SectionCard(
       title: 'Secure your account first',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: spaced([
         for (final (ok, label, fix) in items)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(ok ? Icons.check_circle_outline : Icons.warning_amber_rounded, size: 18, color: ok ? const Color(0xFF059669) : const Color(0xFFD97706)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(label, style: TextStyle(fontWeight: ok ? FontWeight.w400 : FontWeight.w700)),
-                  if (!ok)
-                    fix.startsWith('Set')
-                        ? Hint(fix)
-                        : GestureDetector(
-                            onTap: () => context.read<ShellNavigator>().go(const AdminRoute(Pages.settingsProfile)),
-                            child: Text(fix, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.brown)),
-                          ),
-                ]),
-              ),
-            ]),
-          ),
-      ]),
+          Row(children: [
+            Icon(ok ? Icons.check_circle_outline : Icons.warning_amber_rounded, size: 16, color: ok ? const Color(0xFF059669) : const Color(0xFFD97706)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
+                Text(label, style: TextStyle(fontSize: 14, fontWeight: ok ? FontWeight.w400 : FontWeight.w600, color: ok ? p.muted : p.text)),
+                if (!ok)
+                  fix.startsWith('Set')
+                      ? Text('· $fix', style: TextStyle(fontSize: 11, color: p.faint))
+                      : InkWell(
+                          onTap: () => context.read<ShellNavigator>().go(const AdminRoute(Pages.settingsProfile)),
+                          child: Text('· $fix', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.brown)),
+                        ),
+              ]),
+            ),
+          ]),
+      ], 8)),
     );
   }
 }
@@ -115,7 +248,8 @@ class _BooksCard extends StatelessWidget {
       description: "All customer money sits in the platform's account. It must equal what it is made of.",
       action: balanced ? const ToneBadge('Balanced', tone: Tone.green) : ToneBadge('Off by ${formatRwf(books['unreconciled_rwf'])}', tone: Tone.red),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-        ResponsiveGrid(children: [
+        // `grid-cols-2 lg:grid-cols-5 gap-3`.
+        ResponsiveGrid(minWidth: 1, maxColumns: MediaQuery.sizeOf(context).width >= 1024 ? 5 : 2, children: [
           StatCard(label: 'Cash in account', value: formatRwf(books['cash_balance_rwf']), hint: 'Should be in the real account'),
           StatCard(label: 'Held', value: formatRwf(books['held_balance_rwf']), hint: 'Orders in progress'),
           StatCard(label: 'Owed to vendors', value: formatRwf(books['vendor_payable_rwf'])),
@@ -124,7 +258,6 @@ class _BooksCard extends StatelessWidget {
             label: 'Your balance',
             value: formatRwf(books['owner_balance_rwf']),
             hint: 'Commission earned ${formatRwf(books['total_commission_rwf'])}',
-            tone: Tone.violet,
           ),
         ]),
         if (!balanced)
@@ -132,10 +265,10 @@ class _BooksCard extends StatelessWidget {
             '${formatRwf(books['unreconciled_rwf'])} is unaccounted for, so withdrawals are blocked. If the money was lost '
             '(e.g. paid out twice before the books were fixed), record an adjustment with the reason.',
             icon: Icons.warning_amber_rounded,
-            action: FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            action: BusyButton(
+              label: 'Record adjustment',
+              danger: true,
               onPressed: () => showAppSheet(context, _AdjustmentSheet(suggested: jint(books['unreconciled_rwf']))),
-              child: const Text('Record adjustment'),
             ),
           ),
       ])),
@@ -245,7 +378,7 @@ class _WithdrawCardState extends State<_WithdrawCard> with BusyState {
       title: 'Withdraw commission',
       description: 'Requested here, transferred by you, then confirmed with the transfer reference.',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-        ResponsiveGrid(children: [
+        ResponsiveGrid(minWidth: 1, maxColumns: 2, children: [
           StatCard(
             label: 'Available',
             value: formatRwf(w['available_rwf']),
@@ -261,66 +394,66 @@ class _WithdrawCardState extends State<_WithdrawCard> with BusyState {
         if (processing != null)
           _ProcessingWithdrawal(withdrawal: processing)
         else if (blockers.isNotEmpty)
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // `space-y-1.5 text-sm text-amber-700`, a lock before each reason.
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: spaced([
             for (final blocker in blockers)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Icon(Icons.lock_outline, size: 16, color: Tone.amber.foreground(context)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(jstr(blocker['message']), style: TextStyle(color: Tone.amber.foreground(context)))),
-                ]),
-              ),
-          ])
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Padding(padding: EdgeInsets.only(top: 2), child: Icon(Icons.lock_outline, size: 16, color: Color(0xFFB45309))),
+                const SizedBox(width: 8),
+                Expanded(child: Text(jstr(blocker['message']), style: const TextStyle(fontSize: 14, color: Color(0xFFB45309)))),
+              ]),
+          ], 6))
         else ...[
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: amount,
-                keyboardType: TextInputType.number,
-                inputFormatters: [_digits],
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Amount (RWF)',
-                  hintText: '0',
-                  errorText: amount.text.isNotEmpty && invalid ? 'Enter a whole amount up to ${formatRwf(maxNow)}.' : null,
-                  errorMaxLines: 2,
+          // `grid md:grid-cols-2 gap-3`; the code field spans both columns.
+          _TwoColumns(children: [
+            WebField(
+              label: 'Amount (RWF)',
+              hint: amount.text.isNotEmpty && invalid
+                  ? Text('Enter a whole amount up to ${formatRwf(maxNow)}.', style: const TextStyle(color: AppColors.red600))
+                  : null,
+              child: Row(children: [
+                Expanded(
+                  child: WebInput(controller: amount, hint: '0', keyboardType: TextInputType.number, inputFormatters: [_digits], onChanged: (_) => setState(() {})),
                 ),
+                const SizedBox(width: 8),
+                _SecondaryButton(label: 'Max', onPressed: () => setState(() => amount.text = '$maxNow')),
+              ]),
+            ),
+            WebField(
+              label: 'To company account',
+              child: WebSelect<String>(
+                value: destinationId,
+                options: {
+                  for (final d in ready) jstr(d['id']): '${jstr(d['label'])} · ${jstr(d['provider'])} ${jstr(d['account_number'])}',
+                },
+                onChanged: (value) => setState(() => destinationId = value),
               ),
             ),
-            const SizedBox(width: 8),
-            OutlinedButton(onPressed: () => setState(() => amount.text = '$maxNow'), child: const Text('Max')),
           ]),
-          Dropdown<String>(
-            label: 'To company account',
-            value: destinationId,
-            options: {
-              for (final d in ready) jstr(d['id']): '${jstr(d['label'])} · ${jstr(d['provider'])} ${jstr(d['account_number'])}',
-            },
-            onChanged: (value) => setState(() => destinationId = value),
-          ),
           ActionCodeField(key: ValueKey(codeKey), purpose: 'platform_withdrawal', onChanged: (value) => setState(() => code = value)),
-          BusyButton(
-            label: 'Request withdrawal${(numeric ?? 0) > 0 ? ' of ${formatRwf(numeric)}' : ''}',
-            busyLabel: 'Requesting…',
-            busy: busy,
-            onPressed: invalid || code.length != 6 || destinationId.isEmpty
-                ? null
-                : () async {
-                    final ok = await run(() => api.ownerWithdraw({
-                          'amount_rwf': numeric,
-                          'destination_id': destinationId,
-                          'otp_code': code,
-                          'source': widget.sweepAmount > 0 ? 'weekly_sweep' : 'manual',
-                        }));
-                    if (ok && mounted) {
-                      setState(() {
-                        amount.clear();
-                        code = '';
-                        codeKey++;
-                      });
-                    }
-                  },
+          Align(
+            alignment: Alignment.centerLeft,
+            child: WebButton(
+              large: true,
+              label: busy ? 'Requesting…' : 'Request withdrawal${(numeric ?? 0) > 0 ? ' of ${formatRwf(numeric)}' : ''}',
+              onPressed: busy || invalid || code.length != 6 || destinationId.isEmpty
+                  ? null
+                  : () async {
+                      final ok = await run(() => api.ownerWithdraw({
+                            'amount_rwf': numeric,
+                            'destination_id': destinationId,
+                            'otp_code': code,
+                            'source': widget.sweepAmount > 0 ? 'weekly_sweep' : 'manual',
+                          }));
+                      if (ok && mounted) {
+                        setState(() {
+                          amount.clear();
+                          code = '';
+                          codeKey++;
+                        });
+                      }
+                    },
+            ),
           ),
           if (actionError != null) ErrorNote(error: actionError),
         ],
@@ -371,18 +504,22 @@ class _ProcessingWithdrawalState extends State<_ProcessingWithdrawal> with BusyS
           TextSpan(text: jstr(d['label']), style: const TextStyle(fontWeight: FontWeight.w800)),
           TextSpan(text: ' (${jstr(d['provider'])} · ${jstr(d['account_name'])} · ${jstr(d['account_number'])}) from the platform account, then confirm it here.'),
         ])),
-        TextField(
-          controller: reference,
-          onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(labelText: 'Transfer reference', hintText: 'Bank / MoMo transaction ID'),
+        WebField(
+          label: 'Transfer reference',
+          child: WebInput(controller: reference, hint: 'Bank / MoMo transaction ID', onChanged: (_) => setState(() {})),
         ),
-        BusyButton(
-          label: 'I transferred it: confirm',
-          busy: busy,
-          onPressed: reference.text.trim().length < 3 ? null : () => run(() => api.ownerCompleteWithdrawal(id, {'reference': reference.text})),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: WebButton(
+            label: 'I transferred it: confirm',
+            onPressed: busy || reference.text.trim().length < 3 ? null : () => run(() => api.ownerCompleteWithdrawal(id, {'reference': reference.text})),
+          ),
         ),
-        TextField(controller: reason, decoration: const InputDecoration(labelText: 'Or cancel (reason)', hintText: 'e.g. Bank closed')),
-        OutlinedButton(onPressed: busy ? null : () => run(() => api.ownerCancelWithdrawal(id, {'reason': reason.text})), child: const Text('Cancel withdrawal')),
+        WebField(label: 'Or cancel (reason)', child: WebInput(controller: reason, hint: 'e.g. Bank closed')),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _SecondaryButton(label: 'Cancel withdrawal', onPressed: busy ? null : () => run(() => api.ownerCancelWithdrawal(id, {'reason': reason.text}))),
+        ),
         if (actionError != null) ErrorNote(error: actionError),
       ], 10)),
     );
@@ -396,29 +533,39 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     return SectionCard(
       title: 'Withdrawal history',
       padding: EdgeInsets.zero,
       child: withdrawals.isEmpty
-          ? const Padding(padding: EdgeInsets.all(20), child: Center(child: Hint('No withdrawals yet.')))
-          : Column(children: [
-              for (var i = 0; i < withdrawals.length; i++) ...[
-                if (i > 0) const Divider(),
-                RecordTile(
-                  title: formatRwf(withdrawals[i]['amount_rwf']),
-                  subtitle: '${jstr(jmap(withdrawals[i]['destination'])['label'])} · ${jstr(jmap(withdrawals[i]['destination'])['account_number'])}',
-                  badges: [
-                    StatusBadge(jstr(withdrawals[i]['status'])),
-                    if (withdrawals[i]['source'] == 'weekly_sweep') const ToneBadge('Sweep', tone: Tone.violet),
-                    if (withdrawals[i]['source'] == 'auto') const ToneBadge('Automatic', tone: Tone.violet),
-                  ],
-                  lines: [
-                    jstr(withdrawals[i]['reference'], jstr(withdrawals[i]['failure_reason'], '—')),
-                    'Requested ${formatDate(withdrawals[i]['created_at'])}',
-                  ],
-                ),
+          ? Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('No withdrawals yet.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: p.faint)),
+            )
+          : WebTable(
+              columns: const [
+                WebColumn('Amount', nowrap: true),
+                WebColumn('To'),
+                WebColumn('Status', nowrap: true),
+                WebColumn('Reference'),
+                WebColumn('Requested'),
               ],
-            ]),
+              rows: [
+                for (final w in withdrawals)
+                  [
+                    Text(formatRwf(w['amount_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                    Text('${jstr(jmap(w['destination'])['label'])} · ${jstr(jmap(w['destination'])['account_number'])}',
+                        style: TextStyle(fontSize: 12, color: p.textSecondary)),
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      StatusBadge(jstr(w['status'])),
+                      if (w['source'] == 'weekly_sweep') ...[const SizedBox(width: 4), const ToneBadge('Sweep', tone: Tone.violet)],
+                      if (w['source'] == 'auto') ...[const SizedBox(width: 4), const ToneBadge('Automatic', tone: Tone.violet)],
+                    ]),
+                    Text(jstr(w['reference'], jstr(w['failure_reason'], '—')), style: TextStyle(fontSize: 12, color: p.muted)),
+                    Text(formatDate(w['created_at']), style: TextStyle(fontSize: 12, color: p.muted)),
+                  ],
+              ],
+            ),
     );
   }
 }
@@ -430,34 +577,33 @@ class _DestinationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     return SectionCard(
       title: 'Company payout accounts',
       description: 'Withdrawals can only go to these. New accounts unlock after a waiting period.',
-      action: FilledButton.icon(
-        onPressed: () => showAppSheet(context, const _AddDestinationSheet()),
-        icon: const Icon(Icons.add, size: 16),
-        label: const Text('Add'),
-      ),
+      action: WebButton(small: true, icon: Icons.add, label: 'Add', onPressed: () => showAppSheet(context, const _AddDestinationSheet())),
       child: destinations.isEmpty
-          ? const Hint("No payout account yet. Add the company's bank account.")
-          : Column(children: spaced([
+          ? Text("No payout account yet. Add the company's bank account.", style: TextStyle(fontSize: 14, color: p.faint))
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
               for (final d in destinations)
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.account_balance_outlined),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(jstr(d['label']), style: const TextStyle(fontWeight: FontWeight.w800)),
-                      Hint('${jstr(d['provider'])} · ${jstr(d['account_name'])} · ${jstr(d['account_number'])}'),
-                      const SizedBox(height: 4),
-                      d['ready'] == true
-                          ? const ToneBadge('Ready', tone: Tone.green)
-                          : ToneBadge('Unlocks ${formatDate(d['activates_at'])}', tone: Tone.amber),
-                    ]),
-                  ),
-                  TextButton(onPressed: () => showAppSheet(context, _RemoveDestinationSheet(destination: d)), child: const Text('Remove')),
-                ]),
-            ])),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: p.border)),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Padding(padding: const EdgeInsets.only(top: 2), child: Icon(Icons.account_balance_outlined, size: 16, color: p.faint)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(jstr(d['label']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                        Text('${jstr(d['provider'])} · ${jstr(d['account_name'])} · ${jstr(d['account_number'])}', style: TextStyle(fontSize: 11, color: p.muted)),
+                        const SizedBox(height: 6),
+                        _readyBadge(d),
+                      ]),
+                    ),
+                    SmallButton('Remove', ghost: true, onPressed: () => showAppSheet(context, _RemoveDestinationSheet(destination: d))),
+                  ]),
+                ),
+            ], 8)),
     );
   }
 }
@@ -661,15 +807,22 @@ class _PayoutSettingsCardState extends State<_PayoutSettingsCard> with BusyState
         ? jstr(form['bank_name']).trim().isNotEmpty && jstr(form['account_name']).trim().isNotEmpty && RegExp(r'^[\d\s-]{6,}$').hasMatch(jstr(form['account_number']))
         : jstr(form['account_name']).trim().isNotEmpty && isValidRwandaPhone(jstr(form['phone']));
 
-    Widget text(String key, String label, {String? hint, TextInputType? keyboard, List<TextInputFormatter>? formatters, String? error}) => TextFormField(
-          // Rebuilt from the form only when the saved settings change.
-          key: ValueKey('$key-${_signature(saved)}'),
-          initialValue: jstr(form[key]),
-          keyboardType: keyboard,
-          inputFormatters: formatters,
-          onChanged: (value) => set(key, value),
-          decoration: InputDecoration(labelText: label, hintText: hint, errorText: error, errorMaxLines: 2),
+    final p = Palette.of(context);
+    Widget text(String key, String label, {String? hint, TextInputType? keyboard, List<TextInputFormatter>? formatters, String? error}) => WebField(
+          label: label,
+          hint: error == null ? null : Text(error, style: const TextStyle(color: AppColors.red600)),
+          child: WebInput(
+            // Rebuilt from the form only when the saved settings change.
+            key: ValueKey('$key-${_signature(saved)}'),
+            initialValue: jstr(form[key]),
+            hint: hint,
+            keyboardType: keyboard,
+            inputFormatters: formatters,
+            onChanged: (value) => set(key, value),
+          ),
         );
+    Widget select<T>(String label, T value, Map<T, String> options, ValueChanged<T> onChanged) =>
+        WebField(label: label, child: WebSelect<T>(value: value, options: options, onChanged: onChanged));
 
     return SectionCard(
       title: 'Payout settings',
@@ -681,28 +834,29 @@ class _PayoutSettingsCardState extends State<_PayoutSettingsCard> with BusyState
               : null,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
         if (account != null)
-          InfoTile('', '', child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${jstr(account['provider'])} · ${jstr(account['account_number'])}', style: const TextStyle(fontWeight: FontWeight.w800)),
-            Text(jstr(account['account_name'])),
-            const SizedBox(height: 4),
-            account['ready'] == true ? const ToneBadge('Ready', tone: Tone.green) : ToneBadge('Unlocks ${formatDate(account['activates_at'])}', tone: Tone.amber),
-          ])),
-        SegmentedButton<String>(
-          segments: const [ButtonSegment(value: 'bank', label: Text('Bank account')), ButtonSegment(value: 'mobile_money', label: Text('Phone (MoMo)'))],
-          selected: {jstr(form['method'])},
-          onSelectionChanged: (value) => set('method', value.first),
-        ),
+          _AccountBox(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${jstr(account['provider'])} · ${jstr(account['account_number'])}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.text)),
+                  Text(jstr(account['account_name']), style: TextStyle(fontSize: 11, color: p.muted)),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              _readyBadge(account),
+            ]),
+          ),
+        Row(children: [
+          Expanded(child: _MethodButton(label: 'Bank account', active: isBank, onTap: () => set('method', 'bank'))),
+          const SizedBox(width: 8),
+          Expanded(child: _MethodButton(label: 'Phone (MoMo)', active: !isBank, onTap: () => set('method', 'mobile_money'))),
+        ]),
         if (isBank) ...[
           text('bank_name', 'Bank', hint: 'e.g. Bank of Kigali'),
           text('account_name', 'Account holder name', hint: 'e.g. KitchenLink Ltd'),
           text('account_number', 'Bank account number', hint: 'Digits only', keyboard: TextInputType.number, formatters: [_digits, LengthLimitingTextInputFormatter(20)]),
         ] else ...[
-          Dropdown<String>(
-            label: 'Network',
-            value: jstr(form['network']),
-            options: const {'MTN Mobile Money': 'MTN Mobile Money', 'Airtel Money': 'Airtel Money'},
-            onChanged: (value) => set('network', value),
-          ),
+          select<String>('Network', jstr(form['network']), const {'MTN Mobile Money': 'MTN Mobile Money', 'Airtel Money': 'Airtel Money'}, (value) => set('network', value)),
           text('account_name', 'Registered name', hint: 'Name on the MoMo account'),
           text(
             'phone',
@@ -713,90 +867,71 @@ class _PayoutSettingsCardState extends State<_PayoutSettingsCard> with BusyState
             error: jstr(form['phone']).isNotEmpty && !isValidRwandaPhone(jstr(form['phone'])) ? phoneError : null,
           ),
         ],
-        Dropdown<String>(
-          label: 'Withdraw',
-          value: mode,
-          options: const {'auto': 'Automatically, on schedule', 'reminder': 'Remind me only', 'off': 'Off'},
-          onChanged: (value) => setSchedule('mode', value),
-        ),
+        select<String>('Withdraw', mode, const {'auto': 'Automatically, on schedule', 'reminder': 'Remind me only', 'off': 'Off'}, (value) => setSchedule('mode', value)),
         if (mode != 'off') ...[
-          Dropdown<String>(
-            label: 'How often',
-            value: jstr(schedule['frequency']),
-            options: const {'weekly': 'Every week', 'monthly': 'Every month'},
-            onChanged: (value) => setSchedule('frequency', value),
-          ),
+          select<String>('How often', jstr(schedule['frequency']), const {'weekly': 'Every week', 'monthly': 'Every month'}, (value) => setSchedule('frequency', value)),
           if (schedule['frequency'] == 'weekly')
-            Dropdown<int>(
-              label: 'Day',
-              value: jint(schedule['weekday']),
-              options: {for (var i = 0; i < 7; i++) i: _weekdays[i]},
-              onChanged: (value) => setSchedule('weekday', value),
-            )
+            select<int>('Day', jint(schedule['weekday']), {for (var i = 0; i < 7; i++) i: _weekdays[i]}, (value) => setSchedule('weekday', value))
           else
-            Dropdown<int>(
-              label: 'Day of month',
-              value: jint(schedule['day_of_month']),
-              options: {for (var i = 1; i <= 28; i++) i: '$i'},
-              onChanged: (value) => setSchedule('day_of_month', value),
-            ),
-          Dropdown<int>(
-            label: 'Time (Kigali)',
-            value: jint(schedule['hour']),
-            options: {for (var h = 0; h < 24; h++) h: '${h.toString().padLeft(2, '0')}:00'},
-            onChanged: (value) => setSchedule('hour', value),
-          ),
+            select<int>('Day of month', jint(schedule['day_of_month']), {for (var i = 1; i <= 28; i++) i: '$i'}, (value) => setSchedule('day_of_month', value)),
+          select<int>('Time (Kigali)', jint(schedule['hour']), {for (var h = 0; h < 24; h++) h: '${h.toString().padLeft(2, '0')}:00'}, (value) => setSchedule('hour', value)),
           if (mode == 'auto') ...[
-            Dropdown<String>(
-              label: 'Amount',
-              value: jstr(schedule['amount_mode']),
-              options: const {'all_available': 'Everything available', 'fixed': 'A fixed amount'},
-              onChanged: (value) => setSchedule('amount_mode', value),
-            ),
+            select<String>('Amount', jstr(schedule['amount_mode']), const {'all_available': 'Everything available', 'fixed': 'A fixed amount'},
+                (value) => setSchedule('amount_mode', value)),
             if (schedule['amount_mode'] == 'fixed')
-              TextFormField(
-                initialValue: jstr(schedule['fixed_amount_rwf']),
-                keyboardType: TextInputType.number,
-                inputFormatters: [_digits],
-                onChanged: (value) => setSchedule('fixed_amount_rwf', value),
-                decoration: const InputDecoration(labelText: 'Fixed amount (RWF)'),
+              WebField(
+                label: 'Fixed amount (RWF)',
+                child: WebInput(
+                  initialValue: jstr(schedule['fixed_amount_rwf']),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [_digits],
+                  onChanged: (value) => setSchedule('fixed_amount_rwf', value),
+                ),
               ),
-            Hint(provider['automatic'] == true
-                ? 'Withdrawals are sent automatically by ${jstr(provider['label'])}.'
-                : 'No payout service is connected yet: on schedule the system creates the withdrawal and texts you to transfer it and confirm with '
-                    'the reference. Once a payout service is connected, the money moves by itself.'),
+            Text(
+              provider['automatic'] == true
+                  ? 'Withdrawals are sent automatically by ${jstr(provider['label'])}.'
+                  : 'No payout service is connected yet: on schedule the system creates the withdrawal and texts you to transfer it and confirm with '
+                      'the reference. Once a payout service is connected, the money moves by itself.',
+              style: TextStyle(fontSize: 11, color: p.muted),
+            ),
           ],
         ],
         ActionCodeField(key: ValueKey(codeKey), purpose: 'payout_settings', onChanged: (value) => setState(() => code = value)),
-        BusyButton(
-          label: 'Save changes',
-          busy: busy,
-          onPressed: !accountComplete || code.length != 6
-              ? null
-              : () async {
-                  setState(() => message = '');
-                  dynamic result;
-                  final ok = await run(() async => result = await api.ownerSavePayoutSettings({
-                        ...form,
-                        'schedule': {...schedule, 'fixed_amount_rwf': int.tryParse(jstr(schedule['fixed_amount_rwf'])) ?? 0},
-                        'otp_code': code,
-                      }));
-                  if (ok && mounted) {
-                    setState(() {
-                      code = '';
-                      codeKey++;
-                      message = jmap(result)['account_changed'] == true
-                          ? 'Saved. Your new payout account unlocks after the waiting period. You will get an SMS.'
-                          : 'Saved.';
-                    });
-                  }
-                },
+        Align(
+          alignment: Alignment.centerLeft,
+          child: WebButton(
+            label: busy ? 'Saving…' : 'Save changes',
+            onPressed: busy || !accountComplete || code.length != 6
+                ? null
+                : () async {
+                    setState(() => message = '');
+                    dynamic result;
+                    final ok = await run(() async => result = await api.ownerSavePayoutSettings({
+                          ...form,
+                          'schedule': {...schedule, 'fixed_amount_rwf': int.tryParse(jstr(schedule['fixed_amount_rwf'])) ?? 0},
+                          'otp_code': code,
+                        }));
+                    if (ok && mounted) {
+                      setState(() {
+                        code = '';
+                        codeKey++;
+                        message = jmap(result)['account_changed'] == true
+                            ? 'Saved. Your new payout account unlocks after the waiting period. You will get an SMS.'
+                            : 'Saved.';
+                      });
+                    }
+                  },
+          ),
         ),
         if (actionError != null) ErrorNote(error: actionError),
-        if (message.isNotEmpty) Note(message, tone: Tone.green),
+        if (message.isNotEmpty) Text(message, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF047857))),
         if (widget.sweep['last_at'] != null)
-          Hint('Last scheduled run ${formatDate(widget.sweep['last_at'])}${jint(widget.sweep['last_amount_rwf']) > 0 ? ' · ${formatRwf(widget.sweep['last_amount_rwf'])}' : ''}'),
-      ])),
+          Text(
+            'Last scheduled run ${formatDate(widget.sweep['last_at'])}${jint(widget.sweep['last_amount_rwf']) > 0 ? ' · ${formatRwf(widget.sweep['last_amount_rwf'])}' : ''}',
+            style: TextStyle(fontSize: 11, color: p.faint),
+          ),
+      ], 12)),
     );
   }
 }
@@ -828,26 +963,29 @@ class _ReconciliationCardState extends State<_ReconciliationCard> with BusyState
   @override
   Widget build(BuildContext context) {
     final api = context.read<AdminSession>().api;
+    final p = Palette.of(context);
     final value = int.tryParse(balance.text);
     return SectionCard(
       title: 'Monthly reconciliation',
       description: 'Compare the real bank / MoMo statement with the ${formatRwf(widget.books['cash_balance_rwf'])} the books say should be there.',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-        TextField(controller: accountLabel, decoration: const InputDecoration(labelText: 'Account')),
-        DateField(label: 'Statement date', value: statementDate, onChanged: (v) => setState(() => statementDate = v)),
-        TextField(
-          controller: balance,
-          keyboardType: const TextInputType.numberWithOptions(signed: true),
-          inputFormatters: [_signedDigits],
-          onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(labelText: 'Statement balance (RWF)'),
-        ),
-        TextField(controller: note, decoration: const InputDecoration(labelText: 'Note', hintText: 'optional')),
-        BusyButton(
-          label: 'Check',
+        _ReconciliationForm(fields: [
+          WebField(label: 'Account', child: WebInput(controller: accountLabel)),
+          WebField(label: 'Statement date', child: WebDateInput(value: statementDate, onChanged: (v) => setState(() => statementDate = v))),
+          WebField(
+            label: 'Statement balance (RWF)',
+            child: WebInput(
+              controller: balance,
+              keyboardType: const TextInputType.numberWithOptions(signed: true),
+              inputFormatters: [_signedDigits],
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          WebField(label: 'Note', child: WebInput(controller: note, hint: 'optional')),
+        ], button: WebButton(
+          label: busy ? 'Checking…' : 'Check',
           icon: Icons.balance,
-          busy: busy,
-          onPressed: value == null
+          onPressed: busy || value == null
               ? null
               : () async {
                   final ok = await run(() => api.ownerReconciliation({
@@ -863,23 +1001,30 @@ class _ReconciliationCardState extends State<_ReconciliationCard> with BusyState
                     });
                   }
                 },
-        ),
+        )),
         if (actionError != null) ErrorNote(error: actionError),
         if (widget.checks.isNotEmpty)
-          RecordList(children: [
-            for (final check in widget.checks)
-              RecordTile(
-                title: jstr(check['account_label']),
-                subtitle: formatDate(check['statement_date']),
-                trailing: formatRwf(check['statement_balance_rwf']),
-                badges: [
+          WebTable(
+            columns: const [
+              WebColumn('Statement', nowrap: true),
+              WebColumn('Account'),
+              WebColumn('Statement balance', nowrap: true),
+              WebColumn('Books', nowrap: true),
+              WebColumn('Result', nowrap: true),
+            ],
+            rows: [
+              for (final check in widget.checks)
+                [
+                  Text(formatDate(check['statement_date'], withTime: false), style: TextStyle(fontSize: 12, color: p.muted)),
+                  Text(jstr(check['account_label']), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                  Text(formatRwf(check['statement_balance_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                  Text(formatRwf(check['system_cash_rwf']), style: TextStyle(fontSize: 14, color: p.textSecondary)),
                   check['matches'] == true
                       ? const ToneBadge('Matches', tone: Tone.green)
                       : ToneBadge('${jnum(check['difference_rwf']) > 0 ? '+' : ''}${formatRwf(check['difference_rwf'])}', tone: Tone.red),
                 ],
-                lines: ['Books ${formatRwf(check['system_cash_rwf'])}'],
-              ),
-          ]),
+            ],
+          ),
       ])),
     );
   }

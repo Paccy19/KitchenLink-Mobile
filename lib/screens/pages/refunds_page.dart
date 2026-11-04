@@ -58,6 +58,11 @@ class _RefundsPageState extends State<RefundsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final viewport = MediaQuery.sizeOf(context).width;
+    final narrow = viewport < 640;
+    final dense = webInputDecoration(context, hint: 'Order number, phone or reference').copyWith(contentPadding: const EdgeInsets.fromLTRB(12, 7, 12, 7));
+
     return PageBody(onRefresh: query.load, children: [
       const PageHeader(
         title: 'Refunds',
@@ -68,80 +73,127 @@ class _RefundsPageState extends State<RefundsPage> {
         builder: (context, _) {
           final summary = query.data?['summary'] is Map ? jmap(query.data!['summary']) : null;
           final service = query.data?['payout_service'] is Map ? jmap(query.data!['payout_service']) : null;
+          Json part(String key) => jmap(summary?[key]);
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
             if (summary != null)
-              ResponsiveGrid(minWidth: 110, children: [
-                StatCard(label: 'To send', value: formatRwf(jmap(summary['pending'])['amount_rwf']), hint: '${jint(jmap(summary['pending'])['count'])} refunds', tone: Tone.amber),
-                StatCard(label: 'Failed (still owed)', value: formatRwf(jmap(summary['failed'])['amount_rwf']), hint: '${jint(jmap(summary['failed'])['count'])} refunds', tone: Tone.red),
-                StatCard(label: 'Sent', value: formatRwf(jmap(summary['completed'])['amount_rwf']), hint: '${jint(jmap(summary['completed'])['count'])} refunds', tone: Tone.green),
+              // `grid-cols-2 lg:grid-cols-3 gap-3`.
+              ResponsiveGrid(minWidth: 1, maxColumns: viewport >= 1024 ? 3 : 2, children: [
+                StatCard(label: 'To send', value: formatRwf(part('pending')['amount_rwf']), hint: '${jint(part('pending')['count'])} refunds'),
+                StatCard(label: 'Failed (still owed)', value: formatRwf(part('failed')['amount_rwf']), hint: '${jint(part('failed')['count'])} refunds'),
+                StatCard(label: 'Sent', value: formatRwf(part('completed')['amount_rwf']), hint: '${jint(part('completed')['count'])} refunds'),
               ]),
             if (service != null && service['automatic'] != true)
-              Hint('Payout service: ${jstr(service['label'])}. Send each refund from the business mobile money / card account, '
-                  'then mark it sent here. The customer is notified automatically.'),
-          ]));
+              Text.rich(TextSpan(style: TextStyle(fontSize: 12, color: p.muted), children: [
+                const TextSpan(text: 'Payout service: '),
+                TextSpan(text: jstr(service['label']), style: const TextStyle(fontWeight: FontWeight.w700)),
+                const TextSpan(text: '. Send each refund from the business mobile money / card account, then mark it sent here. The customer is notified automatically.'),
+              ])),
+          ], 20));
         },
       ),
-      SearchField(
-        hint: 'Order number, phone or reference',
-        live: true,
-        onSubmit: (value) {
-          _debounce?.cancel();
-          _debounce = Timer(const Duration(milliseconds: 350), () {
-            setState(() {
-              search = value.trim();
-              page = 1;
-            });
-            query.load();
-          });
-        },
-      ),
-      Dropdown<String>(
-        value: status,
-        options: const {'': 'All refunds', 'pending': 'To send', 'failed': 'Failed', 'completed': 'Sent'},
-        onChanged: (value) {
-          setState(() {
-            status = value;
-            page = 1;
-          });
-          query.load();
-        },
-      ),
-      QueryView<Json>(
-        query: query,
-        builder: (context, data) {
-          final items = jlist(data['items']);
-          if (items.isEmpty) {
-            return Card(child: EmptyState(icon: Icons.replay_outlined, title: status == 'pending' ? 'No refunds to send' : 'No refunds'));
-          }
-          return RecordList(
-            footer: Pager.of(data, onPage: (next) {
-              setState(() => page = next);
-              query.load();
-            }),
-            children: [
-              for (final refund in items)
-                RecordTile(
-                  title: jstr(refund['order_number']),
-                  subtitle: '${jstr(jmap(refund['customer'])['name'], '—')}${jstr(jmap(refund['customer'])['phone']).isNotEmpty ? ' · ${jstr(jmap(refund['customer'])['phone'])}' : ''}',
-                  trailing: formatRwf(refund['amount_rwf']),
-                  badges: [ToneBadge(_statusLabel[refund['status']] ?? toTitle(refund['status']), tone: _statusTone[refund['status']] ?? Tone.slate)],
-                  lines: [
-                    'by ${_cancelledBy[refund['cancelled_by']] ?? jstr(refund['cancelled_by'])}${jstr(refund['reason']).isNotEmpty ? ' · ${jstr(refund['reason'])}' : ''}',
-                    'Send to ${jstr(jmap(refund['destination'])['label'])}',
-                    if (jstr(refund['reference']).isNotEmpty) 'ref ${jstr(refund['reference'])}',
-                    if (jstr(refund['failure_reason']).isNotEmpty) jstr(refund['failure_reason']),
-                    'Cancelled ${formatDate(refund['created_at'])}',
-                  ],
-                  actions: [
-                    if (refund['status'] != 'completed' && session.can('refunds:write'))
-                      refund['status'] == 'pending'
-                          ? FilledButton(onPressed: () => showAppSheet(context, _RefundSheet(refund: refund)), child: const Text('Send refund'))
-                          : OutlinedButton(onPressed: () => showAppSheet(context, _RefundSheet(refund: refund)), child: const Text('Retry')),
-                  ],
-                ),
-            ],
-          );
-        },
+      SectionCard(
+        // Search (`w-56 !py-1.5 text-xs`) and status on the right of the card header.
+        action: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+            width: narrow ? double.infinity : 292,
+            child: TextField(
+              style: TextStyle(fontSize: 12, color: p.text),
+              decoration: dense.copyWith(hintStyle: TextStyle(fontSize: 12, color: p.faint)),
+              onChanged: (value) {
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 350), () {
+                  setState(() {
+                    search = value.trim();
+                    page = 1;
+                  });
+                  query.load();
+                });
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: narrow ? double.infinity : 292,
+            child: WebSelect<String>(
+              dense: true,
+              value: status,
+              options: const {'': 'All refunds', 'pending': 'To send', 'failed': 'Failed', 'completed': 'Sent'},
+              onChanged: (value) {
+                setState(() {
+                  status = value;
+                  page = 1;
+                });
+                query.load();
+              },
+            ),
+          ),
+        ]),
+        actionFullWidth: narrow,
+        child: QueryView<Json>(
+          query: query,
+          builder: (context, data) {
+            final items = jlist(data['items']);
+            if (items.isEmpty) {
+              return EmptyState(icon: Icons.replay_outlined, title: status == 'pending' ? 'No refunds to send' : 'No refunds');
+            }
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              WebTable(
+                columns: const [
+                  WebColumn('Order'),
+                  WebColumn('Customer'),
+                  WebColumn('Amount'),
+                  WebColumn('Send to'),
+                  WebColumn('Status', nowrap: true),
+                  WebColumn('Cancelled'),
+                  WebColumn('', alignEnd: true),
+                ],
+                rows: [
+                  for (final refund in items)
+                    [
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        // `whitespace-nowrap` number; the line under it may wrap.
+                        IntrinsicWidth(
+                          child: Text(jstr(refund['order_number']), softWrap: false, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                        ),
+                        Text(
+                          'by ${_cancelledBy[refund['cancelled_by']] ?? jstr(refund['cancelled_by'])}${jstr(refund['reason']).isNotEmpty ? ' · ${jstr(refund['reason'])}' : ''}',
+                          style: TextStyle(fontSize: 11, color: p.faint),
+                        ),
+                      ]),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        Text(jstr(jmap(refund['customer'])['name'], '—'), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                        Text(jstr(jmap(refund['customer'])['phone']), style: TextStyle(fontSize: 11, color: p.faint)),
+                      ]),
+                      Text(formatRwf(refund['amount_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                      Text(jstr(jmap(refund['destination'])['label']), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        ToneBadge(_statusLabel[refund['status']] ?? toTitle(refund['status']), tone: _statusTone[refund['status']] ?? Tone.slate),
+                        if (jstr(refund['reference']).isNotEmpty)
+                          Padding(padding: const EdgeInsets.only(top: 2), child: Text('ref ${jstr(refund['reference'])}', style: TextStyle(fontSize: 11, color: p.faint))),
+                        if (jstr(refund['failure_reason']).isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(jstr(refund['failure_reason']), style: const TextStyle(fontSize: 11, color: AppColors.red600)),
+                          ),
+                      ]),
+                      Text(formatDate(refund['created_at']), style: TextStyle(fontSize: 12, color: p.muted)),
+                      refund['status'] != 'completed' && session.can('refunds:write')
+                          ? SmallButton(
+                              refund['status'] == 'pending' ? 'Send refund' : 'Retry',
+                              primary: refund['status'] == 'pending',
+                              onPressed: () => showAppSheet(context, _RefundSheet(refund: refund)),
+                            )
+                          : const SizedBox.shrink(),
+                    ],
+                ],
+              ),
+              Pager.of(data, onPage: (next) {
+                setState(() => page = next);
+                query.load();
+              }),
+            ]);
+          },
+        ),
       ),
     ]);
   }

@@ -47,124 +47,161 @@ class _TeamPageState extends State<TeamPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     return PageBody(onRefresh: query.load, children: [
       PageHeader(
         title: 'Team',
         description: 'Invite staff by email, give them a role, and the system sends the invitation to set their own password.',
-        action: FilledButton.icon(
+        action: WebButton(
+          label: 'Invite member',
+          icon: Icons.person_add_alt,
           onPressed: () async {
             setState(() => inviteLink = '');
             after(await showAppSheet<dynamic>(context, _InviteSheet(roles: roles)), 'Invitation sent.');
           },
-          icon: const Icon(Icons.person_add_alt, size: 18),
-          label: const Text('Invite'),
         ),
       ),
       if (inviteLink.isNotEmpty)
         SectionCard(
           title: 'Share this invitation link',
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-            const Hint('The email could not be sent automatically. Send this link to the member yourself; it lets them set their password.'),
-            SelectableText(inviteLink, style: const TextStyle(fontSize: 12)),
-            OutlinedButton.icon(
-              onPressed: () {
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(
+              'The email could not be sent automatically. Send this link to the member yourself; it lets them set their password.',
+              style: TextStyle(fontSize: 12, color: p.muted),
+            ),
+            const SizedBox(height: 8),
+            // Read-only link with a Copy button.
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: inviteLink),
+                  readOnly: true,
+                  style: TextStyle(fontSize: 12, color: p.text),
+                  decoration: webInputDecoration(context),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SmallButton('Copy', icon: Icons.copy, onPressed: () {
                 Clipboard.setData(ClipboardData(text: inviteLink));
                 showToast(context, 'Copied');
-              },
-              icon: const Icon(Icons.copy, size: 16),
-              label: const Text('Copy'),
-            ),
-          ], 8)),
+              }),
+            ]),
+          ]),
         ),
-      QueryView<Json>(
-        query: query,
-        builder: (context, data) {
-          final members = jlist(data['members']);
-          if (members.isEmpty) {
-            return const Card(child: EmptyState(icon: Icons.groups_outlined, title: 'No team members', description: 'Invite your first team member.'));
-          }
-          return RecordList(children: [for (final member in members) _memberRow(member)]);
-        },
+      SectionCard(
+        child: QueryView<Json>(
+          query: query,
+          builder: (context, data) {
+            final members = jlist(data['members']);
+            if (members.isEmpty) {
+              return const EmptyState(icon: Icons.groups_outlined, title: 'No team members', description: 'Invite your first team member.');
+            }
+            return WebTable(
+              columns: const [
+                WebColumn('Member'),
+                WebColumn('Role'),
+                WebColumn('Status'),
+                WebColumn('Sign-in'),
+                WebColumn('Last login'),
+                WebColumn('', alignEnd: true),
+              ],
+              rows: [for (final member in members) _memberRow(member)],
+            );
+          },
+        ),
       ),
       ListenableBuilder(
         listenable: query,
         builder: (context, _) => SectionCard(
           title: 'Roles & permissions',
           description: 'What each role may do. The owner (super admin) can do everything.',
-          action: TextButton(onPressed: () => setState(() => showRoles = !showRoles), child: Text(showRoles ? 'Hide' : 'Show')),
+          action: SmallButton(showRoles ? 'Hide' : 'Show', ghost: true, onPressed: () => setState(() => showRoles = !showRoles)),
           child: showRoles ? _roleReference(query.data ?? const {}) : const SizedBox.shrink(),
         ),
       ),
     ]);
   }
 
-  Widget _memberRow(Json member) {
+  List<Widget> _memberRow(Json member) {
+    final p = Palette.of(context);
     final status = jstr(member['status']);
     final isOwner = member['is_owner'] == true;
     Future<void> confirm(String type) async => after(await showAppSheet<dynamic>(context, _ConfirmSheet(type: type, member: member)), _confirmMeta[type]!.message);
-    return RecordTile(
-      title: jstr(member['name'], '—'),
-      subtitle: jstr(member['email']),
-      badges: [
-        ToneBadge(jstr(member['role_label'])),
+    return [
+      CellText(jstr(member['name'], '—'), sub: jstr(member['email'])),
+      Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        Text(jstr(member['role_label']), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textSecondary)),
         if (isOwner) const ToneBadge('Owner', tone: Tone.violet),
+      ]),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         ToneBadge(_statusLabel[status] ?? toTitle(status), tone: _statusTone[status] ?? Tone.slate),
-        if (member['two_factor_enabled'] == true) const ToneBadge('SMS codes', tone: Tone.green, icon: Icons.verified_user_outlined),
-      ],
-      lines: [
-        if (status == 'invited' && member['invite_expires_at'] != null) 'Expires ${formatDate(member['invite_expires_at'], withTime: false)}',
-        if (member['two_factor_enabled'] != true) jstr(member['phone'], 'No phone yet'),
-        'Last login: ${member['last_login_at'] != null ? formatDate(member['last_login_at']) : 'Never'}',
-      ],
-      actions: isOwner
-          ? const [Hint('Owner account')]
-          : [
+        if (status == 'invited' && member['invite_expires_at'] != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('Expires ${formatDate(member['invite_expires_at'], withTime: false)}', style: TextStyle(fontSize: 11, color: p.faint)),
+          ),
+      ]),
+      member['two_factor_enabled'] == true
+          ? const ToneBadge('SMS codes', tone: Tone.green, icon: Icons.verified_user_outlined)
+          : Text(jstr(member['phone'], 'No phone yet'), style: TextStyle(fontSize: 11, color: p.faint)),
+      Text(member['last_login_at'] != null ? formatDate(member['last_login_at']) : 'Never', style: TextStyle(fontSize: 12, color: p.muted)),
+      isOwner
+          ? Text('Owner account', style: TextStyle(fontSize: 11, color: p.faint))
+          // `flex flex-wrap justify-end gap-1.5`, kept to two lines at most.
+          : ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 172),
+              child: Wrap(alignment: WrapAlignment.end, spacing: 6, runSpacing: 6, children: [
               if (status == 'deactivated')
-                OutlinedButton.icon(onPressed: () => confirm('reactivate'), icon: const Icon(Icons.how_to_reg_outlined, size: 16), label: const Text('Reactivate'))
+                SmallButton('Reactivate', icon: Icons.how_to_reg_outlined, onPressed: () => confirm('reactivate'))
               else ...[
-                OutlinedButton.icon(
+                SmallButton(
+                  'Role',
+                  icon: Icons.manage_accounts_outlined,
                   onPressed: () async => after(await showAppSheet<dynamic>(context, _RoleSheet(member: member, roles: roles)), 'Role updated.'),
-                  icon: const Icon(Icons.manage_accounts_outlined, size: 16),
-                  label: const Text('Role'),
                 ),
-                OutlinedButton.icon(onPressed: () => confirm('resend'), icon: const Icon(Icons.refresh, size: 16), label: const Text('New link')),
-                OutlinedButton.icon(onPressed: () => confirm('deactivate'), icon: const Icon(Icons.person_off_outlined, size: 16), label: const Text('Deactivate')),
+                SmallButton('New link', icon: Icons.refresh, onPressed: () => confirm('resend')),
+                SmallButton('Deactivate', icon: Icons.person_off_outlined, onPressed: () => confirm('deactivate')),
               ],
-              IconButton(onPressed: () => confirm('remove'), icon: const Icon(Icons.delete_outline)),
-            ],
-    );
+              SmallButton('', icon: Icons.delete_outline, ghost: true, onPressed: () => confirm('remove')),
+              ]),
+            ),
+    ];
   }
 
-  /// The roles, grouped by the same categories as the panel (owner reference).
+  /// The roles, grouped by the same categories as the panel (owner reference):
+  /// `grid lg:grid-cols-2 gap-4` of `rounded-xl border p-4` boxes.
   Widget _roleReference(Json data) {
+    final p = Palette.of(context);
     final categories = jlist(data['categories']);
     final permissions = jlist(data['permissions']);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
+    return ResponsiveGrid(minWidth: 1, maxColumns: MediaQuery.sizeOf(context).width >= 1024 ? 2 : 1, spacing: 16, equalHeights: false, children: [
       for (final role in jlist(data['roles']))
         Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(border: Border.all(color: Theme.of(context).dividerColor), borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(border: Border.all(color: p.border), borderRadius: BorderRadius.circular(12)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(jstr(role['label']), style: const TextStyle(fontWeight: FontWeight.w900)),
-            Hint(jstr(role['description'])),
-            const SizedBox(height: 8),
+            Text(jstr(role['label']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: p.text)),
+            const SizedBox(height: 2),
+            Text(jstr(role['description']), style: TextStyle(fontSize: 11, height: 1.35, color: p.muted)),
+            const SizedBox(height: 12),
             for (final category in categories)
               Builder(builder: (context) {
                 final owned = ((role['permissions'] as List?) ?? const []).map((e) => e.toString()).toSet();
-                final allowed = permissions.where((p) => p['category'] == category['id'] && owned.contains(jstr(p['id']))).toList();
+                final allowed = permissions.where((perm) => perm['category'] == category['id'] && owned.contains(jstr(perm['id']))).toList();
                 if (allowed.isEmpty) return const SizedBox.shrink();
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Hint(jstr(category['label']).toUpperCase()),
-                    const SizedBox(height: 3),
-                    Wrap(spacing: 4, runSpacing: 4, children: [for (final p in allowed) ToneBadge(jstr(p['label']))]),
+                    Text(jstr(category['label']).toUpperCase(),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: p.faint)),
+                    const SizedBox(height: 4),
+                    Wrap(spacing: 4, runSpacing: 4, children: [for (final perm in allowed) ToneBadge(jstr(perm['label']))]),
                   ]),
                 );
               }),
           ]),
         ),
-    ]));
+    ]);
   }
 }
 

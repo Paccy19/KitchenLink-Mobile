@@ -75,6 +75,7 @@ class _PayoutsPageState extends State<PayoutsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final viewport = MediaQuery.sizeOf(context).width;
     return PageBody(
       onRefresh: () async {
         await Future.wait([
@@ -89,141 +90,172 @@ class _PayoutsPageState extends State<PayoutsPage> {
           builder: (context, _) {
             final rows = jlist(summaryQuery.data?['by_status']);
             if (summaryQuery.data == null) return const SizedBox.shrink();
-            return ResponsiveGrid(children: [
+            // `grid-cols-2 lg:grid-cols-4 gap-3`, one tile per status.
+            return ResponsiveGrid(minWidth: 1, maxColumns: viewport >= 1024 ? 4 : 2, children: [
               for (final row in rows) StatCard(label: jstr(row['status']), value: formatRwf(row['total_rwf']), hint: '${jint(row['count'])} requests'),
               if (rows.isEmpty) const StatCard(label: 'Requests', value: '0'),
             ]);
           },
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'withdrawals', label: Text('Withdrawals')),
-              ButtonSegment(value: 'vendor-balances', label: Text('Vendor Balances')),
-              ButtonSegment(value: 'driver-balances', label: Text('Worker Balances')),
-            ],
-            selected: {tab},
-            onSelectionChanged: (value) {
-              setState(() {
-                tab = value.first;
-                balPage = 1;
-              });
-              withdrawalsQuery.enabled = tab == 'withdrawals';
-              balancesQuery.enabled = tab != 'withdrawals';
-              if (tab != 'withdrawals') balancesQuery.load();
-            },
-          ),
-        ),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final (key, label) in const [
+            ('withdrawals', 'Withdrawals'),
+            ('vendor-balances', 'Vendor Balances'),
+            ('driver-balances', 'Delivery Worker Balances'),
+          ])
+            tab == key ? WebButton(label: label, small: true, onPressed: () {}) : SmallButton(label, onPressed: () => _setTab(key)),
+        ]),
         if (tab == 'withdrawals') _withdrawals() else _balances(),
       ],
     );
   }
 
+  void _setTab(String key) {
+    setState(() {
+      tab = key;
+      balPage = 1;
+    });
+    withdrawalsQuery.enabled = key == 'withdrawals';
+    balancesQuery.enabled = key != 'withdrawals';
+    if (key != 'withdrawals') balancesQuery.load();
+  }
+
   Widget _withdrawals() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-      Row(children: [
-        Expanded(
-          child: Dropdown<String>(
-            value: payeeType,
-            options: const {'': 'Vendors & delivery workers', 'vendor': 'Vendors', 'driver': 'Delivery workers'},
-            onChanged: (value) {
-              setState(() {
-                payeeType = value;
-                page = 1;
-              });
-              withdrawalsQuery.load();
-              summaryQuery.load(silent: true);
-            },
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Dropdown<String>(
-            value: status,
-            options: const {'': 'All statuses', 'processing': 'processing', 'completed': 'completed', 'failed': 'failed'},
-            onChanged: (value) {
-              setState(() {
-                status = value;
-                page = 1;
-              });
-              withdrawalsQuery.load();
-            },
-          ),
-        ),
+    final p = Palette.of(context);
+    final narrow = MediaQuery.sizeOf(context).width < 640;
+    Widget sized(Widget child) => narrow ? child : SizedBox(width: 358, child: child);
+    return SectionCard(
+      // Card header with only the two small selects on the right.
+      action: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+        sized(WebSelect<String>(
+          dense: true,
+          value: payeeType,
+          options: const {'': 'Vendors & delivery workers', 'vendor': 'Vendors', 'driver': 'Delivery workers'},
+          onChanged: (value) {
+            setState(() {
+              payeeType = value;
+              page = 1;
+            });
+            withdrawalsQuery.load();
+            summaryQuery.load(silent: true);
+          },
+        )),
+        const SizedBox(height: 8),
+        sized(WebSelect<String>(
+          dense: true,
+          value: status,
+          options: const {'': 'All statuses', 'processing': 'processing', 'completed': 'completed', 'failed': 'failed'},
+          onChanged: (value) {
+            setState(() {
+              status = value;
+              page = 1;
+            });
+            withdrawalsQuery.load();
+          },
+        )),
       ]),
-      QueryView<Json>(
+      actionFullWidth: narrow,
+      child: QueryView<Json>(
         query: withdrawalsQuery,
         builder: (context, data) {
           final items = jlist(data['items']);
-          if (items.isEmpty) return const Card(child: EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'No withdrawal requests'));
-          return RecordList(
-            footer: Pager.of(data, onPage: (next) {
+          if (items.isEmpty) return const EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'No withdrawal requests');
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            WebTable(
+              columns: const [
+                WebColumn('Payee'),
+                WebColumn('Amount'),
+                WebColumn('Pay to'),
+                WebColumn('Status', nowrap: true),
+                WebColumn('Reference'),
+                WebColumn('Requested'),
+                WebColumn('', alignEnd: true, nowrap: true),
+              ],
+              rows: [
+                for (final w in items)
+                  [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      _payeeBadge(w['payee_type']),
+                      const SizedBox(width: 8),
+                      Flexible(child: Text(jstr(w['payee_name'], '—'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text))),
+                    ]),
+                    Text(formatRwf(w['amount_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                      Text(jstr(w['method_label']), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                      if (jstr(w['bank_name']).isNotEmpty)
+                        Text(jstr(w['bank_name']), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: p.muted)),
+                      Text(jstr(w['account_number'], 'No number on file'), style: TextStyle(fontSize: 11, color: p.faint)),
+                    ]),
+                    StatusBadge(jstr(w['status'])),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                      Text(jstr(w['reference'], '—'), style: TextStyle(fontSize: 12, color: p.muted)),
+                      if (jstr(w['failure_reason']).isNotEmpty)
+                        Text(jstr(w['failure_reason']), style: const TextStyle(fontSize: 11, color: AppColors.red600)),
+                    ]),
+                    Text(formatDate(w['created_at']), style: TextStyle(fontSize: 12, color: p.muted)),
+                    !session.can('payouts:write')
+                        ? const SizedBox.shrink()
+                        : w['status'] == 'processing'
+                            ? SmallButton('Pay out', primary: true, onPressed: () => _openPayout(w))
+                            : SmallButton('View', onPressed: () => _openPayout(w)),
+                  ],
+              ],
+            ),
+            Pager.of(data, onPage: (next) {
               setState(() => page = next);
               withdrawalsQuery.load();
             }),
-            children: [
-              for (final w in items)
-                RecordTile(
-                  title: jstr(w['payee_name'], '—'),
-                  trailing: formatRwf(w['amount_rwf']),
-                  badges: [_payeeBadge(w['payee_type']), StatusBadge(jstr(w['status']))],
-                  lines: [
-                    [jstr(w['method_label']), jstr(w['bank_name']), jstr(w['account_number'], 'No number on file')].where((s) => s.isNotEmpty).join(' · '),
-                    'Ref ${jstr(w['reference'], '—')}${jstr(w['failure_reason']).isNotEmpty ? ' · ${jstr(w['failure_reason'])}' : ''}',
-                    'Requested ${formatDate(w['created_at'])}',
-                  ],
-                  actions: [
-                    if (session.can('payouts:write'))
-                      w['status'] == 'processing'
-                          ? FilledButton(onPressed: () => _openPayout(w), child: const Text('Pay out'))
-                          : OutlinedButton(onPressed: () => _openPayout(w), child: const Text('View')),
-                  ],
-                ),
-            ],
-          );
+          ]);
         },
       ),
-    ]));
+    );
   }
 
   Widget _balances() {
+    final p = Palette.of(context);
     final driver = balanceType == 'driver';
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-      Hint(driver ? 'Delivery fees earned and not yet withdrawn, ranked by available balance.' : 'Ranked by available balance.'),
-      QueryView<Json>(
+    return SectionCard(
+      title: driver ? 'Delivery Worker Balances' : 'Vendor Balances',
+      description: driver ? 'Delivery fees earned and not yet withdrawn, ranked by available balance.' : 'Ranked by available balance.',
+      child: QueryView<Json>(
         query: balancesQuery,
         builder: (context, data) {
           final items = jlist(data['items']);
           if (items.isEmpty) {
-            return Card(child: EmptyState(icon: Icons.account_balance_wallet_outlined, title: driver ? 'No delivery worker balances' : 'No vendor balances'));
+            return EmptyState(icon: Icons.account_balance_wallet_outlined, title: driver ? 'No delivery worker balances' : 'No vendor balances');
           }
-          return RecordList(
-            footer: Pager.of(data, onPage: (next) {
+          final secondary = TextStyle(fontSize: 14, color: p.textSecondary);
+          final bold = TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text);
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            WebTable(
+              columns: driver
+                  ? const [WebColumn('Delivery worker'), WebColumn('Available', nowrap: true), WebColumn('Total Earned', nowrap: true), WebColumn('Deliveries', nowrap: true)]
+                  : const [WebColumn('Vendor'), WebColumn('Available', nowrap: true), WebColumn('Total Sales', nowrap: true), WebColumn('Est. Commission', nowrap: true)],
+              rows: [
+                for (final row in items)
+                  driver
+                      ? [
+                          CellText(jstr(row['name']), sub: [jstr(row['phone']), jstr(row['vehicle_type'])].where((s) => s.isNotEmpty).join(' · ')),
+                          Text(formatRwf(row['available_balance_rwf']), style: bold),
+                          Text(formatRwf(row['total_earnings_rwf']), style: secondary),
+                          Text('${jint(row['completed_deliveries'])}', style: secondary),
+                        ]
+                      : [
+                          CellText(jstr(row['name']), sub: jstr(row['neighborhood'])),
+                          Text(formatRwf(row['available_balance_rwf']), style: bold),
+                          Text(formatRwf(row['total_sales_rwf']), style: secondary),
+                          ToneBadge(formatRwf(row['estimated_commission_rwf']), tone: Tone.violet),
+                        ],
+              ],
+            ),
+            Pager.of(data, onPage: (next) {
               setState(() => balPage = next);
               balancesQuery.load();
             }),
-            children: [
-              for (final row in items)
-                driver
-                    ? RecordTile(
-                        title: jstr(row['name']),
-                        subtitle: [jstr(row['phone']), jstr(row['vehicle_type'])].where((s) => s.isNotEmpty).join(' · '),
-                        trailing: formatRwf(row['available_balance_rwf']),
-                        lines: ['Total earned ${formatRwf(row['total_earnings_rwf'])} · ${jint(row['completed_deliveries'])} deliveries'],
-                      )
-                    : RecordTile(
-                        title: jstr(row['name']),
-                        subtitle: jstr(row['neighborhood']),
-                        trailing: formatRwf(row['available_balance_rwf']),
-                        badges: [ToneBadge('Est. commission ${formatRwf(row['estimated_commission_rwf'])}', tone: Tone.violet)],
-                        lines: ['Total sales ${formatRwf(row['total_sales_rwf'])}'],
-                      ),
-            ],
-          );
+          ]);
         },
       ),
-    ]));
+    );
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../api/api_client.dart';
 import '../state/admin_session.dart';
 import 'format.dart';
+import 'theme.dart';
 import 'widgets.dart';
 
 /// "Send code" + 6-digit input confirming one money/security action. The code
@@ -64,37 +65,46 @@ class _ActionCodeFieldState extends State<ActionCodeField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    final p = Palette.of(context);
+    // The website's Field + Input (`tracking-[0.3em] font-bold`) + secondary "Send code" button.
+    return WebField(
+      label: widget.label,
+      hint: sentTo.isNotEmpty
+          ? Text('Code sent to $sentTo.${devCode.isNotEmpty ? ' Development code: $devCode' : ''}', style: TextStyle(fontSize: 11, color: p.muted))
+          : error.isNotEmpty
+              ? Text(error, style: const TextStyle(fontSize: 11, color: AppColors.red600))
+              : null,
+      child: Row(children: [
         Expanded(
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
             autofillHints: const [AutofillHints.oneTimeCode],
-            maxLength: 6,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(letterSpacing: 4, fontWeight: FontWeight.w700),
-            decoration: InputDecoration(labelText: widget.label, hintText: '6-digit code', counterText: ''),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            style: TextStyle(fontSize: 14, letterSpacing: 4.2, fontWeight: FontWeight.w700, color: p.text),
+            decoration: webInputDecoration(context, hint: '6-digit code').copyWith(hintStyle: TextStyle(fontSize: 14, letterSpacing: 4.2, fontWeight: FontWeight.w700, color: p.faint)),
             onChanged: widget.onChanged,
           ),
         ),
         const SizedBox(width: 8),
-        SizedBox(
-          height: 46,
-          child: OutlinedButton.icon(
-            onPressed: busy ? null : request,
-            icon: const Icon(Icons.smartphone, size: 16),
-            label: Text(busy ? 'Sending…' : sentTo.isNotEmpty ? 'Resend' : 'Send code'),
+        Material(
+          color: p.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: p.border)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: busy ? null : request,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.smartphone, size: 16, color: p.textSecondary),
+                const SizedBox(width: 6),
+                Text(busy ? 'Sending…' : sentTo.isNotEmpty ? 'Resend' : 'Send code',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textSecondary)),
+              ]),
+            ),
           ),
         ),
       ]),
-      if (sentTo.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Hint('Code sent to $sentTo.${devCode.isNotEmpty ? ' Development code: $devCode' : ''}'),
-        ),
-      if (error.isNotEmpty)
-        Padding(padding: const EdgeInsets.only(top: 4), child: Hint(error, color: const Color(0xFFDC2626))),
-    ]);
+    );
   }
 }

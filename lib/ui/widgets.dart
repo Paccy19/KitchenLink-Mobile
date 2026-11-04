@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import '../api/api_client.dart';
 import 'format.dart';
@@ -90,7 +91,7 @@ class PageHeader extends StatelessWidget {
 /// `px-4 py-3 border-b border-stone-100` with a `text-sm font-black` title;
 /// body `p-4`.
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, this.title, this.description, this.action, required this.child, this.padding});
+  const SectionCard({super.key, this.title, this.description, this.action, required this.child, this.padding, this.actionFullWidth = false});
 
   final String? title;
   final String? description;
@@ -99,6 +100,9 @@ class SectionCard extends StatelessWidget {
 
   /// Body padding; `p-4 sm:p-5` when not given.
   final EdgeInsets? padding;
+
+  /// Stretch the header [action] across the card (filters on a phone).
+  final bool actionFullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -110,19 +114,22 @@ class SectionCard extends StatelessWidget {
           Container(
             padding: EdgeInsets.symmetric(horizontal: sm ? 20 : 16, vertical: 12),
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: p.divider))),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  if (title != null) Text(title!, style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w800, color: p.text)),
-                  if (description != null) Text(description!, style: TextStyle(fontSize: 11, height: 1.45, color: p.muted)),
-                ]),
-                ?action,
-              ],
-            ),
+            child: title == null && description == null
+                // Only the action (filters): it sits on the right, or spans the card.
+                ? Align(alignment: Alignment.centerRight, child: actionFullWidth ? SizedBox(width: double.infinity, child: action) : action)
+                : Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        if (title != null) Text(title!, style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w800, color: p.text)),
+                        if (description != null) Text(description!, style: TextStyle(fontSize: 11, height: 1.45, color: p.muted)),
+                      ]),
+                      ?action,
+                    ],
+                  ),
           ),
         Padding(padding: padding ?? EdgeInsets.all(sm ? 20 : 16), child: child),
       ]),
@@ -877,9 +884,75 @@ class CellText extends StatelessWidget {
   }
 }
 
+/// The website's Field: a `text-xs font-bold text-stone-500 mb-1.5` label above
+/// the control, and an optional `text-[11px] text-stone-400` hint below it.
+class WebField extends StatelessWidget {
+  const WebField({super.key, required this.label, required this.child, this.hint});
+
+  final String label;
+  final Widget child;
+  final Widget? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      if (label.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.muted)),
+        ),
+      child,
+      if (hint != null) Padding(padding: const EdgeInsets.only(top: 4), child: DefaultTextStyle.merge(style: TextStyle(fontSize: 11, color: p.faint), child: hint!)),
+    ]);
+  }
+}
+
+/// A plain website Input (`px-3 py-2 text-sm rounded-xl border`), no floating label.
+class WebInput extends StatelessWidget {
+  const WebInput({
+    super.key,
+    this.controller,
+    this.initialValue,
+    this.hint,
+    this.onChanged,
+    this.keyboardType,
+    this.inputFormatters,
+    this.readOnly = false,
+    this.errorText,
+    this.obscure = false,
+  });
+
+  final TextEditingController? controller;
+  final String? initialValue;
+  final String? hint;
+  final ValueChanged<String>? onChanged;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final bool readOnly;
+  final String? errorText;
+  final bool obscure;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return TextFormField(
+      controller: controller,
+      initialValue: controller == null ? initialValue : null,
+      readOnly: readOnly,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
+      style: TextStyle(fontSize: 14, color: p.text),
+      decoration: webInputDecoration(context, hint: hint).copyWith(errorText: errorText, errorMaxLines: 2),
+    );
+  }
+}
+
 /// The website's primary `Button`: brown gradient, `px-4 py-2 text-xs font-bold rounded-xl shadow-sm`.
 class WebButton extends StatelessWidget {
-  const WebButton({super.key, required this.label, required this.onPressed, this.icon, this.small = false});
+  const WebButton({super.key, required this.label, required this.onPressed, this.icon, this.small = false, this.large = false});
 
   final String label;
   final VoidCallback? onPressed;
@@ -887,6 +960,9 @@ class WebButton extends StatelessWidget {
 
   /// `size="sm"`: `px-2.5 py-1.5 text-[11px]`.
   final bool small;
+
+  /// `size="lg"`: `px-5 py-2.5 text-sm`.
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
@@ -900,10 +976,16 @@ class WebButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             onTap: onPressed,
             child: Padding(
-              padding: small ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6) : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              padding: small
+                  ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+                  : large
+                      ? const EdgeInsets.symmetric(horizontal: 20, vertical: 11)
+                      : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[Icon(icon, size: small ? 14 : 16, color: Colors.white), SizedBox(width: small ? 4 : 6)],
-                Text(label, style: TextStyle(fontSize: small ? 11 : 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                Flexible(
+                  child: Text(label, style: TextStyle(fontSize: small ? 11 : large ? 14 : 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
               ]),
             ),
           ),

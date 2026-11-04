@@ -392,7 +392,7 @@ class DemoServer {
 
   void _seedTeam() {
     s['team'] = <Json>[
-      {'id': 'a1', 'name': 'Demo Owner', 'email': 'admin@foodkitchen.rw', 'role': 'super_admin', 'role_label': 'Owner', 'is_owner': true, 'status': 'active', 'two_factor_enabled': false, 'phone': '', 'last_login_at': _ago(const Duration(days: 1))},
+      {'id': 'a1', 'name': 'Demo Owner', 'email': 'admin@foodkitchen.rw', 'role': 'super_admin', 'role_label': 'Owner', 'is_owner': true, 'status': 'active', 'two_factor_enabled': false, 'phone': '0788000001', 'last_login_at': _ago(const Duration(days: 1))},
       {'id': 'a2', 'name': 'Aline Uwase', 'email': 'aline@foodkitchen.rw', 'role': 'operations', 'role_label': 'Operations manager', 'status': 'active', 'two_factor_enabled': true, 'phone': '0788300301', 'last_login_at': _ago(const Duration(hours: 6))},
       {'id': 'a3', 'name': 'Moses Kalisa', 'email': 'moses@foodkitchen.rw', 'role': 'finance', 'role_label': 'Finance', 'status': 'active', 'two_factor_enabled': false, 'phone': '0788300302', 'last_login_at': _ago(const Duration(days: 3))},
       {'id': 'a4', 'name': '', 'email': 'support1@foodkitchen.rw', 'role': 'support', 'role_label': 'Support agent', 'status': 'invited', 'two_factor_enabled': false, 'phone': '', 'invite_expires_at': _in(const Duration(days: 5)), 'last_login_at': null},
@@ -1070,14 +1070,33 @@ class DemoServer {
       case 'GET /admin/platform/wallet':
         final books = _books();
         final type = _q(uri, 'type');
+        // The same entries, wording and order as the website's demo ledger.
+        Json tx(String id, String type, String direction, num amount, dynamic at, String description, {dynamic order, dynamic reference}) => {
+              'id': id,
+              'type': type,
+              'direction': direction,
+              'amount_rwf': amount,
+              'order_number': order,
+              'reference': reference,
+              'description': description,
+              'created_at': at,
+            };
         final ledger = <Json>[
           for (final o in _list('orders').where((o) => o['payment_status'] != 'pending')) ...[
-            {'id': 'tx-pay-${o['id']}', 'type': 'order_payment', 'direction': 'credit', 'amount_rwf': o['total_amount_rwf'], 'order_number': o['order_number'], 'reference': 'MOMO-${o['id']}', 'description': 'Customer payment', 'created_at': o['created_at']},
-            if (o['status'] == 'delivered')
-              {'id': 'tx-com-${o['id']}', 'type': 'commission', 'direction': 'credit', 'amount_rwf': (o['subtotal_rwf'] as int) * _commissionPercent ~/ 100, 'order_number': o['order_number'], 'reference': null, 'description': '$_commissionPercent% commission', 'created_at': o['created_at']},
+            tx('tx-pay-${o['id']}', 'order_payment', 'credit', o['total_amount_rwf'], o['created_at'], 'Payment for ${o['order_number']}', order: o['order_number']),
+            if (o['status'] == 'delivered') ...[
+              tx('tx-ven-${o['id']}', 'vendor_earning', 'debit', (o['subtotal_rwf'] as int) - (o['subtotal_rwf'] as int) * _commissionPercent ~/ 100, o['created_at'],
+                  '${_find('vendors', o['vendor_id'])?['name']} earned', order: o['order_number']),
+              if (o['driver_id'] != null)
+                tx('tx-drv-${o['id']}', 'driver_earning', 'debit', o['delivery_fee_rwf'], o['created_at'], 'Delivery worker earned', order: o['order_number']),
+              tx('tx-com-${o['id']}', 'commission', 'credit', (o['subtotal_rwf'] as int) * _commissionPercent ~/ 100, o['created_at'], 'Commission and delivery margin',
+                  order: o['order_number']),
+            ],
           ],
+          for (final r in _list('refunds').where((r) => r['status'] == 'completed'))
+            tx('tx-${r['id']}', 'refund', 'debit', r['amount_rwf'], r['created_at'], 'Refund sent to the customer', order: r['order_number'], reference: r['reference']),
           for (final w in _list('withdrawals').where((w) => w['status'] == 'completed'))
-            {'id': 'tx-${w['id']}', 'type': 'withdrawal', 'direction': 'debit', 'amount_rwf': w['amount_rwf'], 'order_number': null, 'reference': w['reference'], 'description': 'Paid to ${w['payee_name']}', 'created_at': w['created_at']},
+            tx('tx-${w['id']}', 'withdrawal', 'debit', w['amount_rwf'], w['created_at'], 'Withdrawal to ${w['payee_name']}', reference: w['reference']),
         ].where((t) => type.isEmpty || t['type'] == type).toList()
           ..sort((a, b) => b['created_at'].toString().compareTo(a['created_at'].toString()));
         final paged = _page(ledger, uri);
@@ -1108,8 +1127,15 @@ class DemoServer {
         }
         final top = byVendor.values.toList()..sort((a, b) => (b['gross_rwf'] as int).compareTo(a['gross_rwf'] as int));
         final deliveries = <String, int>{};
+        // Grouped by delivery step, as the website shows them.
         for (final o in _list('orders').where((o) => o['fulfillment'] == 'delivery')) {
-          deliveries.update(_labels[o['status']]!.toLowerCase().replaceAll(' ', '_'), (n) => n + 1, ifAbsent: () => 1);
+          final step = switch (o['status']) {
+            'placed' || 'confirmed' || 'preparing' => 'pending',
+            'ready' || 'assigned' => 'ready_for_pickup',
+            'picked_up' || 'out_for_delivery' => 'out_for_delivery',
+            final other => other.toString(),
+          };
+          deliveries.update(step, (n) => n + 1, ifAbsent: () => 1);
         }
         return {
           'sales': {'gross_rwf': gross, 'orders': done.length, 'commission_rwf': gross * _commissionPercent ~/ 100, 'commission_percent': _commissionPercent, 'delivery_fees_rwf': done.fold<int>(0, (t, o) => t + (o['delivery_fee_rwf'] as int))},
