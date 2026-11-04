@@ -92,6 +92,15 @@ class _VendorsPageState extends State<VendorsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final searchBox = WebSearchInput(hint: 'Search vendors by name…', onSubmit: (value) => apply(() => search = value));
+    final statusSelect = WebSelect<String>(
+      value: status,
+      options: const {'': 'All statuses', 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'suspended': 'Suspended'},
+      onChanged: (value) => apply(() => status = value),
+    );
+    final viewport = MediaQuery.sizeOf(context).width;
+
     return PageBody(
       onRefresh: () async {
         await Future.wait([listQuery.load(), countsQuery.load(silent: true)]);
@@ -103,24 +112,28 @@ class _VendorsPageState extends State<VendorsPage> {
           builder: (context, _) {
             final counts = countsQuery.data;
             if (counts == null) return const SizedBox.shrink();
-            return ResponsiveGrid(minWidth: 110, children: [
+            // `grid-cols-2 lg:grid-cols-5 gap-3`.
+            return ResponsiveGrid(minWidth: 1, maxColumns: viewport >= 1024 ? 5 : 2, children: [
               StatCard(label: 'Total', value: formatNumber(counts['total'])),
-              StatCard(label: 'Pending', value: formatNumber(counts['pending']), tone: Tone.amber),
-              StatCard(label: 'Approved', value: formatNumber(counts['approved']), tone: Tone.green),
-              StatCard(label: 'Rejected', value: formatNumber(counts['rejected']), tone: Tone.red),
-              StatCard(label: 'Suspended', value: formatNumber(counts['suspended']), tone: Tone.red),
+              StatCard(label: 'Pending', value: formatNumber(counts['pending'])),
+              StatCard(label: 'Approved', value: formatNumber(counts['approved'])),
+              StatCard(label: 'Rejected', value: formatNumber(counts['rejected'])),
+              StatCard(label: 'Suspended', value: formatNumber(counts['suspended'])),
             ]);
           },
         ),
         SectionCard(
           title: 'Filters',
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-            SearchField(hint: 'Search vendors by name…', onSubmit: (value) => apply(() => search = value)),
-            Dropdown<String>(
-              value: status,
-              options: const {'': 'All statuses', 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'suspended': 'Suspended'},
-              onChanged: (value) => apply(() => status = value),
-            ),
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, search spanning two columns.
+            if (viewport >= 1024)
+              Row(children: [Expanded(flex: 2, child: searchBox), const SizedBox(width: 12), Expanded(child: statusSelect)])
+            else if (viewport >= 640)
+              Column(children: spaced([searchBox, Row(children: [Expanded(child: statusSelect), const SizedBox(width: 12), const Spacer()])]))
+            else
+              Column(children: spaced([searchBox, statusSelect])),
+            const SizedBox(height: 12),
             ListenableBuilder(
               listenable: listQuery,
               builder: (context, _) => VendorTypeFilter(
@@ -129,53 +142,79 @@ class _VendorsPageState extends State<VendorsPage> {
                 onChanged: (codes) => apply(() => types = codes),
               ),
             ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('Group the list by vendor type', style: TextStyle(fontSize: 13)),
-              value: groupByType,
-              onChanged: (value) => setState(() => groupByType = value ?? false),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => setState(() => groupByType = !groupByType),
+              child: Row(children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: Checkbox(
+                    value: groupByType,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    onChanged: (value) => setState(() => groupByType = value ?? false),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text('Group the list by vendor type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.textSecondary)),
+                ),
+              ]),
             ),
-          ], 10)),
+          ]),
         ),
-        QueryView<Json>(
-          query: listQuery,
-          builder: (context, data) {
-            var items = jlist(data['items']);
-            if (items.isEmpty) {
-              return const Card(child: EmptyState(icon: Icons.storefront_outlined, title: 'No vendors found', description: 'Adjust the filters above.'));
-            }
-            final typeCounts = _typeCounts(data);
-            if (groupByType) {
-              int order(Json v) => vendorTypes.indexWhere((t) => t.code == vendorTypeOf(v['vendor_type']).code);
-              items = [...items]..sort((a, b) => order(a).compareTo(order(b)));
-            }
-            final rows = <Widget>[];
-            for (var i = 0; i < items.length; i++) {
-              final vendor = items[i];
-              final code = vendorTypeOf(vendor['vendor_type']).code;
-              if (groupByType && (i == 0 || vendorTypeOf(items[i - 1]['vendor_type']).code != code)) {
-                final onPage = items.where((row) => vendorTypeOf(row['vendor_type']).code == code).length;
-                rows.add(Container(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Row(children: [
+        SectionCard(
+          child: QueryView<Json>(
+            query: listQuery,
+            builder: (context, data) {
+              var items = jlist(data['items']);
+              if (items.isEmpty) {
+                return const EmptyState(icon: Icons.storefront_outlined, title: 'No vendors found', description: 'Adjust the filters above.');
+              }
+              final typeCounts = _typeCounts(data);
+              if (groupByType) {
+                int order(Json v) => vendorTypes.indexWhere((t) => t.code == vendorTypeOf(v['vendor_type']).code);
+                items = [...items]..sort((a, b) => order(a).compareTo(order(b)));
+              }
+              // A header row before each type when grouped.
+              final groups = <int, Widget>{};
+              if (groupByType) {
+                for (var i = 0; i < items.length; i++) {
+                  final code = vendorTypeOf(items[i]['vendor_type']).code;
+                  if (i > 0 && vendorTypeOf(items[i - 1]['vendor_type']).code == code) continue;
+                  final onPage = items.where((row) => vendorTypeOf(row['vendor_type']).code == code).length;
+                  groups[i] = Row(mainAxisSize: MainAxisSize.min, children: [
                     VendorTypeBadge(code),
                     const SizedBox(width: 8),
-                    Hint('$onPage on this page${typeCounts[code] != null ? ' · ${typeCounts[code]} in total' : ''}'),
-                  ]),
-                ));
+                    Text(
+                      softWrap: false,
+                      '$onPage on this page${typeCounts[code] != null ? ' · ${typeCounts[code]} in total' : ''}',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: p.muted),
+                    ),
+                  ]);
+                }
               }
-              rows.add(_vendorRow(vendor));
-            }
-            return RecordList(
-              footer: Pager.of(data, onPage: (next) {
-                setState(() => page = next);
-                listQuery.load();
-              }),
-              children: rows,
-            );
-          },
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                WebTable(
+                  columns: const [
+                    WebColumn('Vendor'),
+                    WebColumn('Contact'),
+                    WebColumn('Status', nowrap: true),
+                    WebColumn('Sales'),
+                    WebColumn('Joined'),
+                    WebColumn('', alignEnd: true, nowrap: true),
+                  ],
+                  groupRows: groups,
+                  rows: [for (final vendor in items) _vendorRow(vendor)],
+                ),
+                Pager.of(data, onPage: (next) {
+                  setState(() => page = next);
+                  listQuery.load();
+                }),
+              ]);
+            },
+          ),
         ),
       ],
     );
@@ -185,26 +224,35 @@ class _VendorsPageState extends State<VendorsPage> {
         for (final row in jlist(data?['type_counts'])) jstr(row['code']): jint(row['count']),
       };
 
-  Widget _vendorRow(Json vendor) {
+  List<Widget> _vendorRow(Json vendor) {
+    final p = Palette.of(context);
     final request = vendor['vendor_type_request'] is Map ? jmap(vendor['vendor_type_request']) : null;
-    return RecordTile(
-      title: jstr(vendor['name']),
-      subtitle: [jstr(vendor['phone'], '—'), jstr(vendor['neighborhood'])].where((s) => s.isNotEmpty).join(' · '),
-      trailing: formatRwf(vendor['total_sales_rwf']),
-      badges: [
+    return [
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text(jstr(vendor['name']), style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w700, color: p.text)),
+        const SizedBox(height: 4),
+        Wrap(spacing: 4, runSpacing: 4, children: [
+          VendorTypeBadge(vendor['vendor_type'], small: true),
+          if (jmap(vendor['nationwide'])['enabled'] == true) const ToneBadge('Nationwide', tone: Tone.violet),
+          if (request != null) ToneBadge('Wants ${jstr(request['vendor_type_label'])}', tone: Tone.amber),
+        ]),
+      ]),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text(jstr(vendor['phone'], '—'), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+        Text(jstr(vendor['neighborhood']), style: TextStyle(fontSize: 11, color: p.faint)),
+      ]),
+      Row(mainAxisSize: MainAxisSize.min, children: [
         StatusBadge(jstr(vendor['status'])),
+        const SizedBox(width: 4),
         ToneBadge(vendor['is_open'] == true ? 'Store open' : 'Store closed', tone: vendor['is_open'] == true ? Tone.green : Tone.slate),
-        VendorTypeBadge(vendor['vendor_type']),
-        if (jmap(vendor['nationwide'])['enabled'] == true) const ToneBadge('Nationwide', tone: Tone.violet),
-        if (request != null) ToneBadge('Wants ${jstr(request['vendor_type_label'])}', tone: Tone.amber),
-      ],
-      lines: ['Joined ${formatDate(vendor['created_at'], withTime: false)}'],
-      onTap: () => _openVendor(jstr(vendor['id'])),
-      actions: [
-        if (session.can('vendors:write'))
-          OutlinedButton(onPressed: () => _changeStatus(vendor), child: const Text('Status')),
-      ],
-    );
+      ]),
+      Text(formatRwf(vendor['total_sales_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.textSecondary)),
+      Text(formatDate(vendor['created_at'], withTime: false), style: TextStyle(fontSize: 12, color: p.muted)),
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        SmallButton('View', ghost: true, onPressed: () => _openVendor(jstr(vendor['id']))),
+        if (session.can('vendors:write')) ...[const SizedBox(width: 6), SmallButton('Status', onPressed: () => _changeStatus(vendor))],
+      ]),
+    ];
   }
 }
 

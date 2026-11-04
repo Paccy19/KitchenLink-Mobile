@@ -54,7 +54,8 @@ void main() {
         }
         expect(find.text('Something went wrong.'), findsNothing, reason: page.label);
         expect(find.textContaining('not available in demo mode'), findsNothing, reason: page.label);
-        expect(tester.takeException(), isNull, reason: page.label);
+        final error = tester.takeException();
+        expect(error, isNull, reason: '${page.label}: $error');
       }
     }
 

@@ -695,6 +695,29 @@ class WebColumn {
   final bool nowrap;
 }
 
+/// A grouped table heading (`<td colSpan>`): takes no column width, and draws
+/// at its natural width across the empty cells to its right.
+class _SpanRow extends SingleChildRenderObjectWidget {
+  const _SpanRow({required Widget super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSpanRow();
+}
+
+class _RenderSpanRow extends RenderProxyBox {
+  @override
+  double computeMinIntrinsicWidth(double height) => 0;
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => 0;
+
+  @override
+  void performLayout() {
+    child!.layout(BoxConstraints(maxHeight: constraints.maxHeight), parentUsesSize: true);
+    size = constraints.constrain(Size(constraints.maxWidth.isFinite ? constraints.maxWidth : child!.size.width, child!.size.height));
+  }
+}
+
 /// As wide as [width], but never narrower than the child's minimum width.
 class _AtLeastMinWidth extends SingleChildRenderObjectWidget {
   const _AtLeastMinWidth({required this.width, super.child});
@@ -742,10 +765,16 @@ class _RenderAtLeastMinWidth extends RenderProxyBox {
 /// `divide-stone-50`. Columns size to their content like an HTML table; the
 /// table is at least 640px wide and scrolls sideways on a phone.
 class WebTable extends StatelessWidget {
-  const WebTable({super.key, required this.columns, required this.rows});
+  const WebTable({super.key, required this.columns, required this.rows, this.highlightRows = const {}, this.groupRows = const {}});
 
   final List<WebColumn> columns;
   final List<List<Widget>> rows;
+
+  /// Rows shown with the light red background (`bg-red-50/40`).
+  final Set<int> highlightRows;
+
+  /// A `bg-stone-50` heading row shown before the row with that index (grouped lists).
+  final Map<int, Widget> groupRows;
 
   @override
   Widget build(BuildContext context) {
@@ -790,13 +819,28 @@ class WebTable extends StatelessWidget {
                       ),
                   ],
                 ),
-                for (var i = 0; i < rows.length; i++)
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (groupRows.containsKey(i))
+                    TableRow(
+                      decoration: BoxDecoration(color: p.stone50, border: i == 0 ? null : Border(top: BorderSide(color: p.stone50))),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: _SpanRow(child: groupRows[i]!),
+                        ),
+                        for (var c = 1; c < columns.length; c++) const SizedBox.shrink(),
+                      ],
+                    ),
                   TableRow(
-                    decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: p.stone50))),
+                    decoration: BoxDecoration(
+                      color: highlightRows.contains(i) ? Tone.red.background(context).withValues(alpha: 0.4) : null,
+                      border: i == 0 ? null : Border(top: BorderSide(color: p.stone50)),
+                    ),
                     children: [
                       for (var c = 0; c < columns.length; c++) cell(columns[c], rows[i][c], const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
                     ],
                   ),
+                ],
               ],
             ),
           ),
@@ -828,18 +872,24 @@ class CellText extends StatelessWidget {
 
 /// The website's `Button variant="secondary" size="sm"`.
 class SmallButton extends StatelessWidget {
-  const SmallButton(this.label, {super.key, required this.onPressed, this.primary = false});
+  const SmallButton(this.label, {super.key, required this.onPressed, this.primary = false, this.ghost = false});
 
   final String label;
   final VoidCallback? onPressed;
   final bool primary;
 
+  /// `variant="ghost"`: no border or fill, `text-stone-600`.
+  final bool ghost;
+
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     return Material(
-      color: primary ? const Color(0xFF481F0D) : p.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: primary ? BorderSide.none : BorderSide(color: p.border)),
+      color: primary ? const Color(0xFF481F0D) : ghost ? Colors.transparent : p.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: primary || ghost ? BorderSide.none : BorderSide(color: p.border),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onPressed,
