@@ -1,5 +1,5 @@
 name: kitchenlink_mobile
-description: "A new Flutter project."
+description: "KitchenLink Kitchen: the vendor app for managing orders, menu, wallet and kitchen settings."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,6 +34,14 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_riverpod: ^3.4.3
+  go_router: ^18.1.2
+  dio: ^5.11.1
+  flutter_secure_storage: ^11.2.0
+  image_picker: ^1.2.4
+  file_picker: ^13.3.2
+  url_launcher: ^6.3.3
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
