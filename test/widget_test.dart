@@ -1,30 +1,57 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:kitchenlink_mobile/main.dart';
+import 'package:kitchenlink_mobile/nav/admin_nav.dart';
+import 'package:kitchenlink_mobile/ui/format.dart';
+import 'package:kitchenlink_mobile/ui/validation.dart';
+import 'package:kitchenlink_mobile/ui/vendor_types.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('notification links', () {
+    test('open the matching page with its parameters', () {
+      final route = AdminRoute.fromLink('/admin-dashboard/orders?order=abc123');
+      expect(route.page.id, 'orders');
+      expect(route.params['order'], 'abc123');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('settings and the dashboard root', () {
+      expect(AdminRoute.fromLink('/admin-dashboard/settings').page.id, 'settings/profile');
+      expect(AdminRoute.fromLink('/admin-dashboard').page.id, 'overview');
+      expect(AdminRoute.fromLink('/admin-dashboard/deliveries?tab=late').params['tab'], 'late');
+    });
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  group('permissions', () {
+    bool can(String p) => p == 'orders:read';
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('a page needs its permission', () {
+      expect(Pages.orders.allowed(can: can, isOwner: false), isTrue);
+      expect(Pages.vendors.allowed(can: can, isOwner: false), isFalse);
+    });
+
+    test('owner pages are for the owner only', () {
+      expect(Pages.platform.allowed(can: can, isOwner: false), isFalse);
+      expect(Pages.platform.allowed(can: (_) => true, isOwner: true), isTrue);
+    });
+  });
+
+  test('money is shown as the website does', () {
+    expect(formatRwf(2500), '2,500 RWF');
+    expect(formatRwf(null), '0 RWF');
+    expect(toTitle('out_for_delivery'), 'Out For Delivery');
+  });
+
+  test('Rwandan phones and emails follow the website rules', () {
+    expect(isValidRwandaPhone('0788123456'), isTrue);
+    expect(isValidRwandaPhone('+250731234567'), isTrue);
+    expect(isValidRwandaPhone('0712345678'), isFalse);
+    expect(sanitizePhoneInput('07 88-12a3456789'), '0788123456');
+    expect(isValidEmail('admin@foodkitchen.rw'), isTrue);
+    expect(isValidEmail('admin@@x'), isFalse);
+  });
+
+  test('legacy vendor type labels map to codes', () {
+    expect(vendorTypeOf('Home Cook').code, 'home_cook');
+    expect(vendorTypeOf('Juice/Drinks vendor').code, 'juice_drinks');
+    expect(vendorTypeOf('something new').code, 'other');
   });
 }
