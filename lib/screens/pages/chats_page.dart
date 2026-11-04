@@ -5,6 +5,7 @@ import '../../api/api_client.dart';
 import '../../state/admin_session.dart';
 import '../../ui/format.dart';
 import '../../ui/query.dart';
+import '../../ui/theme.dart';
 import '../../ui/vendor_types.dart';
 import '../../ui/widgets.dart';
 
@@ -46,56 +47,93 @@ class _ChatsPageState extends State<ChatsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     return PageBody(onRefresh: query.load, children: [
       const PageHeader(
         title: 'Customer–Kitchen Chats',
         description: 'Read the conversations between customers and kitchens when handling a complaint or refund. '
             'Read only — support cannot write in these chats.',
       ),
-      SearchField(
-        hint: 'Search by customer or kitchen name or phone…',
-        onSubmit: (value) {
-          setState(() {
-            applied = value;
-            page = 1;
-          });
-          query.load();
-        },
+      SectionCard(
+        padding: const EdgeInsets.all(16),
+        // `relative max-w-md`.
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 448),
+            child: WebSearchInput(
+              hint: 'Search by customer or kitchen name or phone…',
+              onSubmit: (value) {
+                setState(() {
+                  applied = value;
+                  page = 1;
+                });
+                query.load();
+              },
+            ),
+          ),
+        ),
       ),
-      QueryView<Json>(
-        query: query,
-        builder: (context, data) {
-          final items = jlist(data['items']);
-          if (items.isEmpty) {
-            return Card(
-              child: EmptyState(
+      SectionCard(
+        child: QueryView<Json>(
+          query: query,
+          builder: (context, data) {
+            final items = jlist(data['items']);
+            if (items.isEmpty) {
+              return EmptyState(
                 icon: Icons.forum_outlined,
                 title: 'No chats found',
                 description: applied.isNotEmpty ? 'Try another name or phone.' : 'No customer has messaged a kitchen yet.',
+              );
+            }
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              WebTable(
+                columns: const [
+                  WebColumn('Customer'),
+                  WebColumn('Kitchen'),
+                  WebColumn('Last message', nowrap: true),
+                  WebColumn('Messages', nowrap: true),
+                  WebColumn('', alignEnd: true, nowrap: true),
+                ],
+                rows: [
+                  for (final chat in items)
+                    [
+                      CellText(jstr(jmap(chat['customer'])['name']), sub: jstr(jmap(chat['customer'])['phone'])),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        Text(jstr(jmap(chat['vendor'])['name']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                        if (jmap(chat['vendor'])['vendor_type'] != null) ...[
+                          const SizedBox(height: 4),
+                          VendorTypeBadge(jmap(chat['vendor'])['vendor_type'], small: true),
+                        ],
+                      ]),
+                      // `max-w-xs` with the preview cut to one line.
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          Text.rich(
+                            TextSpan(children: [
+                              TextSpan(text: chat['last_message_role'] == 'vendor' ? 'Kitchen: ' : 'Customer: ', style: TextStyle(color: p.faint)),
+                              TextSpan(text: jstr(chat['last_message_preview'])),
+                            ]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 14, color: p.textSecondary),
+                          ),
+                          Text(formatDate(chat['last_message_at']), style: TextStyle(fontSize: 11, color: p.faint)),
+                        ]),
+                      ),
+                      Text('${jint(chat['messages_count'])}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.textSecondary)),
+                      SmallButton('Read', icon: Icons.visibility_outlined, ghost: true, onPressed: () => _open(jstr(chat['id']))),
+                    ],
+                ],
               ),
-            );
-          }
-          return RecordList(
-            footer: Pager.of(data, onPage: (next) {
-              setState(() => page = next);
-              query.load();
-            }),
-            children: [
-              for (final chat in items)
-                RecordTile(
-                  title: '${jstr(jmap(chat['customer'])['name'])} ↔ ${jstr(jmap(chat['vendor'])['name'])}',
-                  subtitle: jstr(jmap(chat['customer'])['phone']),
-                  trailing: '${jint(chat['messages_count'])}',
-                  badges: [if (jmap(chat['vendor'])['vendor_type'] != null) VendorTypeBadge(jmap(chat['vendor'])['vendor_type'])],
-                  lines: [
-                    '${chat['last_message_role'] == 'vendor' ? 'Kitchen: ' : 'Customer: '}${jstr(chat['last_message_preview'])}',
-                    formatDate(chat['last_message_at']),
-                  ],
-                  onTap: () => _open(jstr(chat['id'])),
-                ),
-            ],
-          );
-        },
+              Pager.of(data, onPage: (next) {
+                setState(() => page = next);
+                query.load();
+              }),
+            ]);
+          },
+        ),
       ),
     ]);
   }

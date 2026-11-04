@@ -57,6 +57,8 @@ class _PaymentsPageState extends State<PaymentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final viewport = MediaQuery.sizeOf(context).width;
     return PageBody(
       onRefresh: () async {
         await Future.wait([paymentsQuery.load(), summaryQuery.load(silent: true), commissionsQuery.load(silent: true)]);
@@ -68,59 +70,73 @@ class _PaymentsPageState extends State<PaymentsPage> {
           builder: (context, _) {
             final summary = summaryQuery.data;
             if (summary == null) return const SizedBox.shrink();
-            return ResponsiveGrid(children: [
-              StatCard(label: 'Successful Total', value: formatRwf(summary['successful_total_rwf']), tone: Tone.green),
-              StatCard(label: 'Successful Count', value: formatNumber(summary['successful_count']), tone: Tone.green),
+            // `grid-cols-2 lg:grid-cols-4 gap-3`.
+            return ResponsiveGrid(minWidth: 1, maxColumns: viewport >= 1024 ? 4 : 2, children: [
+              StatCard(label: 'Successful Total', value: formatRwf(summary['successful_total_rwf'])),
+              StatCard(label: 'Successful Count', value: formatNumber(summary['successful_count'])),
               for (final row in jlist(summary['by_status']).take(2))
-                StatCard(label: toTitle(row['status']), value: formatRwf(row['total_rwf']), hint: '${jint(row['count'])} payments', tone: Tone.blue),
+                StatCard(label: toTitle(row['status']), value: formatRwf(row['total_rwf']), hint: '${jint(row['count'])} payments'),
             ]);
           },
         ),
         SectionCard(
           title: 'Transactions',
-          padding: const EdgeInsets.all(10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-            Row(children: [
-              Expanded(
-                child: Dropdown<String>(
-                  value: status,
-                  options: {'': 'All statuses', for (final s in _paymentStatuses) s: toTitle(s)},
-                  onChanged: (value) => apply(() => status = value),
-                ),
+          // Two small selects in the card header (`!py-1.5 text-xs`).
+          action: Row(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(
+              width: 138,
+              child: WebSelect<String>(
+                dense: true,
+                value: status,
+                options: {'': 'All statuses', for (final s in _paymentStatuses) s: toTitle(s)},
+                onChanged: (value) => apply(() => status = value),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Dropdown<String>(
-                  value: method,
-                  options: const {'': 'All methods', 'mobile_money': 'Mobile Money', 'card': 'Card', 'ekash': 'eKash', 'cash': 'Cash'},
-                  onChanged: (value) => apply(() => method = value),
-                ),
-              ),
-            ]),
-            QueryView<Json>(
-              query: paymentsQuery,
-              builder: (context, data) {
-                final items = jlist(data['items']);
-                if (items.isEmpty) return const EmptyState(icon: Icons.credit_card_outlined, title: 'No payments found');
-                return RecordList(
-                  footer: Pager.of(data, onPage: (next) {
-                    setState(() => page = next);
-                    paymentsQuery.load();
-                  }),
-                  children: [
-                    for (final payment in items)
-                      RecordTile(
-                        title: jstr(payment['order_number'], '—'),
-                        subtitle: jstr(jmap(payment['customer'])['name'], '—'),
-                        trailing: formatRwf(payment['amount_rwf']),
-                        badges: [StatusBadge(jstr(payment['status'])), ToneBadge(toTitle(payment['provider'] ?? payment['method']))],
-                        lines: [formatDate(payment['created_at'])],
-                      ),
-                  ],
-                );
-              },
             ),
-          ])),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 138,
+              child: WebSelect<String>(
+                dense: true,
+                value: method,
+                options: const {'': 'All methods', 'mobile_money': 'Mobile Money', 'card': 'Card', 'ekash': 'eKash', 'cash': 'Cash'},
+                onChanged: (value) => apply(() => method = value),
+              ),
+            ),
+          ]),
+          child: QueryView<Json>(
+            query: paymentsQuery,
+            builder: (context, data) {
+              final items = jlist(data['items']);
+              if (items.isEmpty) return const EmptyState(icon: Icons.credit_card_outlined, title: 'No payments found');
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                WebTable(
+                  columns: const [
+                    WebColumn('Order', nowrap: true),
+                    WebColumn('Customer'),
+                    WebColumn('Amount', nowrap: true),
+                    WebColumn('Method'),
+                    WebColumn('Status', nowrap: true),
+                    WebColumn('Date'),
+                  ],
+                  rows: [
+                    for (final payment in items)
+                      [
+                        Text(jstr(payment['order_number'], '—'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                        Text(jstr(jmap(payment['customer'])['name'], '—'), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                        Text(formatRwf(payment['amount_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                        Text(toTitle(payment['provider'] ?? payment['method']), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                        StatusBadge(jstr(payment['status'])),
+                        Text(formatDate(payment['created_at']), style: TextStyle(fontSize: 12, color: p.muted)),
+                      ],
+                  ],
+                ),
+                Pager.of(data, onPage: (next) {
+                  setState(() => page = next);
+                  paymentsQuery.load();
+                }),
+              ]);
+            },
+          ),
         ),
         if (canSeeCommissions)
           SectionCard(
@@ -129,13 +145,8 @@ class _PaymentsPageState extends State<PaymentsPage> {
                 ? 'Most specific active scope wins: vendor › category › vendor type › global.'
                 : 'Only the owner can change the commission rate.',
             action: canEditCommissions
-                ? FilledButton.icon(
-                    onPressed: () => showAppSheet(context, const _CommissionSheet()),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('New rule'),
-                  )
+                ? WebButton(label: 'New rule', icon: Icons.add, small: true, onPressed: () => showAppSheet(context, const _CommissionSheet()))
                 : null,
-            padding: const EdgeInsets.all(10),
             child: QueryView<Json>(
               query: commissionsQuery,
               builder: (context, data) {
@@ -143,39 +154,54 @@ class _PaymentsPageState extends State<PaymentsPage> {
                 if (items.isEmpty) {
                   return const EmptyState(icon: Icons.percent, title: 'No commission rules', description: 'Create a global rule to get started.');
                 }
-                return RecordList(children: [
-                  for (final rule in items)
-                    RecordTile(
-                      title: jstr(rule['name']),
-                      subtitle: jstr(rule['vendor_name'], jstr(rule['category_name'], jstr(rule['vendor_type_label'], jstr(rule['vendor_type'], 'All')))),
-                      trailing: '${jstr(rule['percentage'], '0')}%${jint(rule['fixed_fee_rwf']) > 0 ? ' + ${formatRwf(rule['fixed_fee_rwf'])}' : ''}',
-                      badges: [
+                return WebTable(
+                  columns: const [
+                    WebColumn('Name'),
+                    WebColumn('Scope', nowrap: true),
+                    WebColumn('Target'),
+                    WebColumn('Rate', nowrap: true),
+                    WebColumn('Active', nowrap: true),
+                    WebColumn('', alignEnd: true, nowrap: true),
+                  ],
+                  rows: [
+                    for (final rule in items)
+                      [
+                        Text(jstr(rule['name']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
                         ToneBadge(toTitle(rule['scope']), tone: Tone.violet),
+                        Text(
+                          jstr(rule['vendor_name'], jstr(rule['category_name'], jstr(rule['vendor_type_label'], jstr(rule['vendor_type'], 'All')))),
+                          style: TextStyle(fontSize: 14, color: p.textSecondary),
+                        ),
+                        Text.rich(TextSpan(children: [
+                          TextSpan(text: '${jstr(rule['percentage'], '0')}%', style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
+                          if (jint(rule['fixed_fee_rwf']) > 0)
+                            TextSpan(text: ' + ${formatRwf(rule['fixed_fee_rwf'])}', style: TextStyle(fontSize: 11, color: p.faint)),
+                        ]), style: const TextStyle(fontSize: 14)),
                         ToneBadge(rule['is_active'] == true ? 'Active' : 'Inactive', tone: rule['is_active'] == true ? Tone.green : Tone.slate),
+                        canEditCommissions
+                            ? Row(mainAxisSize: MainAxisSize.min, children: [
+                                SmallButton('Edit', ghost: true, onPressed: () => showAppSheet(context, _CommissionSheet(rule: rule))),
+                                const SizedBox(width: 6),
+                                SmallButton('', icon: Icons.delete_outline, ghost: true, danger: true, onPressed: () => _deleteRule(rule)),
+                              ])
+                            : const SizedBox.shrink(),
                       ],
-                      actions: canEditCommissions
-                          ? [
-                              OutlinedButton(onPressed: () => showAppSheet(context, _CommissionSheet(rule: rule)), child: const Text('Edit')),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-                                onPressed: () async {
-                                  if (!await confirmDialog(context, 'Delete commission rule “${jstr(rule['name'])}”?', confirm: 'Delete', danger: true)) return;
-                                  try {
-                                    await session.api.deleteCommission(jstr(rule['id']));
-                                  } catch (err) {
-                                    if (context.mounted) showToast(context, ErrorNote.messageOf(err));
-                                  }
-                                },
-                              ),
-                            ]
-                          : const [],
-                    ),
-                ]);
+                  ],
+                );
               },
             ),
           ),
       ],
     );
+  }
+
+  Future<void> _deleteRule(Json rule) async {
+    if (!await confirmDialog(context, 'Delete commission rule “${jstr(rule['name'])}”?', confirm: 'Delete', danger: true)) return;
+    try {
+      await session.api.deleteCommission(jstr(rule['id']));
+    } catch (err) {
+      if (mounted) showToast(context, ErrorNote.messageOf(err));
+    }
   }
 }
 

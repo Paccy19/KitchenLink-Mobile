@@ -88,89 +88,126 @@ class _DriversPageState extends State<DriversPage> {
           builder: (context, _) {
             final counts = countsQuery.data;
             if (counts == null) return const SizedBox.shrink();
-            return ResponsiveGrid(children: [
+            // `grid-cols-2 lg:grid-cols-4 gap-3`.
+            return ResponsiveGrid(minWidth: 1, maxColumns: MediaQuery.sizeOf(context).width >= 1024 ? 4 : 2, children: [
               StatCard(label: 'Total', value: formatNumber(counts['total'])),
-              StatCard(label: 'Online', value: formatNumber(counts['online']), tone: Tone.green),
-              StatCard(label: 'Pending', value: formatNumber(counts['pending']), tone: Tone.amber),
-              StatCard(label: 'Suspended', value: formatNumber(counts['suspended']), tone: Tone.red),
+              StatCard(label: 'Online', value: formatNumber(counts['online'])),
+              StatCard(label: 'Pending', value: formatNumber(counts['pending'])),
+              StatCard(label: 'Suspended', value: formatNumber(counts['suspended'])),
             ]);
           },
         ),
+        _filters(),
         SectionCard(
-          title: 'Filters',
-          child: Column(children: spaced([
-            SearchField(hint: 'Search delivery workers by name or phone…', onSubmit: (value) => apply(() => search = value)),
-            Row(children: [
-              Expanded(
-                child: Dropdown<String>(
-                  value: status,
-                  options: const {'': 'All statuses', 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'suspended': 'Suspended'},
-                  onChanged: (value) => apply(() => status = value),
+          child: QueryView<Json>(
+            query: listQuery,
+            builder: (context, data) {
+              final items = jlist(data['items']);
+              if (items.isEmpty) {
+                return const EmptyState(icon: Icons.pedal_bike_outlined, title: 'No delivery workers found', description: 'Adjust the filters above.');
+              }
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                WebTable(
+                  columns: const [
+                    WebColumn('Delivery worker'),
+                    WebColumn('Contact'),
+                    WebColumn('Status', nowrap: true),
+                    WebColumn('Availability'),
+                    WebColumn('Location'),
+                    WebColumn('Earnings'),
+                    WebColumn('', alignEnd: true, nowrap: true),
+                  ],
+                  rows: [for (final driver in items) _row(driver)],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Dropdown<String>(
-                  value: online,
-                  options: const {'': 'Any availability', 'true': 'Online', 'false': 'Offline'},
-                  onChanged: (value) => apply(() => online = value),
-                ),
-              ),
-            ]),
-          ])),
-        ),
-        QueryView<Json>(
-          query: listQuery,
-          builder: (context, data) {
-            final items = jlist(data['items']);
-            if (items.isEmpty) {
-              return const Card(child: EmptyState(icon: Icons.pedal_bike_outlined, title: 'No delivery workers found', description: 'Adjust the filters above.'));
-            }
-            return RecordList(
-              footer: Pager.of(data, onPage: (next) {
-                setState(() => page = next);
-                listQuery.load();
-              }),
-              children: [for (final driver in items) _row(driver)],
-            );
-          },
+                Pager.of(data, onPage: (next) {
+                  setState(() => page = next);
+                  listQuery.load();
+                }),
+              ]);
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _row(Json driver) {
+  /// `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3`, search spanning two columns.
+  Widget _filters() {
+    final viewport = MediaQuery.sizeOf(context).width;
+    final searchBox = WebSearchInput(hint: 'Search delivery workers by name or phone…', onSubmit: (value) => apply(() => search = value));
+    final statusSelect = WebSelect<String>(
+      value: status,
+      options: const {'': 'All statuses', 'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'suspended': 'Suspended'},
+      onChanged: (value) => apply(() => status = value),
+    );
+    final onlineSelect = WebSelect<String>(
+      value: online,
+      options: const {'': 'Any availability', 'true': 'Online', 'false': 'Offline'},
+      onChanged: (value) => apply(() => online = value),
+    );
+    return SectionCard(
+      title: 'Filters',
+      padding: const EdgeInsets.all(16),
+      child: viewport >= 1024
+          ? Row(children: [
+              Expanded(flex: 2, child: searchBox),
+              const SizedBox(width: 12),
+              Expanded(child: statusSelect),
+              const SizedBox(width: 12),
+              Expanded(child: onlineSelect),
+            ])
+          : viewport >= 640
+              ? Column(children: spaced([
+                  searchBox,
+                  Row(children: [Expanded(child: statusSelect), const SizedBox(width: 12), Expanded(child: onlineSelect)]),
+                ]))
+              : Column(children: spaced([searchBox, statusSelect, onlineSelect])),
+    );
+  }
+
+  List<Widget> _row(Json driver) {
+    final p = Palette.of(context);
     final location = jmap(driver['location']);
     final active = jint(driver['active_deliveries_count']);
-    final hasFix = location['updated_at'] != null;
-    // Orders are only offered to drivers whose phone reported a position recently.
-    final locationLine = hasFix
-        ? 'Location ${formatRelative(location['updated_at'])} · ${location['counts_for_dispatch'] == true ? 'Gets nearby orders' : 'Too old for dispatch'}'
-        : 'Location never shared';
-    return RecordTile(
-      title: jstr(driver['name']),
-      subtitle: '${toTitle(driver['vehicle_type'])}${jstr(driver['plate_number']).isNotEmpty ? ' · ${jstr(driver['plate_number'])}' : ''}',
-      trailing: formatRwf(driver['total_earnings_rwf']),
-      badges: [
-        StatusBadge(jstr(driver['verification_status'])),
+    final plate = jstr(driver['plate_number']);
+    return [
+      CellText(jstr(driver['name']), sub: '${toTitle(driver['vehicle_type'])}${plate.isNotEmpty ? ' · $plate' : ''}'),
+      Text(jstr(driver['phone'], jstr(driver['email'], '—')), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+      StatusBadge(jstr(driver['verification_status'])),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         ToneBadge(driver['is_online'] == true ? 'Online' : 'Offline', tone: driver['is_online'] == true ? Tone.green : Tone.slate),
-        if (active > 0) ToneBadge('$active active deliver${active == 1 ? 'y' : 'ies'}', tone: Tone.orange),
-      ],
-      lines: [
-        jstr(driver['phone'], jstr(driver['email'], '—')),
-        locationLine,
-        '${jint(driver['completed_deliveries'])} deliveries · joined ${formatDate(driver['created_at'], withTime: false)}',
-      ],
-      actions: [
-        if (location['latitude'] != null)
-          TextButton.icon(
-            onPressed: () => openMaps(location['latitude'], location['longitude']),
-            icon: const Icon(Icons.map_outlined, size: 16),
-            label: const Text('Map'),
+        if (active > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '$active active deliver${active == 1 ? 'y' : 'ies'}',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFC2410C)),
+            ),
           ),
-        if (session.can('drivers:write'))
-          OutlinedButton(onPressed: () => _changeStatus(driver), child: const Text('Change status')),
-      ],
-    );
+      ]),
+      // Orders are only offered to drivers whose phone reported a position recently.
+      location['updated_at'] != null
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(formatRelative(location['updated_at']), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.text)),
+              Text(
+                location['counts_for_dispatch'] == true ? 'Gets nearby orders' : 'Too old for dispatch',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: location['counts_for_dispatch'] == true ? const Color(0xFF047857) : p.faint),
+              ),
+              if (location['latitude'] != null)
+                InkWell(
+                  onTap: () => openMaps(location['latitude'], location['longitude']),
+                  child: const Text('Map', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0369A1))),
+                ),
+            ])
+          : Text('Never shared', style: TextStyle(fontSize: 12, color: p.faint)),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text(formatRwf(driver['total_earnings_rwf']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+        Text(
+          '${jint(driver['completed_deliveries'])} deliveries · joined ${formatDate(driver['created_at'], withTime: false)}',
+          style: TextStyle(fontSize: 11, color: p.faint),
+        ),
+      ]),
+      session.can('drivers:write') ? SmallButton('Change status', onPressed: () => _changeStatus(driver)) : const SizedBox.shrink(),
+    ];
   }
 }

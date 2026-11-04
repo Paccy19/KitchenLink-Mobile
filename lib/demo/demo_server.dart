@@ -72,7 +72,8 @@ class DemoServer {
           'phone': '07881${(23450 + i * 7).toString().padLeft(5, '0')}',
           'status': i == 8 ? 'suspended' : 'active',
           'created_at': _ago(Duration(days: 120 - i * 9)),
-          'location': i < 4 ? {'latitude': -1.95 + i * 0.006, 'longitude': 30.09 + i * 0.004, 'accuracy_m': 15, 'updated_at': _ago(Duration(hours: i + 1))} : null,
+          // No demo customer has shared a location, so every row shows "—" (as on the website).
+          'location': null,
         },
     ];
 
@@ -96,8 +97,18 @@ class DemoServer {
       'customers': customers,
       'orders': <Json>[],
       'categories': [
-        for (final (i, name) in ['Local Food', 'Grill & BBQ', 'Breakfast', 'Bakery & Pastry', 'Drinks & Juice', 'Healthy', 'Snacks', 'Desserts'].indexed)
-          {'id': 'cat${i + 1}', 'name': name, 'description': '', 'icon_url': '', 'sort_order': i, 'is_active': i != 7, 'created_by_vendor': i == 6 ? {'name': 'Street Brochette Truck'} : null},
+        // The website demo's categories: all active, each with a description.
+        for (final (i, (name, description)) in const [
+          ('Rwandan', 'Isombe, ibihaza, brochettes and more.'),
+          ('Grills', 'Brochettes, grilled chicken and fish.'),
+          ('Pizza', 'Wood-fired and pan pizzas.'),
+          ('Burgers', 'Burgers, wraps and fries.'),
+          ('Breakfast', 'Morning plates and coffee.'),
+          ('Bakery', 'Bread, cakes and pastries.'),
+          ('Drinks', 'Fresh juices and smoothies.'),
+          ('Healthy', 'Salads and balanced bowls.'),
+        ].indexed)
+          {'id': 'cat${i + 1}', 'name': name, 'description': description, 'icon_url': '', 'sort_order': i, 'is_active': true, 'created_by_vendor': null},
       ],
       'complaints': <Json>[],
       'chats': <Json>[],

@@ -77,65 +77,105 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   Widget build(BuildContext context) {
     final canWrite = session.can('categories:write');
+    final p = Palette.of(context);
     return PageBody(onRefresh: query.load, children: [
       PageHeader(
         title: 'Categories',
         description: 'Organise how dishes and vendors are grouped across the marketplace.',
-        action: canWrite ? FilledButton.icon(onPressed: () => edit(), icon: const Icon(Icons.add, size: 18), label: const Text('New')) : null,
+        action: canWrite ? WebButton(label: 'New category', icon: Icons.add, onPressed: () => edit()) : null,
       ),
       if (error != null) ErrorNote(error: error),
-      QueryView<Json>(
-        query: query,
-        builder: (context, data) {
-          final items = categories;
-          if (items.isEmpty) {
-            return Card(
-              child: EmptyState(
+      SectionCard(
+        child: QueryView<Json>(
+          query: query,
+          builder: (context, data) {
+            final items = categories;
+            if (items.isEmpty) {
+              return EmptyState(
                 icon: Icons.sell_outlined,
                 title: 'No categories yet',
                 description: 'Create your first category to organise the marketplace.',
-                action: canWrite ? FilledButton(onPressed: () => edit(), child: const Text('New category')) : null,
-              ),
+                action: canWrite ? WebButton(label: 'New category', onPressed: () => edit()) : null,
+              );
+            }
+            return WebTable(
+              columns: const [
+                WebColumn('Category'),
+                WebColumn('Order', nowrap: true),
+                WebColumn('Status', nowrap: true),
+                WebColumn('', alignEnd: true, nowrap: true),
+              ],
+              rows: [
+                for (var i = 0; i < items.length; i++)
+                  [
+                    Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _icon(jstr(items[i]['icon_url'])),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                            Text(jstr(items[i]['name']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text)),
+                            if (items[i]['created_by_vendor'] is Map)
+                              ToneBadge('Added by ${jstr(jmap(items[i]['created_by_vendor'])['name'])}', tone: Tone.amber),
+                          ]),
+                          if (jstr(items[i]['description']).isNotEmpty)
+                            Text(jstr(items[i]['description']), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: p.faint)),
+                        ]),
+                      ),
+                    ]),
+                    // Moving rows changes the marketplace order (`sort_order`).
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (canWrite) _arrow(Icons.arrow_upward, i == 0 ? null : () => move(i, -1)),
+                      SizedBox(
+                        width: 24,
+                        child: Text(jstr(items[i]['sort_order'], '0'),
+                            textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.muted)),
+                      ),
+                      if (canWrite) _arrow(Icons.arrow_downward, i == items.length - 1 ? null : () => move(i, 1)),
+                    ]),
+                    ToneBadge(items[i]['is_active'] == true ? 'Active' : 'Hidden', tone: items[i]['is_active'] == true ? Tone.green : Tone.slate),
+                    canWrite
+                        ? Row(mainAxisSize: MainAxisSize.min, children: [
+                            SmallButton('Edit', ghost: true, onPressed: () => edit(items[i])),
+                            const SizedBox(width: 6),
+                            _arrow(Icons.delete_outline, () => remove(items[i]), color: AppColors.red500),
+                          ])
+                        : const SizedBox.shrink(),
+                  ],
+              ],
             );
-          }
-          return RecordList(children: [
-            for (var i = 0; i < items.length; i++)
-              RecordTile(
-                leading: _icon(jstr(items[i]['icon_url'])),
-                title: jstr(items[i]['name']),
-                subtitle: jstr(items[i]['description']),
-                badges: [
-                  ToneBadge(items[i]['is_active'] == true ? 'Active' : 'Hidden', tone: items[i]['is_active'] == true ? Tone.green : Tone.slate),
-                  ToneBadge('Order ${jstr(items[i]['sort_order'], '0')}'),
-                  if (items[i]['created_by_vendor'] is Map)
-                    ToneBadge('Added by ${jstr(jmap(items[i]['created_by_vendor'])['name'])}', tone: Tone.amber),
-                ],
-                actions: canWrite
-                    ? [
-                        IconButton.outlined(onPressed: i == 0 ? null : () => move(i, -1), icon: const Icon(Icons.arrow_upward, size: 16)),
-                        IconButton.outlined(onPressed: i == items.length - 1 ? null : () => move(i, 1), icon: const Icon(Icons.arrow_downward, size: 16)),
-                        OutlinedButton(onPressed: () => edit(items[i]), child: const Text('Edit')),
-                        IconButton(onPressed: () => remove(items[i]), icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444))),
-                      ]
-                    : const [],
-              ),
-          ]);
-        },
+          },
+        ),
       ),
     ]);
   }
 
-  Widget _icon(String url) {
-    final fallback = Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(9)),
-      child: const Icon(Icons.sell_outlined, size: 16),
+  /// A `ghost sm` icon button (`px-2.5 py-1.5`), faded when it can't be used.
+  Widget _arrow(IconData icon, VoidCallback? onTap, {Color? color}) {
+    final p = Palette.of(context);
+    return Opacity(
+      opacity: onTap == null ? 0.6 : 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), child: Icon(icon, size: 14, color: color ?? p.textSecondary)),
+      ),
     );
-    if (url.isEmpty) return fallback;
+  }
+
+  /// The category picture, or `w-8 h-8 rounded-lg bg-stone-100` with a tag icon.
+  Widget _icon(String url) {
+    final p = Palette.of(context);
+    final fallback = Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(color: p.stone100, borderRadius: BorderRadius.circular(8)),
+      child: Icon(Icons.sell_outlined, size: 16, color: p.faint),
+    );
+    if (url.isEmpty || !url.startsWith('http')) return fallback;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(9),
-      child: Image.network(url, width: 34, height: 34, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(url, width: 32, height: 32, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
     );
   }
 }

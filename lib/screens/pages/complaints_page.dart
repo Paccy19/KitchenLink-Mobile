@@ -71,94 +71,107 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final viewport = MediaQuery.sizeOf(context).width;
+    final p = Palette.of(context);
+    final filters = [
+      WebSearchInput(hint: 'Search subject or reference…', onSubmit: (value) => apply(() => search = value)),
+      WebSelect<String>(
+        value: status,
+        options: {'': 'All statuses', for (final s in _statuses) s: toTitle(s)},
+        onChanged: (value) => apply(() => status = value),
+      ),
+      WebSelect<String>(
+        value: category,
+        options: {'': 'All categories', for (final c in _categories) c: toTitle(c)},
+        onChanged: (value) => apply(() => category = value),
+      ),
+      WebSelect<String>(
+        value: priority,
+        options: {'': 'All priorities', for (final pr in _priorities) pr: toTitle(pr)},
+        onChanged: (value) => apply(() => priority = value),
+      ),
+    ];
+
     return PageBody(onRefresh: query.load, children: [
       PageHeader(
         title: 'Support & Complaints',
         description: 'Conversations with customers, vendors and delivery workers who need help. Unread ones are on top.',
         action: session.can('complaints:write')
-            ? FilledButton.icon(
-                onPressed: () => showAppSheet(context, const _CreateSheet()),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Log'),
-              )
+            ? WebButton(label: 'Log complaint', icon: Icons.add, onPressed: () => showAppSheet(context, const _CreateSheet()))
             : null,
       ),
       ListenableBuilder(
         listenable: query,
         builder: (context, _) {
           final counts = jmap(query.data?['counts']);
-          return ResponsiveGrid(minWidth: 110, children: [
-            StatCard(label: 'New messages', value: formatNumber(counts['unread']), tone: Tone.red),
+          // `grid-cols-2 lg:grid-cols-5 gap-3`.
+          return ResponsiveGrid(minWidth: 1, maxColumns: viewport >= 1024 ? 5 : 2, children: [
+            StatCard(label: 'New messages', value: formatNumber(counts['unread'])),
             for (final s in _statuses) StatCard(label: toTitle(s), value: formatNumber(counts[s])),
           ]);
         },
       ),
       SectionCard(
         title: 'Filters',
-        child: Column(children: spaced([
-          SearchField(hint: 'Search subject or reference…', onSubmit: (value) => apply(() => search = value)),
-          Dropdown<String>(
-            value: status,
-            options: {'': 'All statuses', for (final s in _statuses) s: toTitle(s)},
-            onChanged: (value) => apply(() => status = value),
-          ),
-          Row(children: [
-            Expanded(
-              child: Dropdown<String>(
-                value: category,
-                options: {'': 'All categories', for (final c in _categories) c: toTitle(c)},
-                onChanged: (value) => apply(() => category = value),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Dropdown<String>(
-                value: priority,
-                options: {'': 'All priorities', for (final p in _priorities) p: toTitle(p)},
-                onChanged: (value) => apply(() => priority = value),
-              ),
-            ),
-          ]),
-        ])),
+        padding: const EdgeInsets.all(16),
+        // `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3`.
+        child: ResponsiveGrid(minWidth: 1, maxColumns: viewport >= 1024 ? 4 : viewport >= 640 ? 2 : 1, equalHeights: false, children: filters),
       ),
-      QueryView<Json>(
-        query: query,
-        builder: (context, data) {
-          final items = jlist(data['items']);
-          if (items.isEmpty) {
-            return const Card(child: EmptyState(icon: Icons.report_outlined, title: 'No complaints', description: 'All clear for now.'));
-          }
-          return RecordList(
-            footer: Pager.of(data, onPage: (next) {
-              setState(() => page = next);
-              query.load();
-            }),
-            children: [
-              for (final row in items)
-                RecordTile(
-                  leading: row['unread'] == true ? const Padding(padding: EdgeInsets.only(top: 6), child: CircleAvatar(radius: 4, backgroundColor: Color(0xFFEF4444))) : null,
-                  title: jstr(row['subject']),
-                  subtitle: '${jstr(row['reference'])}${jlist(row['messages']).isNotEmpty ? ' · ${jlist(row['messages']).length} message${jlist(row['messages']).length > 1 ? 's' : ''}' : ''}',
-                  badges: [
-                    ToneBadge(_roleLabel[jmap(row['raised_by'])['role']] ?? 'Guest', tone: _roleTone[jmap(row['raised_by'])['role']] ?? Tone.slate),
-                    StatusBadge(jstr(row['status'])),
-                    ToneBadge(toTitle(row['priority']), tone: _priorityTone[row['priority']] ?? Tone.slate),
-                    ToneBadge(toTitle(row['category'])),
-                  ],
-                  lines: [
-                    jstr(jmap(row['raised_by'])['name'], jstr(jmap(row['raised_by'])['phone'])),
-                    'Last activity ${formatDate(row['last_message_at'] ?? row['created_at'])}',
-                  ],
-                  onTap: () => _open(jstr(row['id'])),
-                  actions: [
-                    row['unread'] == true
-                        ? FilledButton(onPressed: () => _open(jstr(row['id'])), child: const Text('Reply'))
-                        : OutlinedButton(onPressed: () => _open(jstr(row['id'])), child: const Text('Open')),
-                  ],
-                ),
-            ],
-          );
-        },
+      SectionCard(
+        child: QueryView<Json>(
+          query: query,
+          builder: (context, data) {
+            final items = jlist(data['items']);
+            if (items.isEmpty) {
+              return const EmptyState(icon: Icons.report_outlined, title: 'No complaints', description: 'All clear for now.');
+            }
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              WebTable(
+                columns: const [
+                  WebColumn('Subject'),
+                  WebColumn('From'),
+                  WebColumn('Category'),
+                  WebColumn('Priority', nowrap: true),
+                  WebColumn('Status', nowrap: true),
+                  WebColumn('Last activity'),
+                  WebColumn('', alignEnd: true, nowrap: true),
+                ],
+                rows: [
+                  for (final row in items)
+                    [
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (row['unread'] == true) ...[
+                            Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.red500, shape: BoxShape.circle)),
+                            const SizedBox(width: 6),
+                          ],
+                          Flexible(child: Text(jstr(row['subject']), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.text))),
+                        ]),
+                        Text(
+                          '${jstr(row['reference'])}${jlist(row['messages']).isNotEmpty ? ' · ${jlist(row['messages']).length} message${jlist(row['messages']).length > 1 ? 's' : ''}' : ''}',
+                          style: TextStyle(fontSize: 11, color: p.faint),
+                        ),
+                      ]),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        ToneBadge(_roleLabel[jmap(row['raised_by'])['role']] ?? 'Guest', tone: _roleTone[jmap(row['raised_by'])['role']] ?? Tone.slate),
+                        const SizedBox(height: 2),
+                        Text(jstr(jmap(row['raised_by'])['name'], jstr(jmap(row['raised_by'])['phone'])), style: TextStyle(fontSize: 11, color: p.muted)),
+                      ]),
+                      Text(toTitle(row['category']), style: TextStyle(fontSize: 14, color: p.textSecondary)),
+                      ToneBadge(toTitle(row['priority']), tone: _priorityTone[row['priority']] ?? Tone.slate),
+                      StatusBadge(jstr(row['status'])),
+                      Text(formatDate(row['last_message_at'] ?? row['created_at']), style: TextStyle(fontSize: 12, color: p.muted)),
+                      SmallButton(row['unread'] == true ? 'Reply' : 'Open', primary: row['unread'] == true, onPressed: () => _open(jstr(row['id']))),
+                    ],
+                ],
+              ),
+              Pager.of(data, onPage: (next) {
+                setState(() => page = next);
+                query.load();
+              }),
+            ]);
+          },
+        ),
       ),
     ]);
   }

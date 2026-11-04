@@ -64,18 +64,25 @@ class PageHeader extends StatelessWidget {
     final p = Palette.of(context);
     // `sm:text-2xl` / `sm:text-sm` from 640px.
     final sm = isSm(context);
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(title, style: TextStyle(fontSize: sm ? 24 : 20, height: sm ? 1.33 : 1.4, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: p.text)),
-          if (description != null) ...[
-            const SizedBox(height: 2),
-            Text(description!, style: TextStyle(fontSize: sm ? 14 : 12, height: sm ? 1.43 : 1.33, color: p.muted)),
-          ],
-        ]),
-      ),
-      if (action != null) ...[const SizedBox(width: 12), action!],
+    final heading = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text(title, style: TextStyle(fontSize: sm ? 24 : 20, height: sm ? 1.33 : 1.4, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: p.text)),
+      if (description != null) ...[
+        const SizedBox(height: 2),
+        Text(description!, style: TextStyle(fontSize: sm ? 14 : 12, height: sm ? 1.43 : 1.33, color: p.muted)),
+      ],
     ]);
+    if (action == null) return heading;
+    // `flex flex-wrap justify-between gap-3`: the button sits on the right, and
+    // drops below the title when they don't fit side by side.
+    return LayoutBuilder(builder: (context, constraints) {
+      return Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.start,
+        spacing: 12,
+        runSpacing: 12,
+        children: [ConstrainedBox(constraints: BoxConstraints(maxWidth: constraints.maxWidth), child: heading), action!],
+      );
+    });
   }
 }
 
@@ -870,9 +877,45 @@ class CellText extends StatelessWidget {
   }
 }
 
+/// The website's primary `Button`: brown gradient, `px-4 py-2 text-xs font-bold rounded-xl shadow-sm`.
+class WebButton extends StatelessWidget {
+  const WebButton({super.key, required this.label, required this.onPressed, this.icon, this.small = false});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  /// `size="sm"`: `px-2.5 py-1.5 text-[11px]`.
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: onPressed == null ? 0.6 : 1,
+      child: DecoratedBox(
+        decoration: BoxDecoration(gradient: AppColors.buttonGradient, borderRadius: BorderRadius.circular(12), boxShadow: AppColors.shadowSm),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onPressed,
+            child: Padding(
+              padding: small ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6) : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (icon != null) ...[Icon(icon, size: small ? 14 : 16, color: Colors.white), SizedBox(width: small ? 4 : 6)],
+                Text(label, style: TextStyle(fontSize: small ? 11 : 12, fontWeight: FontWeight.w700, color: Colors.white)),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The website's `Button variant="secondary" size="sm"`.
 class SmallButton extends StatelessWidget {
-  const SmallButton(this.label, {super.key, required this.onPressed, this.primary = false, this.ghost = false});
+  const SmallButton(this.label, {super.key, required this.onPressed, this.primary = false, this.ghost = false, this.danger = false, this.icon});
 
   final String label;
   final VoidCallback? onPressed;
@@ -881,9 +924,16 @@ class SmallButton extends StatelessWidget {
   /// `variant="ghost"`: no border or fill, `text-stone-600`.
   final bool ghost;
 
+  /// Secondary with red text (`!text-red-600`), e.g. "Erase data".
+  final bool danger;
+
+  /// A 16px icon before the label (e.g. the eye on "Read").
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
+    final color = primary ? Colors.white : danger ? AppColors.red600 : p.textSecondary;
     return Material(
       color: primary ? const Color(0xFF481F0D) : ghost ? Colors.transparent : p.card,
       shape: RoundedRectangleBorder(
@@ -895,7 +945,12 @@ class SmallButton extends StatelessWidget {
         onTap: onPressed,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: primary ? Colors.white : p.textSecondary)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon != null) Icon(icon, size: label.isEmpty ? 14 : 16, color: color),
+            if (icon != null && label.isNotEmpty) const SizedBox(width: 6),
+            if (label.isNotEmpty)
+              Flexible(child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color))),
+          ]),
         ),
       ),
     );
@@ -960,24 +1015,28 @@ class _WebSearchInputState extends State<WebSearchInput> {
 
 /// The website's Select: an input-styled box showing the chosen option.
 class WebSelect<T> extends StatelessWidget {
-  const WebSelect({super.key, required this.value, required this.options, required this.onChanged});
+  const WebSelect({super.key, required this.value, required this.options, required this.onChanged, this.dense = false});
 
   final T value;
   final Map<T, String> options;
   final ValueChanged<T> onChanged;
 
+  /// The compact card-header size (`!py-1.5 text-xs`).
+  final bool dense;
+
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
+    final decoration = webInputDecoration(context);
     return DropdownButtonFormField<T>(
       key: ValueKey(value),
       initialValue: options.containsKey(value) ? value : null,
       isExpanded: true,
-      icon: Icon(Icons.keyboard_arrow_down, size: 18, color: p.text),
-      style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14, color: p.text),
+      icon: Icon(Icons.keyboard_arrow_down, size: dense ? 16 : 18, color: p.text),
+      style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: dense ? 12 : 14, color: p.text),
       dropdownColor: p.card,
       borderRadius: BorderRadius.circular(12),
-      decoration: webInputDecoration(context),
+      decoration: dense ? decoration.copyWith(contentPadding: const EdgeInsets.fromLTRB(12, 6, 8, 6)) : decoration,
       items: [for (final e in options.entries) DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))],
       onChanged: (next) => next == null ? null : onChanged(next),
     );
