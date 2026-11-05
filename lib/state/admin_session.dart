@@ -6,7 +6,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../api/admin_api.dart';
 import '../api/api_client.dart';
 import '../config.dart';
-import '../demo/demo_server.dart';
 
 /// The SMS step of sign-in: the password was right and a code is now needed.
 class TwoFactorChallenge {
@@ -54,9 +53,6 @@ class AdminSession extends ChangeNotifier {
   int get largeMoneyActionRwf => (limits['large_money_action_rwf'] as num?)?.toInt() ?? 50000;
   String get baseUrl => client.baseUrl;
 
-  /// Running on built-in demo data, with no backend.
-  bool get demoMode => client.demo != null;
-
   /// What the signed-in admin may do (decided by their role on the server).
   bool can(String permission) => isOwner || permissions.contains(permission);
 
@@ -65,11 +61,9 @@ class AdminSession extends ChangeNotifier {
     try {
       final savedUrl = await _storage.read(key: _baseUrlKey);
       if (savedUrl != null && savedUrl.isNotEmpty) client.baseUrl = savedUrl;
-      if (kDemoModeDefault) client.demo = DemoServer();
       _token = await _storage.read(key: _tokenKey);
     } catch (_) {
       _token = null;
-      if (kDemoModeDefault) client.demo ??= DemoServer();
     }
     client.token = _token;
     restoring = false;
@@ -83,13 +77,6 @@ class AdminSession extends ChangeNotifier {
       await _storage.write(key: _baseUrlKey, value: client.baseUrl);
     } catch (_) {}
     notifyListeners();
-  }
-
-  /// Puts the demo data back to how it started.
-  void resetDemoData() {
-    client.demo?.reset();
-    client.notifyChanged();
-    refreshProfile().catchError((_) => null);
   }
 
   Future<void> _loadProfile() async {
