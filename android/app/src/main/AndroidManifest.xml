@@ -2,9 +2,10 @@
     <!-- Talks to the KitchenLink API and loads map tiles. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- usesCleartextTraffic lets the app reach a development backend on plain
-         http (e.g. http://10.0.2.2:4000). Live builds should use https. -->
+         http (e.g. http://10.0.2.2:4000). Live builds should use https.
+         One label for both entry points (admin: lib/main.dart, vendor: lib/main_vendor.dart). -->
     <application
-        android:label="KitchenLink Admin"
+        android:label="KitchenLink"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -55,7 +56,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- Call buttons, Google Maps links and opening vendor documents. -->
+        <!-- url_launcher: call buttons, Google Maps links, opening vendor
+             documents (admin) and writing an email (vendor). -->
         <intent>
             <action android:name="android.intent.action.DIAL"/>
             <data android:scheme="tel"/>
@@ -67,6 +69,10 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:mimeType="*/*"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
         </intent>
     </queries>
 </manifest>
