@@ -8,6 +8,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/forms.dart';
+import '../../../core/widgets/server_address.dart';
 import '../application/session.dart';
 import '../models/vendor_account.dart';
 import 'widgets/brand_header.dart';
@@ -50,6 +51,13 @@ class ConnectionProblemScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () async {
+                  if (await showServerAddressSheet(context)) await ref.read(sessionProvider.notifier).restore();
+                },
+                icon: const Icon(Icons.dns_rounded),
+                label: const Text('Server address'),
+              ),
               TextButton(
                 onPressed: () => ref.read(sessionProvider.notifier).logout(),
                 child: const Text('Sign out'),

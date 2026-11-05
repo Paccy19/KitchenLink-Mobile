@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/server_address.dart';
 import '../../../core/widgets/forms.dart';
 import '../application/session.dart';
 import 'widgets/brand_header.dart';
@@ -132,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
-                const BrandHeader(),
+                Row(children: [const Expanded(child: BrandHeader()), const ServerAddressButton()]),
                 const SizedBox(height: 36),
                 Text(
                   onCodeStep ? 'Enter your code' : 'Welcome back',
@@ -156,7 +157,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   NoteBox(message: _error!, tone: Tone.danger, icon: Icons.error_outline_rounded),
                 ],
                 const SizedBox(height: 28),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
                   Text('New kitchen?', style: theme.textTheme.bodyMedium),
                   TextButton(onPressed: () => context.go('/register'), child: const Text('Register your kitchen')),
                 ]),

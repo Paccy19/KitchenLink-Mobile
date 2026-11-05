@@ -48,6 +48,9 @@ class ApiClient {
 
   void setToken(String? token) => _token = token;
 
+  /// Points the client at another server (the address screen).
+  void setBaseUrl(String url) => dio.options.baseUrl = url;
+
   Future<Object?> get(String path, {Map<String, dynamic>? query, bool auth = true}) =>
       _send('GET', path, query: query, auth: auth);
 

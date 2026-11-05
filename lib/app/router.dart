@@ -9,7 +9,21 @@ import '../features/auth/presentation/status_screens.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/orders/presentation/order_detail_screen.dart';
 import '../features/orders/presentation/orders_screen.dart';
+import '../features/chat/presentation/chat_screens.dart';
+import '../features/menu/presentation/menu_form_screen.dart';
+import '../features/menu/presentation/menu_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
+import '../features/promotions/presentation/offers_screen.dart';
+import '../features/promotions/presentation/special_screen.dart';
+import '../features/settings/presentation/account_screen.dart';
+import '../features/settings/presentation/business_settings_screens.dart';
+import '../features/settings/presentation/event_package_screen.dart';
+import '../features/settings/presentation/location_screen.dart';
 import '../features/shell/app_shell.dart';
+import '../features/shell/more_screen.dart';
+import '../features/support/presentation/support_screens.dart';
+import '../features/wallet/presentation/wallet_screen.dart';
+import '../features/wallet/presentation/withdraw_screen.dart';
 
 const _authPaths = {'/login', '/register', '/register/done'};
 
@@ -67,11 +81,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (_, _) => const OrdersScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/menu', builder: (_, _) => const NotBuiltYetScreen(title: 'Menu'))]),
-          StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (_, _) => const NotBuiltYetScreen(title: 'Wallet'))]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/more', builder: (_, _) => const NotBuiltYetScreen(title: 'More', showSignOut: true)),
-          ]),
+          StatefulShellBranch(routes: [GoRoute(path: '/menu', builder: (_, _) => const MenuScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (_, _) => const WalletScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/more', builder: (_, _) => const MoreScreen())]),
         ],
       ),
       GoRoute(
@@ -79,11 +91,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['id']!),
       ),
-      GoRoute(
-        path: '/notifications',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, _) => const NotBuiltYetScreen(title: 'Notifications'),
-      ),
+      _full('/menu/new', (_, _) => const MenuFormScreen()),
+      _full('/menu/:id/edit', (_, state) => MenuFormScreen(itemId: state.pathParameters['id'])),
+      _full('/wallet/withdraw', (_, _) => const WithdrawScreen()),
+      _full('/notifications', (_, _) => const NotificationsScreen()),
+      _full('/messages', (_, _) => const MessagesScreen()),
+      _full('/messages/:id', (_, state) => ChatThreadScreen(conversationId: state.pathParameters['id']!)),
+      _full('/support', (_, _) => const SupportScreen()),
+      _full('/support/new', (_, _) => const NewSupportRequestScreen()),
+      _full('/support/:id', (_, state) => SupportTicketScreen(ticketId: state.pathParameters['id']!)),
+      _full('/special', (_, _) => const SpecialScreen()),
+      _full('/offers', (_, _) => const OffersScreen()),
+      _full('/settings', (_, _) => const AccountScreen()),
+      _full('/settings/account', (_, _) => const AccountScreen()),
+      _full('/settings/location', (_, _) => const LocationScreen()),
+      _full('/settings/type', (_, _) => const VendorTypeScreen()),
+      _full('/settings/ordering', (_, _) => const OrderingSettingsScreen()),
+      _full('/settings/nationwide', (_, _) => const NationwideScreen()),
+      _full('/settings/events', (_, _) => const EventPackageScreen()),
     ],
   );
 });
+
+/// A screen that opens over the tabs, full screen.
+GoRoute _full(String path, Widget Function(BuildContext, GoRouterState) builder) =>
+    GoRoute(path: path, parentNavigatorKey: rootNavigatorKey, builder: builder);

@@ -13,6 +13,7 @@ import '../features/settings/data/settings_repository.dart';
 import '../features/support/data/support_repository.dart';
 import '../features/wallet/data/wallet_repository.dart';
 import 'config/app_config.dart';
+import 'config/server_address.dart';
 import 'network/api_client.dart';
 import 'storage/token_store.dart';
 import 'utils/uploads.dart';
@@ -27,6 +28,29 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       Future.microtask(() => ref.read(connectionProvider.notifier).report(online: online));
   return client;
 });
+
+final serverAddressStoreProvider = Provider<ServerAddressStore>((ref) => ServerAddressStore());
+
+/// The API address in use. Changing it points the client at the new server.
+class ServerAddressNotifier extends Notifier<String> {
+  @override
+  String build() => AppConfig.current.apiBaseUrl;
+
+  /// Saves and uses [url] (already normalised), or the build default for null.
+  Future<void> apply(String? url) async {
+    final store = ref.read(serverAddressStoreProvider);
+    if (url == null) {
+      await store.clear();
+    } else {
+      await store.write(url);
+    }
+    AppConfig.overrideApiBaseUrl(url);
+    state = AppConfig.current.apiBaseUrl;
+    ref.read(apiClientProvider).setBaseUrl(state);
+  }
+}
+
+final serverAddressProvider = NotifierProvider<ServerAddressNotifier, String>(ServerAddressNotifier.new);
 
 final mediaPickerProvider = Provider<MediaPicker>((ref) => DeviceMediaPicker());
 

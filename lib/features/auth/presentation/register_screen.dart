@@ -13,6 +13,7 @@ import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/forms.dart';
 import '../../../core/widgets/pickers.dart';
+import '../../../core/widgets/server_address.dart';
 import '../../menu/application/menu_providers.dart';
 import '../../settings/presentation/widgets/place_search_field.dart';
 import '../../settings/application/settings_providers.dart';
@@ -87,7 +88,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!(_forms[_step].currentState?.validate() ?? false)) return 'Please fix the highlighted fields.';
     switch (_step) {
       case 0:
-        if (_vendorType == null) return 'Choose your kitchen type.';
+        if (_vendorType == null) {
+          return ref.read(vendorTypesProvider).hasError
+              ? "Kitchen types could not be loaded. Fix the server address (the server icon, top right), then choose your type."
+              : 'Choose your kitchen type.';
+        }
       case 3:
         if (_categoryIds.isEmpty) return 'Choose at least one food category.';
         if (_hours.every((hour) => hour.isClosed)) return 'Your kitchen must be open at least one day.';
@@ -198,6 +203,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(_titles[_step]),
+          actions: [ServerAddressButton(onChanged: () {
+            ref.invalidate(vendorTypesProvider);
+            ref.invalidate(foodCategoriesProvider);
+            ref.invalidate(bankListProvider);
+          })],
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: _submitting ? null : () => _step == 0 ? context.go('/login') : setState(() => _step--),
@@ -288,7 +298,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       const SizedBox(height: 16),
       types.when(
         loading: () => const SkeletonBox(height: 56, radius: 14),
-        error: (error, _) => ErrorState(error: error, onRetry: () => ref.invalidate(vendorTypesProvider)),
+        error: (error, _) => _LoadFailure(
+          what: 'kitchen types',
+          error: error,
+          onRetry: () => ref.invalidate(vendorTypesProvider),
+        ),
         data: (list) => DropdownButtonFormField<String>(
           initialValue: _vendorType,
           isExpanded: true,
@@ -434,7 +448,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       const SizedBox(height: 10),
       categories.when(
         loading: () => const SkeletonBox(height: 90, radius: 14),
-        error: (error, _) => ErrorState(error: error, onRetry: () => ref.invalidate(foodCategoriesProvider)),
+        error: (error, _) => _LoadFailure(
+          what: 'food categories',
+          error: error,
+          onRetry: () => ref.invalidate(foodCategoriesProvider),
+        ),
         data: (list) => Wrap(spacing: 8, runSpacing: 8, children: [
           for (final category in list)
             FilterChip(
@@ -632,6 +650,61 @@ class RegistrationDoneScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A compact "could not load" box inside a form: says what failed and why,
+/// with Try again and the server address, so registration never looks broken.
+class _LoadFailure extends ConsumerWidget {
+  const _LoadFailure({required this.what, required this.error, required this.onRetry});
+
+  final String what;
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = toneColors(context, Tone.danger);
+    final url = ref.watch(serverAddressProvider);
+    final offline = error is ApiException && (error as ApiException).isNetwork;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: colors.background, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.wifi_off_rounded, color: colors.foreground, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              offline ? "Can't load the $what: the server is not reachable." : "Can't load the $what.",
+              style: TextStyle(color: colors.foreground, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+          offline ? 'The app is trying $url. If that is not your computer, change the server address.' : errorMessage(error),
+          style: TextStyle(color: colors.foreground),
+        ),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, children: [
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+            onPressed: () async {
+              if (await showServerAddressSheet(context)) onRetry();
+            },
+            icon: const Icon(Icons.dns_rounded, size: 18),
+            label: const Text('Server address'),
+          ),
+        ]),
+      ]),
     );
   }
 }

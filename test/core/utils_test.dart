@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitchenlink_mobile/app/router.dart';
 import 'package:kitchenlink_mobile/core/config/app_config.dart';
+import 'package:kitchenlink_mobile/core/config/server_address.dart';
 import 'package:kitchenlink_mobile/core/network/json.dart';
 import 'package:kitchenlink_mobile/core/utils/formatters.dart';
 import 'package:kitchenlink_mobile/core/utils/media_url.dart';
@@ -103,6 +104,21 @@ void main() {
     test('blocked and unreachable states have their own screens', () {
       expect(appRedirect(SessionStatus.blocked, u('/dashboard')), '/blocked');
       expect(appRedirect(SessionStatus.unreachable, u('/dashboard')), '/offline');
+    });
+  });
+
+  group('server address', () {
+    test('a bare IP and port becomes the API address', () {
+      expect(normalizeApiBaseUrl('192.168.196.250:4000'), 'http://192.168.196.250:4000/api/v1');
+      expect(normalizeApiBaseUrl(' http://10.0.2.2:4000/ '), 'http://10.0.2.2:4000/api/v1');
+    });
+    test('an explicit path and https are kept', () {
+      expect(normalizeApiBaseUrl('https://api.kitchenlink.rw/api/v1/'), 'https://api.kitchenlink.rw/api/v1');
+    });
+    test('nonsense is refused', () {
+      expect(normalizeApiBaseUrl(''), isNull);
+      expect(normalizeApiBaseUrl('ftp://x.com'), isNull);
+      expect(normalizeApiBaseUrl('http://'), isNull);
     });
   });
 }

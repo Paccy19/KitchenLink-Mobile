@@ -19,8 +19,16 @@ class AppConfig {
     defaultValue: emulatorApiBaseUrl,
   );
 
+  static String? _override;
+
+  /// An address the vendor typed in the app (saved on the phone). It wins
+  /// over the build-time default until it is reset.
+  static void overrideApiBaseUrl(String? url) => _override = url;
+
+  static String get defaultApiBaseUrl => _fromEnvironment;
+
   /// Configuration used by the running app.
-  static const AppConfig current = AppConfig(apiBaseUrl: _fromEnvironment);
+  static AppConfig get current => AppConfig(apiBaseUrl: _override ?? _fromEnvironment);
 
   /// Full API address including `/api/v1`, without a trailing slash.
   final String apiBaseUrl;
