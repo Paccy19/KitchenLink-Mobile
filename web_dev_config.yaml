@@ -1,0 +1,5 @@
+# `flutter run -d chrome` always serves on this address, so the backend's
+# CORS list (ALLOWED_ORIGINS in KitchenLink-backend/.env) can allow it.
+server:
+  host: localhost
+  port: 5300
