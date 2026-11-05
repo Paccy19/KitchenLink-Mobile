@@ -403,8 +403,13 @@ class _Drawer extends StatefulWidget {
 }
 
 class _DrawerState extends State<_Drawer> {
-  // The Settings dropdown starts open when a settings page is showing.
-  late bool settingsOpen = widget.current.id.startsWith('settings/');
+  // Like the website (`openMenus[item.to] ?? inside`): the Settings dropdown
+  // is open while a settings page is showing, until the admin toggles it.
+  bool? _settingsToggled;
+
+  bool get _insideSettings => widget.current.id.startsWith('settings/');
+
+  bool get settingsOpen => _settingsToggled ?? _insideSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -567,7 +572,7 @@ class _DrawerState extends State<_Drawer> {
   /// "Settings" opens a dropdown; each option is its own page.
   Widget _settingsGroup(AdminSection section) {
     final p = Palette.of(context);
-    final inside = widget.current.id.startsWith('settings/');
+    final inside = _insideSettings;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -580,7 +585,7 @@ class _DrawerState extends State<_Drawer> {
             duration: const Duration(milliseconds: 150),
             child: const Icon(Icons.expand_more, size: 16),
           ),
-          onTap: () => setState(() => settingsOpen = !settingsOpen),
+          onTap: () => setState(() => _settingsToggled = !settingsOpen),
         ),
         if (settingsOpen)
           Container(

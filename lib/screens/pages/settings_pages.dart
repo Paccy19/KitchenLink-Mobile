@@ -22,49 +22,112 @@ class ProfileSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = context.watch<AdminSession>();
     final admin = session.admin ?? const {};
+    final p = Palette.of(context);
+    final active = admin['is_active'] == true;
+    // The website's ProfileSection: `space-y-5` of the warning and three cards.
     return PageBody(children: [
       const PageHeader(title: 'Settings', description: 'Profile & account security'),
-      if (session.usesDefaultPassword)
-        const Note(
-          'You are still using the default admin password. Anyone who knows it can sign in. '
-          'Change it below: the rest of the admin panel stays locked until you do.',
-          icon: Icons.warning_amber_rounded,
-        ),
+      if (session.usesDefaultPassword) const _DefaultPasswordAlert(),
       SectionCard(
         title: 'Profile',
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: spaced([
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // `flex items-center gap-4`.
           Row(children: [
+            // `w-14 h-14 rounded-2xl bg-gradient-to-br from-[#111827] via-[#1f2937] to-[#0b1220]`, ShieldCheck `w-7 h-7`.
             Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(gradient: AppColors.brandGradient, borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.verified_user_outlined, color: Colors.white),
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(gradient: AppColors.brandDiagonal, borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.verified_user_outlined, color: Colors.white, size: 28),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(jstr(admin['name']), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                Hint(jstr(admin['email'])),
+                // `text-lg font-black text-gray-900`.
+                Text(jstr(admin['name']), style: TextStyle(fontSize: 18, height: 1.55, fontWeight: FontWeight.w900, color: p.text)),
+                // `text-sm text-stone-500`.
+                Text(jstr(admin['email']), style: TextStyle(fontSize: 14, height: 1.43, color: p.muted)),
+                // `mt-1.5 flex items-center gap-2`.
                 const SizedBox(height: 6),
-                Wrap(spacing: 6, children: [
+                Wrap(spacing: 8, runSpacing: 6, children: [
                   ToneBadge(toTitle(admin['role']), tone: Tone.violet),
-                  ToneBadge(admin['is_active'] == true ? 'Active' : 'Disabled', tone: admin['is_active'] == true ? Tone.green : Tone.red),
+                  ToneBadge(active ? 'Active' : 'Disabled', tone: active ? Tone.green : Tone.red),
                 ]),
               ]),
             ),
           ]),
-          Hint('Last login: ${formatDate(admin['last_login_at'])}'),
+          // `mt-4 text-xs text-stone-400`.
+          const SizedBox(height: 16),
+          Text('Last login: ${formatDate(admin['last_login_at'])}', style: TextStyle(fontSize: 12, height: 1.33, color: p.faint)),
           if (session.permissions.isNotEmpty) ...[
+            // `mt-4`; label `text-xs font-black uppercase tracking-wider text-stone-400 mb-2`; badges `gap-1.5`.
+            const SizedBox(height: 16),
             const SectionLabel('Permissions'),
-            Wrap(spacing: 6, runSpacing: 6, children: [for (final p in session.permissions) ToneBadge(p)]),
+            Wrap(spacing: 6, runSpacing: 6, children: [for (final permission in session.permissions) ToneBadge(permission)]),
           ],
-        ])),
+        ]),
       ),
       const _TwoFactorCard(),
       const _ChangePasswordCard(),
     ]);
   }
 }
+
+/// `role="alert" flex items-start gap-3 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800`.
+class _DefaultPasswordAlert extends StatelessWidget {
+  const _DefaultPasswordAlert();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fg = dark ? Tone.red.foreground(context) : const Color(0xFF991B1B);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Tone.red.background(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Tone.red.border(context)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.only(top: 2), child: Icon(Icons.warning_amber_rounded, size: 20, color: fg)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: [
+              const TextSpan(text: 'You are still using the '),
+              const TextSpan(text: 'default admin password', style: TextStyle(fontWeight: FontWeight.w700)),
+              const TextSpan(
+                text: '. Anyone who knows it can sign in. Change it below: the rest of the admin panel stays locked until you do.',
+              ),
+            ]),
+            style: TextStyle(fontSize: 14, height: 1.43, color: fg),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// The website's form column: `max-w-md space-y-4`, controls left-aligned.
+class _FormColumn extends StatelessWidget {
+  const _FormColumn({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 448),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(children, 16)),
+      ),
+    );
+  }
+}
+
+/// A left-aligned (not stretched) website button, like an inline `<Button>`.
+Widget _inlineButton(Widget button) => Align(alignment: Alignment.centerLeft, child: button);
 
 /// Turn SMS codes on (verify a phone) or off (confirmed with a code).
 class _TwoFactorCard extends StatefulWidget {
@@ -104,27 +167,59 @@ class _TwoFactorCardState extends State<_TwoFactorCard> with BusyState {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     final admin = context.watch<AdminSession>().admin ?? const {};
     final enabled = admin['two_factor_enabled'] == true;
+    final phoneInvalid = phone.text.isNotEmpty && !isValidRwandaPhone(phone.text);
     return SectionCard(
       title: 'SMS codes (two-step sign-in)',
-      action: ToneBadge(enabled ? 'On' : 'Off', tone: enabled ? Tone.green : Tone.amber),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-        Text(enabled
-            ? 'Codes go to ${jstr(admin['phone'])}. You need one to sign in and to confirm every money action.'
-            : 'Get a code on your phone when you sign in and before money actions. Required '
-                '${admin['is_owner'] == true ? 'to withdraw platform commission and manage your team' : 'to send refunds or payouts of 50,000 RWF or more'}.'),
+      child: _FormColumn(children: [
+        // `flex items-start gap-3`: phone tile, explanation, On/Off badge.
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // `w-10 h-10 rounded-xl bg-stone-100`, Smartphone `w-5 h-5 text-stone-700`.
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: p.stone100, borderRadius: BorderRadius.circular(12)),
+            child: Icon(Icons.smartphone, size: 20, color: p.textSecondary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            // `text-sm text-stone-600`.
+            child: Text.rich(
+              TextSpan(
+                children: enabled
+                    ? [
+                        const TextSpan(text: 'Codes go to '),
+                        TextSpan(text: jstr(admin['phone']), style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
+                        const TextSpan(text: '. You need one to sign in and to confirm every money action.'),
+                      ]
+                    : [
+                        const TextSpan(text: 'Get a code on your phone when you sign in and before money actions. '),
+                        const TextSpan(text: 'Required', style: TextStyle(fontWeight: FontWeight.w700)),
+                        TextSpan(
+                          text: admin['is_owner'] == true
+                              ? ' to withdraw platform commission and manage your team.'
+                              : ' to send refunds or payouts of 50,000 RWF or more.',
+                        ),
+                      ],
+              ),
+              style: TextStyle(fontSize: 14, height: 1.43, color: p.textSecondary),
+            ),
+          ),
+          const SizedBox(width: 12),
+          ToneBadge(enabled ? 'On' : 'Off', tone: enabled ? Tone.green : Tone.amber),
+        ]),
         if (!enabled) ...[
-          TextField(
-            controller: phone,
-            keyboardType: TextInputType.phone,
-            onChanged: (_) => setState(() {}),
-            inputFormatters: [TextInputFormatter.withFunction((_, next) => next.copyWith(text: sanitizePhoneInput(next.text)))],
-            decoration: InputDecoration(
-              labelText: 'Your phone number',
-              hintText: phonePlaceholder,
-              errorText: phone.text.isNotEmpty && !isValidRwandaPhone(phone.text) ? phoneError : null,
-              errorMaxLines: 2,
+          WebField(
+            label: 'Your phone number',
+            hint: phoneInvalid ? Text(phoneError, style: const TextStyle(color: AppColors.red500, fontWeight: FontWeight.w600)) : null,
+            child: WebInput(
+              controller: phone,
+              keyboardType: TextInputType.phone,
+              hint: phonePlaceholder,
+              onChanged: (_) => setState(() {}),
+              inputFormatters: [TextInputFormatter.withFunction((_, next) => next.copyWith(text: sanitizePhoneInput(next.text)))],
             ),
           ),
           ActionCodeField(
@@ -137,25 +232,21 @@ class _TwoFactorCardState extends State<_TwoFactorCard> with BusyState {
               return session.api.startTwoFactor(phone.text.trim());
             },
           ),
-          BusyButton(
-            label: 'Turn on SMS codes',
-            busyLabel: 'Turning on…',
-            busy: busy,
-            onPressed: code.length != 6 ? null : () => change(() => session.api.enableTwoFactor(phone.text.trim(), code), 'SMS codes are on.'),
-          ),
+          _inlineButton(WebButton(
+            label: busy ? 'Turning on…' : 'Turn on SMS codes',
+            onPressed: busy || code.length != 6 ? null : () => change(() => session.api.enableTwoFactor(phone.text.trim(), code), 'SMS codes are on.'),
+          )),
         ] else ...[
           ActionCodeField(key: ValueKey(codeKey), purpose: 'disable_2fa', onChanged: (value) => setState(() => code = value)),
-          BusyButton(
-            label: 'Turn off SMS codes',
-            busyLabel: 'Turning off…',
+          _inlineButton(WebButton(
+            label: busy ? 'Turning off…' : 'Turn off SMS codes',
             danger: true,
-            busy: busy,
-            onPressed: code.length != 6 ? null : () => change(() => session.api.disableTwoFactor(code), 'SMS codes are off.'),
-          ),
+            onPressed: busy || code.length != 6 ? null : () => change(() => session.api.disableTwoFactor(code), 'SMS codes are off.'),
+          )),
         ],
         if (actionError != null) ErrorNote(error: actionError),
         if (message.isNotEmpty) Note(message, tone: Tone.green),
-      ])),
+      ]),
     );
   }
 }
@@ -203,20 +294,25 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> with BusyState
     return SectionCard(
       title: 'Change password',
       child: AutofillGroup(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-          TextField(controller: current, obscureText: true, autofillHints: const [AutofillHints.password], decoration: const InputDecoration(labelText: 'Current password')),
-          TextField(
-            controller: next,
-            obscureText: true,
-            autofillHints: const [AutofillHints.newPassword],
-            decoration: const InputDecoration(labelText: 'New password', helperText: 'At least 8 characters.'),
+        child: _FormColumn(children: [
+          WebField(
+            label: 'Current password',
+            child: WebInput(controller: current, obscure: true, autofillHints: const [AutofillHints.password]),
           ),
-          TextField(controller: confirm, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password')),
-          if (error.isNotEmpty) Note(error),
+          WebField(
+            label: 'New password',
+            hint: const Text('At least 8 characters.'),
+            child: WebInput(controller: next, obscure: true, autofillHints: const [AutofillHints.newPassword]),
+          ),
+          WebField(
+            label: 'Confirm new password',
+            child: WebInput(controller: confirm, obscure: true, autofillHints: const [AutofillHints.newPassword]),
+          ),
+          if (error.isNotEmpty) ErrorNote(error: error),
           if (actionError != null) ErrorNote(error: actionError),
           if (done) const Note('Password updated.', tone: Tone.green),
-          BusyButton(label: 'Update password', busyLabel: 'Updating…', busy: busy, onPressed: submit),
-        ])),
+          _inlineButton(WebButton(label: busy ? 'Updating…' : 'Update password', onPressed: busy ? null : submit)),
+        ]),
       ),
     );
   }
@@ -307,6 +403,7 @@ class _DeliveryRulesPageState extends State<DeliveryRulesPage> with BusyState {
   @override
   Widget build(BuildContext context) {
     final go = context.read<ShellNavigator>().go;
+    final p = Palette.of(context);
     return QueryView<Json>(
       query: query,
       builder: (context, rules) {
@@ -319,113 +416,221 @@ class _DeliveryRulesPageState extends State<DeliveryRulesPage> with BusyState {
         final sms = jmap(rules['sms']);
         final bad = problem(rules);
         String v(String field) => form![field]!.text.isEmpty ? '…' : form![field]!.text;
+        final lg = MediaQuery.sizeOf(context).width >= 1024;
 
+        // The website's Field + `type="number"` Input; hint `unit (min–max)`.
         Widget input(_Rule rule) {
           final limit = (limits[rule.field] as List?) ?? const [];
-          return TextField(
-            controller: form![rule.field],
-            enabled: canEdit,
-            keyboardType: TextInputType.numberWithOptions(decimal: rule.decimal),
-            onChanged: (_) => setState(() => saved = false),
-            decoration: InputDecoration(
-              labelText: rule.label,
-              helperText: '${rule.unit}${limit.length > 1 ? ' (${jstr(limit[0])}–${jstr(limit[1])})' : ''}',
+          return WebField(
+            label: rule.label,
+            hint: Text('${rule.unit}${limit.length > 1 ? ' (${jstr(limit[0])}–${jstr(limit[1])})' : ''}'),
+            child: WebInput(
+              controller: form![rule.field],
+              readOnly: !canEdit,
+              keyboardType: TextInputType.numberWithOptions(decimal: rule.decimal),
+              onChanged: (_) => setState(() => saved = false),
             ),
           );
         }
 
+        // `grid gap-4 sm:grid-cols-2 lg:grid-cols-3`.
+        Widget fields(String group) => _webGrid(context, [for (final rule in _rules.where((r) => r.group == group)) input(rule)]);
+
+        // `mt-3 rounded-2xl bg-stone-50 border border-stone-100 p-3 text-sm text-stone-700`, values in `<strong>`.
+        Widget explainer(List<InlineSpan> spans) => Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: p.stone50, borderRadius: BorderRadius.circular(16), border: Border.all(color: p.divider)),
+              child: Text.rich(TextSpan(children: spans), style: TextStyle(fontSize: 14, height: 1.43, color: p.textSecondary)),
+            );
+        InlineSpan b(String text) => TextSpan(text: text, style: TextStyle(fontWeight: FontWeight.w700, color: p.text));
+
+        // `flex items-center justify-between`: section label and an "Edit in …" link.
+        Widget headingWithLink(String label, String link, AdminPage page, {required double top}) => Padding(
+              padding: EdgeInsets.only(top: top, bottom: 4),
+              child: Row(children: [
+                Expanded(child: _sectionHeading(context, label)),
+                InkWell(
+                  onTap: () => go(AdminRoute(page)),
+                  child: Text(link, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: p.accent)),
+                ),
+              ]),
+            );
+
+        final clockAndFees = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          headingWithLink('Pickup clock (delivery workers)', 'Edit in Delivery timing', Pages.settingsTiming, top: 12),
+          ..._ruleRows([
+            ('Reminder after', '${jstr(pickupClock['warning_after_minutes'])} min', false),
+            ('Counts as late after', '${jstr(pickupClock['grace_minutes'])} min', false),
+            (
+              'Given to another worker after',
+              pickupClock['reassign_after_minutes'] != null ? '${jstr(pickupClock['reassign_after_minutes'])} min' : 'Off',
+              false,
+            ),
+            ('Late-pickup charge', 'None', false),
+          ]),
+          headingWithLink('Delivery fee', 'Edit in Delivery fee by distance', Pages.settingsFees, top: 16),
+          ..._ruleRows([
+            if (jlist(fees['ranges']).isNotEmpty)
+              for (final range in jlist(fees['ranges']))
+                (
+                  range['to_km'] == null ? '${jstr(range['from_km'])} km and more' : '${jstr(range['from_km'])}–${jstr(range['to_km'])} km',
+                  formatRwf(range['fee_rwf']),
+                  false,
+                )
+            else
+              ('Price', '${jstr(fees['base_rwf'])} RWF + ${jstr(fees['per_km_rwf'])} RWF/km (min ${jstr(fees['minimum_rwf'])} RWF)', false),
+            ('Share paid to the delivery worker', '${jstr(fees['driver_share_percent'])}%', false),
+          ]),
+        ]);
+
+        final mapsAndMessages = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(padding: const EdgeInsets.only(top: 12, bottom: 4), child: _sectionHeading(context, 'Maps & messages')),
+          ..._ruleRows([
+            ('Routes & live tracking', jstr(tracking['routes_provider']), tracking['google_key_configured'] != true),
+            ('Place search', jstr(tracking['place_search_provider']), false),
+            ('SMS', jstr(sms['note']), sms['configured'] != true),
+          ]),
+          const SizedBox(height: 8),
+          Text(
+            "These depend on the map and SMS service keys in the server configuration, so they can't be changed here.",
+            style: TextStyle(fontSize: 11, height: 1.45, color: p.faint),
+          ),
+        ]);
+
         return PageBody(children: [
           const PageHeader(title: 'Settings', description: 'Delivery & pickup rules'),
-          const Hint('How orders are dispatched, collected and tracked. Changes apply as soon as you save.'),
           SectionCard(
-            title: 'Dispatch',
-            description: jstr(dispatch['offered_when']),
+            title: 'Delivery & pickup rules',
+            description: 'How orders are dispatched, collected and tracked. Changes apply as soon as you save.',
+            action: Icon(Icons.radar_outlined, size: 20, color: p.faint),
+            // `space-y-6`.
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-              for (final rule in _rules.where((r) => r.group == 'dispatch')) input(rule),
-              Note(
-                'A new order is sent to up to ${v('max_offer_recipients')} online delivery workers within ${v('radius_km')} km of the kitchen '
-                'whose location is less than ${v('location_max_age_minutes')} min old and who carry fewer than ${v('max_active_deliveries')} '
-                "deliveries. Workers further away can't take it. If nobody accepts, it is offered again every "
-                '${v('rebroadcast_every_seconds')} s to anyone who has come into range.',
-                tone: Tone.slate,
+              // Dispatch.
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Padding(padding: const EdgeInsets.only(bottom: 4), child: _sectionHeading(context, 'Dispatch')),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(jstr(dispatch['offered_when']), style: TextStyle(fontSize: 12, height: 1.33, color: p.muted)),
+                ),
+                fields('dispatch'),
+                const SizedBox(height: 12),
+                explainer([
+                  const TextSpan(text: 'A new order is sent to up to '),
+                  b(v('max_offer_recipients')),
+                  const TextSpan(text: ' online delivery workers within '),
+                  b('${v('radius_km')} km'),
+                  const TextSpan(text: ' of the kitchen whose location is less than '),
+                  b('${v('location_max_age_minutes')} min'),
+                  const TextSpan(text: ' old and who carry fewer than '),
+                  b(v('max_active_deliveries')),
+                  const TextSpan(text: " deliveries. Workers further away can't take it. If nobody accepts, it is offered again every "),
+                  b('${v('rebroadcast_every_seconds')} s'),
+                  const TextSpan(text: ' to anyone who has come into range.'),
+                ]),
+                const SizedBox(height: 8),
+                explainer([
+                  const TextSpan(text: 'Customers more than '),
+                  b('${v('platform_delivery_max_km')} km'),
+                  const TextSpan(
+                    text: " from a kitchen can't get delivery workers. Nationwide kitchens (Caterers, and any kitchen you switch on in "
+                        'Vendors) bring those orders themselves for their own travel fee; other kitchens offer pickup only.',
+                  ),
+                ]),
+              ]),
+              // Customer pickup.
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Padding(padding: const EdgeInsets.only(bottom: 4), child: _sectionHeading(context, 'Customer pickup')),
+                fields('customer_pickup'),
+                ..._ruleRows([
+                  ('Delivery fee', 'None', false),
+                  ('Pickup code', '${jstr(jmap(rules['customer_pickup'])['code_digits'])} digits, given when the order is placed', false),
+                ]),
+              ]),
+              // `flex flex-wrap items-center gap-3`: save button and status.
+              Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                if (canEdit)
+                  WebButton(label: busy ? 'Saving…' : 'Save rules', onPressed: bad != null || busy ? null : save)
+                else
+                  const ToneBadge('View only — ask an operations manager or the owner to change it'),
+                if (saved)
+                  Text('Saved. The system uses these rules now.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tone.green.foreground(context))),
+                if (bad != null)
+                  Text('Check “${bad.label}”.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tone.red.foreground(context))),
+                if (dispatch['updated_at'] != null)
+                  Text('Last changed ${formatDate(dispatch['updated_at'])}', style: TextStyle(fontSize: 11, color: p.faint)),
+              ]),
+              if (actionError != null) ErrorNote(error: actionError),
+              // `grid gap-6 lg:grid-cols-2 pt-2 border-t border-stone-100`.
+              Container(
+                padding: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: p.divider))),
+                child: lg
+                    ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(child: clockAndFees),
+                        const SizedBox(width: 24),
+                        Expanded(child: mapsAndMessages),
+                      ])
+                    : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [clockAndFees, const SizedBox(height: 24), mapsAndMessages]),
               ),
-              Note(
-                "Customers more than ${v('platform_delivery_max_km')} km from a kitchen can't get delivery workers. Nationwide kitchens "
-                '(Caterers, and any kitchen you switch on in Vendors) bring those orders themselves for their own travel fee; other kitchens offer pickup only.',
-                tone: Tone.slate,
-              ),
-            ])),
-          ),
-          SectionCard(
-            title: 'Customer pickup',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-              for (final rule in _rules.where((r) => r.group == 'customer_pickup')) input(rule),
-              _ruleRow('Delivery fee', 'None'),
-              _ruleRow('Pickup code', '${jstr(jmap(rules['customer_pickup'])['code_digits'])} digits, given when the order is placed'),
-            ], 8)),
-          ),
-          Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            if (canEdit)
-              BusyButton(label: 'Save rules', busy: busy, onPressed: bad != null ? null : save)
-            else
-              const ToneBadge('View only — ask an operations manager or the owner to change it'),
-            if (saved) Hint('Saved. The system uses these rules now.', color: Tone.green.foreground(context)),
-            if (bad != null) Hint('Check “${bad.label}”.', color: Tone.red.foreground(context)),
-            if (dispatch['updated_at'] != null) Hint('Last changed ${formatDate(dispatch['updated_at'])}'),
-          ]),
-          if (actionError != null) ErrorNote(error: actionError),
-          SectionCard(
-            title: 'Pickup clock (delivery workers)',
-            action: TextButton(onPressed: () => go(const AdminRoute(Pages.settingsTiming)), child: const Text('Edit')),
-            child: Column(children: [
-              _ruleRow('Reminder after', '${jstr(pickupClock['warning_after_minutes'])} min'),
-              _ruleRow('Counts as late after', '${jstr(pickupClock['grace_minutes'])} min'),
-              _ruleRow('Given to another worker after', pickupClock['reassign_after_minutes'] != null ? '${jstr(pickupClock['reassign_after_minutes'])} min' : 'Off'),
-              _ruleRow('Late-pickup charge', 'None'),
-            ]),
-          ),
-          SectionCard(
-            title: 'Delivery fee',
-            action: TextButton(onPressed: () => go(const AdminRoute(Pages.settingsFees)), child: const Text('Edit')),
-            child: Column(children: [
-              if (jlist(fees['ranges']).isNotEmpty)
-                for (final range in jlist(fees['ranges']))
-                  _ruleRow(
-                    range['to_km'] == null ? '${jstr(range['from_km'])} km and more' : '${jstr(range['from_km'])}–${jstr(range['to_km'])} km',
-                    formatRwf(range['fee_rwf']),
-                  )
-              else
-                _ruleRow('Price', '${jstr(fees['base_rwf'])} RWF + ${jstr(fees['per_km_rwf'])} RWF/km (min ${jstr(fees['minimum_rwf'])} RWF)'),
-              _ruleRow('Share paid to the delivery worker', '${jstr(fees['driver_share_percent'])}%'),
-            ]),
-          ),
-          SectionCard(
-            title: 'Maps & messages',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              _ruleRow('Routes & live tracking', jstr(tracking['routes_provider']), warn: tracking['google_key_configured'] != true),
-              _ruleRow('Place search', jstr(tracking['place_search_provider'])),
-              _ruleRow('SMS', jstr(sms['note']), warn: sms['configured'] != true),
-              const SizedBox(height: 6),
-              const Hint("These depend on the map and SMS service keys in the server configuration, so they can't be changed here."),
-            ]),
+            ], 24)),
           ),
         ]);
       },
     );
   }
 
-  Widget _ruleRow(String label, String value, {bool warn = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(value,
-                textAlign: TextAlign.right,
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: warn ? Tone.amber.foreground(context) : null)),
-          ),
-        ]),
+  /// `text-xs font-black uppercase tracking-wider text-stone-400`.
+  Widget _sectionHeading(BuildContext context, String text) => Text(
+        text.toUpperCase(),
+        style: TextStyle(fontSize: 12, height: 1.33, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: Palette.of(context).faint),
       );
+
+  /// RuleRow: `flex justify-between gap-4 py-2 border-b border-stone-50 last:border-0`;
+  /// label `text-sm text-stone-600`, value `text-sm font-bold text-right` (amber when [warn]).
+  List<Widget> _ruleRows(List<(String, String, bool)> rows) {
+    final p = Palette.of(context);
+    return [
+      for (var i = 0; i < rows.length; i++)
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(border: i == rows.length - 1 ? null : Border(bottom: BorderSide(color: p.stone50))),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: Text(rows[i].$1, style: TextStyle(fontSize: 14, height: 1.43, color: p.textSecondary))),
+            const SizedBox(width: 16),
+            Flexible(
+              child: Text(
+                rows[i].$2,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.43,
+                  fontWeight: FontWeight.w700,
+                  color: rows[i].$3 ? Tone.amber.foreground(context) : p.text,
+                ),
+              ),
+            ),
+          ]),
+        ),
+    ];
+  }
+}
+
+/// `grid gap-4 sm:grid-cols-2 lg:grid-cols-3` (breakpoints on the screen width).
+Widget _webGrid(BuildContext context, List<Widget> children) {
+  final width = MediaQuery.sizeOf(context).width;
+  final columns = width >= 1024 ? 3 : width >= 640 ? 2 : 1;
+  if (columns == 1) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(children, 16));
+  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
+    for (var i = 0; i < children.length; i += columns)
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (var j = 0; j < columns; j++) ...[
+          if (j > 0) const SizedBox(width: 16),
+          Expanded(child: i + j < children.length ? children[i + j] : const SizedBox.shrink()),
+        ],
+      ]),
+  ], 16));
 }
 
 // ---- Bank account numbers -------------------------------------------------
@@ -506,82 +711,111 @@ class _BankFormatsPageState extends State<BankFormatsPage> with BusyState {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     final digits = [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)];
+    void changed(_) => setState(() => saved = false);
+
+    // `text-[11px] font-black uppercase tracking-wider text-stone-400`.
+    Widget head(String text) => Text(
+          text.toUpperCase(),
+          style: TextStyle(fontSize: 11, height: 1.45, fontWeight: FontWeight.w800, letterSpacing: 0.55, color: p.faint),
+        );
+
+    // One table row: Bank (flexible), Digits `w-24`, Up to `w-24`, Rule, delete `w-10`; cells `py-2 pr-3`.
+    Widget tableRow({required Widget bank, required Widget min, required Widget max, required Widget rule, Widget? remove, bool border = true}) =>
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(border: border ? Border(top: BorderSide(color: p.divider)) : null),
+          child: Row(children: [
+            Expanded(child: bank),
+            const SizedBox(width: 12),
+            SizedBox(width: 84, child: min),
+            const SizedBox(width: 12),
+            SizedBox(width: 84, child: max),
+            const SizedBox(width: 12),
+            SizedBox(width: 148, child: Align(alignment: Alignment.centerLeft, child: rule)),
+            SizedBox(width: 40, child: Align(alignment: Alignment.centerRight, child: remove)),
+          ]),
+        );
+
     return QueryView<Json>(
       query: query,
       builder: (context, data) {
         if (rows == null) return const LoadingBlock();
+        final table = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          tableRow(bank: head('Bank'), min: head('Digits'), max: head('Up to'), rule: head('Rule'), border: false),
+          for (var i = 0; i < rows!.length; i++)
+            tableRow(
+              bank: WebInput(
+                controller: rows![i].name,
+                readOnly: !canEdit,
+                inputFormatters: [LengthLimitingTextInputFormatter(60)],
+                onChanged: changed,
+              ),
+              min: WebInput(controller: rows![i].min, readOnly: !canEdit, hint: '?', keyboardType: TextInputType.number, inputFormatters: digits, onChanged: changed),
+              max: WebInput(controller: rows![i].max, readOnly: !canEdit, hint: 'same', keyboardType: TextInputType.number, inputFormatters: digits, onChanged: changed),
+              rule: _rule(rows![i]),
+              // `p-1.5 rounded-lg text-stone-400`, Trash2 `w-4 h-4`.
+              remove: canEdit
+                  ? InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => setState(() {
+                        rows!.removeAt(i).dispose();
+                        saved = false;
+                      }),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(Icons.delete_outline, size: 16, color: p.faint, semanticLabel: 'Remove ${rows![i].name.text}'),
+                      ),
+                    )
+                  : null,
+            ),
+        ]);
+
         return PageBody(children: [
           const PageHeader(title: 'Settings', description: 'Bank account numbers'),
-          const Hint("Banks people can withdraw to and how many digits each bank's account numbers have. The withdraw popup only accepts that many digits."),
-          for (var i = 0; i < rows!.length; i++)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-                  Row(children: [
-                    Expanded(
-                      child: TextField(
-                        controller: rows![i].name,
-                        enabled: canEdit,
-                        inputFormatters: [LengthLimitingTextInputFormatter(60)],
-                        onChanged: (_) => setState(() => saved = false),
-                        decoration: const InputDecoration(labelText: 'Bank'),
-                      ),
-                    ),
-                    if (canEdit)
-                      IconButton(
-                        onPressed: () => setState(() {
-                          rows!.removeAt(i).dispose();
-                          saved = false;
-                        }),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                  ]),
-                  Row(children: [
-                    Expanded(
-                      child: TextField(
-                        controller: rows![i].min,
-                        enabled: canEdit,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: digits,
-                        onChanged: (_) => setState(() => saved = false),
-                        decoration: const InputDecoration(labelText: 'Digits', hintText: '?'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: rows![i].max,
-                        enabled: canEdit,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: digits,
-                        onChanged: (_) => setState(() => saved = false),
-                        decoration: const InputDecoration(labelText: 'Up to', hintText: 'same'),
-                      ),
-                    ),
-                  ]),
-                  Align(alignment: Alignment.centerLeft, child: _rule(rows![i])),
-                ], 10)),
+          SectionCard(
+            title: 'Bank account numbers',
+            description: "Banks people can withdraw to and how many digits each bank's account numbers have. The withdraw popup only accepts that many digits.",
+            action: Icon(Icons.account_balance_outlined, size: 20, color: p.faint),
+            // `space-y-4`.
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
+              // `overflow-x-auto`: the table scrolls sideways on narrow screens.
+              LayoutBuilder(builder: (context, constraints) {
+                const minWidth = 560.0;
+                if (constraints.maxWidth >= minWidth) return table;
+                return SingleChildScrollView(scrollDirection: Axis.horizontal, child: SizedBox(width: minWidth, child: table));
+              }),
+              if (canEdit)
+                // `inline-flex items-center gap-1.5 text-xs font-bold text-stone-600`.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    onTap: () => setState(() => rows!.add(_BankRow('', '', ''))),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.add, size: 14, color: p.textSecondary),
+                      const SizedBox(width: 6),
+                      Text('Add a bank', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textSecondary)),
+                    ]),
+                  ),
+                ),
+              // `flex flex-wrap items-center gap-3`.
+              Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                if (canEdit) WebButton(label: busy ? 'Saving…' : 'Save banks', onPressed: busy ? null : save) else const ToneBadge('View only'),
+                if (saved)
+                  Text('Saved. The withdraw popup uses these now.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tone.green.foreground(context))),
+                if (data['updated_at'] != null) Text('Last changed ${formatDate(data['updated_at'])}', style: TextStyle(fontSize: 11, color: p.faint)),
+              ]),
+              // `text-[11px] text-stone-400`.
+              Text(
+                'Bank of Kigali (14 digits) and I&M (16 digits) come from real account numbers; confirm the others with each bank before setting them. '
+                'Type one number for an exact length, or both for a range. Banks not in the list (“Other bank”) accept 6–30 digits.',
+                style: TextStyle(fontSize: 11, height: 1.45, color: p.faint),
               ),
-            ),
-          if (canEdit)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => setState(() => rows!.add(_BankRow('', '', ''))),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add a bank'),
-              ),
-            ),
-          Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            if (canEdit) BusyButton(label: 'Save banks', busy: busy, onPressed: save) else const ToneBadge('View only'),
-            if (saved) Hint('Saved. The withdraw popup uses these now.', color: Tone.green.foreground(context)),
-            if (data['updated_at'] != null) Hint('Last changed ${formatDate(data['updated_at'])}'),
-          ]),
-          if (actionError != null) ErrorNote(error: actionError),
-          const Hint('Bank of Kigali (14 digits) and I&M (16 digits) come from real account numbers; confirm the others with each bank before setting them. '
-              'Type one number for an exact length, or both for a range. Banks not in the list (“Other bank”) accept 6–30 digits.'),
+              if (actionError != null) ErrorNote(error: actionError),
+            ], 16)),
+          ),
         ]);
       },
     );
@@ -690,6 +924,8 @@ class _DeliveryFeesPageState extends State<DeliveryFeesPage> with BusyState {
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final muted = TextStyle(fontSize: 14, height: 1.43, color: p.muted);
     return QueryView<Json>(
       query: query,
       builder: (context, data) {
@@ -701,82 +937,156 @@ class _DeliveryFeesPageState extends State<DeliveryFeesPage> with BusyState {
           final cleaned = next.text.replaceAll(RegExp(r'[^\d.]'), '').replaceAllMapped(RegExp(r'(\..*)\.'), (m) => m.group(1)!);
           return next.copyWith(text: cleaned.length > 5 ? cleaned.substring(0, 5) : cleaned);
         });
-        return PageBody(children: [
-          const PageHeader(title: 'Settings', description: 'Delivery fee by distance'),
-          const Hint('Set the delivery fee for each distance range, from the kitchen to the customer by road. '
-              'The delivery worker keeps the whole fee. No fee can be below 500 RWF.'),
-          if (!usingRanges)
-            const Note(
-              'Not set yet — fees use the standard formula (500 RWF + 200 RWF per km, at least 800 RWF). Save ranges below to use your own prices.',
-              tone: Tone.amber,
-            ),
-          for (var i = 0; i < rows!.length; i++)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(children: [
-                  SizedBox(width: 76, child: Text('From ${_km(current[i].from)} km', style: const TextStyle(fontWeight: FontWeight.w800))),
-                  Expanded(
-                    child: i == rows!.length - 1
-                        ? const Text('and more', style: TextStyle(fontWeight: FontWeight.w700))
-                        : TextField(
-                            controller: rows![i].to,
-                            enabled: canEdit,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            inputFormatters: [kmFormatter],
-                            onChanged: (_) => setState(() => saved = false),
-                            decoration: const InputDecoration(labelText: 'to (km)'),
-                          ),
+
+        // One range: `flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 px-3 py-2.5`.
+        Widget rangeRow(int i) {
+          final isLast = i == rows!.length - 1;
+          final fee = num.tryParse(rows![i].fee.text) ?? 0;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: p.border)),
+            child: Row(children: [
+              Expanded(
+                child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  // `text-sm font-bold text-gray-900 w-20`.
+                  SizedBox(
+                    width: 80,
+                    child: Text('From ${_km(current[i].from)} km', style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w700, color: p.text)),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: rows![i].fee,
-                      enabled: canEdit,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-                      onChanged: (_) => setState(() => saved = false),
-                      decoration: InputDecoration(
-                        labelText: 'Fee (RWF)',
-                        errorText: (num.tryParse(rows![i].fee.text) ?? 0) > 0 && (num.tryParse(rows![i].fee.text) ?? 0) < _minFee ? 'Below 500 RWF' : null,
+                  // `w-32`: "to [km] km", or "and more" on the last range.
+                  SizedBox(
+                    width: 128,
+                    child: isLast
+                        ? Text('and more', style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w700, color: p.textSecondary))
+                        : Row(children: [
+                            Text('to', style: muted),
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              width: 64,
+                              child: WebInput(
+                                controller: rows![i].to,
+                                readOnly: !canEdit,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [kmFormatter],
+                                onChanged: (_) => setState(() => saved = false),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text('km', style: muted),
+                          ]),
+                  ),
+                  // Fee `w-24` + "RWF".
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    SizedBox(
+                      width: 96,
+                      child: WebInput(
+                        controller: rows![i].fee,
+                        readOnly: !canEdit,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+                        onChanged: (_) => setState(() => saved = false),
                       ),
                     ),
-                  ),
-                  if (canEdit && rows!.length > 1) IconButton(onPressed: () => removeRange(i), icon: const Icon(Icons.delete_outline)),
+                    const SizedBox(width: 6),
+                    Text('RWF', style: muted),
+                  ]),
+                  if (fee > 0 && fee < _minFee) const ToneBadge('Below 500 RWF', tone: Tone.red),
                 ]),
               ),
-            ),
-          if (canEdit)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(onPressed: addRange, icon: const Icon(Icons.add, size: 16), label: const Text('Add a range')),
-            ),
-          if (issues.isNotEmpty)
-            Note(issues.join('\n'))
-          else
-            SectionCard(
-              title: 'Customers will pay',
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                for (final r in current)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text.rich(TextSpan(children: [
-                      TextSpan(text: '${_label(r.from, r.to)}: '),
-                      TextSpan(text: formatRwf(r.fee), style: const TextStyle(fontWeight: FontWeight.w800)),
-                    ])),
+              // `ml-auto p-1.5 rounded-lg text-stone-400`, Trash2 `w-4 h-4`.
+              if (canEdit && rows!.length > 1)
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => removeRange(i),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(Icons.delete_outline, size: 16, color: p.faint, semanticLabel: 'Remove range ${i + 1}'),
                   ),
+                ),
+            ]),
+          );
+        }
+
+        return PageBody(children: [
+          const PageHeader(title: 'Settings', description: 'Delivery fee by distance'),
+          SectionCard(
+            title: 'Delivery fee by distance',
+            description: 'Set the delivery fee for each distance range, from the kitchen to the customer by road. '
+                'The delivery worker keeps the whole fee. No fee can be below 500 RWF.',
+            action: Icon(Icons.pedal_bike_outlined, size: 20, color: p.faint),
+            // `space-y-4`.
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
+              if (!usingRanges)
+                const Note(
+                  'Not set yet — fees use the standard formula (500 RWF + 200 RWF per km, at least 800 RWF). Save ranges below to use your own prices.',
+                  tone: Tone.amber,
+                ),
+              // `space-y-2`.
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([for (var i = 0; i < rows!.length; i++) rangeRow(i)], 8)),
+              if (canEdit)
+                // `inline-flex items-center gap-1.5 text-xs font-bold text-stone-600`.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    onTap: addRange,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.add, size: 14, color: p.textSecondary),
+                      const SizedBox(width: 6),
+                      Text('Add a range', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textSecondary)),
+                    ]),
+                  ),
+                ),
+              if (issues.isNotEmpty)
+                // `text-xs font-semibold text-red-700 space-y-0.5`.
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  for (final issue in issues)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(issue, style: TextStyle(fontSize: 12, height: 1.33, fontWeight: FontWeight.w600, color: Tone.red.foreground(context))),
+                    ),
+                ])
+              else
+                // `rounded-2xl bg-stone-50 border border-stone-100 p-3 text-sm text-stone-700`.
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: p.stone50, borderRadius: BorderRadius.circular(16), border: Border.all(color: p.divider)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('CUSTOMERS WILL PAY',
+                          style: TextStyle(fontSize: 12, height: 1.33, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: p.faint)),
+                    ),
+                    for (final r in current)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text.rich(
+                          TextSpan(children: [
+                            TextSpan(text: '${_label(r.from, r.to)}: '),
+                            TextSpan(text: formatRwf(r.fee), style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
+                          ]),
+                          style: TextStyle(fontSize: 14, height: 1.43, color: p.textSecondary),
+                        ),
+                      ),
+                  ]),
+                ),
+              // `flex flex-wrap items-center gap-3`.
+              Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                if (canEdit)
+                  WebButton(label: busy ? 'Saving…' : 'Save delivery fees', onPressed: issues.isNotEmpty || busy ? null : () => save(current))
+                else
+                  const ToneBadge('View only'),
+                if (saved)
+                  Text('Saved. New orders use these fees.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tone.green.foreground(context))),
+                if (data['updated_at'] != null) Text('Last changed ${formatDate(data['updated_at'])}', style: TextStyle(fontSize: 11, color: p.faint)),
               ]),
-            ),
-          Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            if (canEdit)
-              BusyButton(label: 'Save delivery fees', busy: busy, onPressed: issues.isNotEmpty ? null : () => save(current))
-            else
-              const ToneBadge('View only'),
-            if (saved) Hint('Saved. New orders use these fees.', color: Tone.green.foreground(context)),
-            if (data['updated_at'] != null) Hint('Last changed ${formatDate(data['updated_at'])}'),
-          ]),
-          const Hint('A distance exactly on the edge (e.g. 3 km) uses the next range. Orders already placed keep the fee they were charged.'),
-          if (actionError != null) ErrorNote(error: actionError),
+              Text(
+                'A distance exactly on the edge (e.g. 3 km) uses the next range. Orders already placed keep the fee they were charged.',
+                style: TextStyle(fontSize: 11, height: 1.45, color: p.faint),
+              ),
+              if (actionError != null) ErrorNote(error: actionError),
+            ], 16)),
+          ),
         ]);
       },
     );
@@ -827,6 +1137,7 @@ class _DeliveryTimingPageState extends State<DeliveryTimingPage> with BusyState 
 
   @override
   Widget build(BuildContext context) {
+    final p = Palette.of(context);
     return QueryView<Json>(
       query: query,
       builder: (context, data) {
@@ -841,89 +1152,172 @@ class _DeliveryTimingPageState extends State<DeliveryTimingPage> with BusyState 
         final noon = DateTime(now.year, now.month, now.day, 12);
         String at(num minutes) => formatTime(noon.add(Duration(minutes: minutes.toInt())));
         final digits = [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)];
+        void changed(_) => setState(() => saved = false);
+        final body = TextStyle(fontSize: 14, height: 1.43, color: p.textSecondary);
+        TextSpan strong(String text) => TextSpan(text: text, style: TextStyle(fontWeight: FontWeight.w700, color: p.text));
 
-        return PageBody(children: [
-          const PageHeader(title: 'Settings', description: 'Delivery timing'),
-          const Hint('For delivery workers who delay collecting an order that is ready. Times count from when the kitchen marks the food ready. '
-              'Workers see these rules before they accept.'),
-          SectionCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
-              TextField(
-                controller: warning,
-                enabled: canEdit,
-                keyboardType: TextInputType.number,
-                inputFormatters: digits,
-                onChanged: (_) => setState(() => saved = false),
-                decoration: const InputDecoration(labelText: 'Remind the worker after', helperText: 'minutes'),
+        final fields = [
+          WebField(
+            label: 'Remind the worker after',
+            hint: const Text('minutes'),
+            child: WebInput(controller: warning, readOnly: !canEdit, keyboardType: TextInputType.number, inputFormatters: digits, onChanged: changed),
+          ),
+          WebField(
+            label: 'Counts as late after',
+            hint: const Text('minutes'),
+            child: WebInput(controller: charge, readOnly: !canEdit, keyboardType: TextInputType.number, inputFormatters: digits, onChanged: changed),
+          ),
+          WebField(
+            label: 'Give to another worker after',
+            hint: Text(reassignOn ? 'minutes' : 'switched off'),
+            // `flex items-center gap-2`: the input and an "On" checkbox.
+            child: Row(children: [
+              Expanded(
+                child: WebInput(
+                  controller: reassign,
+                  enabled: canEdit && reassignOn,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: digits,
+                  onChanged: changed,
+                ),
               ),
-              TextField(
-                controller: charge,
-                enabled: canEdit,
-                keyboardType: TextInputType.number,
-                inputFormatters: digits,
-                onChanged: (_) => setState(() => saved = false),
-                decoration: const InputDecoration(labelText: 'Counts as late after', helperText: 'minutes'),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Give to another worker automatically'),
-                value: reassignOn,
-                onChanged: canEdit
-                    ? (value) => setState(() {
-                          reassignOn = value;
+              const SizedBox(width: 8),
+              InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: canEdit
+                    ? () => setState(() {
+                          reassignOn = !reassignOn;
                           saved = false;
                         })
                     : null,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Checkbox(
+                      value: reassignOn,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      onChanged: canEdit
+                          ? (value) => setState(() {
+                                reassignOn = value ?? false;
+                                saved = false;
+                              })
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text('On', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.textSecondary)),
+                ]),
               ),
-              TextField(
-                controller: reassign,
-                enabled: canEdit && reassignOn,
-                keyboardType: TextInputType.number,
-                inputFormatters: digits,
-                onChanged: (_) => setState(() => saved = false),
-                decoration: InputDecoration(labelText: 'Give to another worker after', helperText: reassignOn ? 'minutes' : 'switched off'),
-              ),
-            ])),
+            ]),
           ),
+        ];
+
+        return PageBody(children: [
+          const PageHeader(title: 'Settings', description: 'Delivery timing'),
           SectionCard(
-            title: 'Example: food ready at ${at(0)}',
-            child: valid
-                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: spaced([
-                    Text('${at(w)} — the worker is reminded to collect it.'),
-                    Text('${at(c)} — not collected: late pickup recorded and support is alerted. No charge is taken.'),
-                    reassignOn
-                        ? Text('${at(r)} — still not collected: the order is taken away and offered to other nearby workers '
-                            '(never back to the late one). The kitchen and customer are told.')
-                        : const Hint('The order is never taken away automatically — support can still reassign it by phone.'),
-                  ], 6))
-                : Note('The reminder must come before the pickup counts as late${reassignOn ? ', and giving it to another worker must come after that' : ''}.'),
+            title: 'Delivery timing',
+            description: 'For delivery workers who delay collecting an order that is ready. Times count from when the kitchen marks the food ready. '
+                'Workers see these rules before they accept.',
+            action: Icon(Icons.timer_outlined, size: 20, color: p.faint),
+            // `space-y-5`.
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
+              // `grid gap-4 sm:grid-cols-3`.
+              if (isSm(context))
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  for (var i = 0; i < fields.length; i++) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: fields[i])],
+                ])
+              else
+                Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced(fields, 16)),
+              // `rounded-2xl bg-stone-50 border border-stone-100 p-4 text-sm text-stone-700 space-y-1`.
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: p.stone50, borderRadius: BorderRadius.circular(16), border: Border.all(color: p.divider)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('EXAMPLE: FOOD READY AT ${at(0).toUpperCase()}',
+                        style: TextStyle(fontSize: 12, height: 1.33, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: p.faint)),
+                  ),
+                  if (valid) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text.rich(TextSpan(children: [strong(at(w)), const TextSpan(text: ' — the worker is reminded to collect it.')]), style: body),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text.rich(
+                        TextSpan(children: [
+                          strong(at(c)),
+                          const TextSpan(text: ' — not collected: late pickup recorded and support is alerted. No charge is taken.'),
+                        ]),
+                        style: body,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: reassignOn
+                          ? Text.rich(
+                              TextSpan(children: [
+                                strong(at(r)),
+                                const TextSpan(
+                                  text: ' — still not collected: the order is taken away and offered to other nearby workers '
+                                      '(never back to the late one). The kitchen and customer are told.',
+                                ),
+                              ]),
+                              style: body,
+                            )
+                          : Text('The order is never taken away automatically — support can still reassign it by phone.',
+                              style: body.copyWith(color: p.muted)),
+                    ),
+                  ] else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'The reminder must come before the pickup counts as late${reassignOn ? ', and giving it to another worker must come after that' : ''}.',
+                        style: body.copyWith(fontWeight: FontWeight.w600, color: Tone.red.foreground(context)),
+                      ),
+                    ),
+                ]),
+              ),
+              // `flex flex-wrap items-center gap-3`.
+              Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                if (canEdit)
+                  WebButton(
+                    label: busy ? 'Saving…' : 'Save timing',
+                    onPressed: !valid || busy
+                        ? null
+                        : () async {
+                            final ok = await run(() => session.api.saveDeliveryTiming({
+                                  'warning_minutes': w,
+                                  'charge_after_minutes': c,
+                                  'reassign_after_minutes': reassignOn ? r : null,
+                                }));
+                            if (ok && mounted) setState(() => saved = true);
+                          },
+                  )
+                else
+                  const ToneBadge('View only — ask an operations manager or the owner to change it'),
+                if (saved)
+                  Text('Saved. New pickups use these times.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tone.green.foreground(context))),
+                if (timing['updated_at'] != null) Text('Last changed ${formatDate(timing['updated_at'])}', style: TextStyle(fontSize: 11, color: p.faint)),
+              ]),
+              // `text-[11px] text-stone-400`.
+              Text(
+                'Changes apply to orders that become ready after you save. A worker who takes over a late order '
+                '(assigned by support or re-offered) gets this time again from when they take it.',
+                style: TextStyle(fontSize: 11, height: 1.45, color: p.faint),
+              ),
+              Text(
+                'Late pickups are never charged: a worker who delivers is always paid the full delivery fee. '
+                'A worker who is too late only loses the order to another worker.',
+                style: TextStyle(fontSize: 11, height: 1.45, color: p.faint),
+              ),
+              if (actionError != null) ErrorNote(error: actionError),
+            ], 20)),
           ),
-          Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            if (canEdit)
-              BusyButton(
-                label: 'Save timing',
-                busy: busy,
-                onPressed: !valid
-                    ? null
-                    : () async {
-                        final ok = await run(() => session.api.saveDeliveryTiming({
-                              'warning_minutes': w,
-                              'charge_after_minutes': c,
-                              'reassign_after_minutes': reassignOn ? r : null,
-                            }));
-                        if (ok && mounted) setState(() => saved = true);
-                      },
-              )
-            else
-              const ToneBadge('View only — ask an operations manager or the owner to change it'),
-            if (saved) Hint('Saved. New pickups use these times.', color: Tone.green.foreground(context)),
-            if (timing['updated_at'] != null) Hint('Last changed ${formatDate(timing['updated_at'])}'),
-          ]),
-          if (actionError != null) ErrorNote(error: actionError),
-          const Hint('Changes apply to orders that become ready after you save. A worker who takes over a late order '
-              '(assigned by support or re-offered) gets this time again from when they take it.'),
-          const Hint('Late pickups are never charged: a worker who delivers is always paid the full delivery fee. '
-              'A worker who is too late only loses the order to another worker.'),
         ]);
       },
     );

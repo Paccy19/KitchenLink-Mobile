@@ -921,7 +921,12 @@ class WebInput extends StatelessWidget {
     this.readOnly = false,
     this.errorText,
     this.obscure = false,
+    this.autofillHints,
+    this.enabled = true,
   });
+
+  /// `disabled`: greyed out and not editable.
+  final bool enabled;
 
   final TextEditingController? controller;
   final String? initialValue;
@@ -932,6 +937,7 @@ class WebInput extends StatelessWidget {
   final bool readOnly;
   final String? errorText;
   final bool obscure;
+  final Iterable<String>? autofillHints;
 
   @override
   Widget build(BuildContext context) {
@@ -940,7 +946,9 @@ class WebInput extends StatelessWidget {
       controller: controller,
       initialValue: controller == null ? initialValue : null,
       readOnly: readOnly,
+      enabled: enabled,
       obscureText: obscure,
+      autofillHints: autofillHints,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       onChanged: onChanged,
@@ -952,7 +960,10 @@ class WebInput extends StatelessWidget {
 
 /// The website's primary `Button`: brown gradient, `px-4 py-2 text-xs font-bold rounded-xl shadow-sm`.
 class WebButton extends StatelessWidget {
-  const WebButton({super.key, required this.label, required this.onPressed, this.icon, this.small = false, this.large = false});
+  const WebButton({super.key, required this.label, required this.onPressed, this.icon, this.small = false, this.large = false, this.danger = false});
+
+  /// `variant="danger"`: `bg-red-600 text-white shadow-sm`.
+  final bool danger;
 
   final String label;
   final VoidCallback? onPressed;
@@ -969,7 +980,12 @@ class WebButton extends StatelessWidget {
     return Opacity(
       opacity: onPressed == null ? 0.6 : 1,
       child: DecoratedBox(
-        decoration: BoxDecoration(gradient: AppColors.buttonGradient, borderRadius: BorderRadius.circular(12), boxShadow: AppColors.shadowSm),
+        decoration: BoxDecoration(
+          color: danger ? AppColors.red600 : null,
+          gradient: danger ? null : AppColors.buttonGradient,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: AppColors.shadowSm,
+        ),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
