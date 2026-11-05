@@ -34,7 +34,15 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-
+  http: ^1.6.0
+  provider: ^6.1.5+1
+  flutter_secure_storage: ^11.2.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  url_launcher: ^6.3.3
+  intl: ^0.20.3
+  path_provider: ^2.1.6
+  web: ^1.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -56,6 +64,21 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # The website's font (Plus Jakarta Sans), bundled so it works offline.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-700.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-800.ttf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:
