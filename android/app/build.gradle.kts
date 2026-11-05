@@ -47,3 +47,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // FileProvider, used to hand downloaded vendor documents to a viewer app.
+    implementation("androidx.core:core:1.18.0")
+}
