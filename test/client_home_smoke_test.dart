@@ -9,9 +9,10 @@ import 'package:provider/provider.dart';
 
 import 'package:kitchenlink_mobile/api/api_client.dart';
 import 'package:kitchenlink_mobile/client/customer_api.dart';
+import 'package:kitchenlink_mobile/client/customer_session.dart';
 import 'package:kitchenlink_mobile/client/location.dart';
 import 'package:kitchenlink_mobile/client/widgets/home_bars.dart';
-import 'package:kitchenlink_mobile/main_client.dart';
+import 'package:kitchenlink_mobile/main.dart';
 
 Map<String, Object?> vendor(String id, String name) => {
       'id': id,
@@ -82,6 +83,7 @@ void main() {
             Provider(create: (_) => CustomerApi(ApiClient(baseUrl: 'http://localhost:4000/api/v1'))),
             ChangeNotifierProvider(create: (_) => ClientLocation()..restore()),
             ChangeNotifierProvider(create: (_) => RecentSearches()..restore()),
+            ChangeNotifierProvider(create: (_) => CustomerSession(ApiClient(baseUrl: 'http://localhost:4000/api/v1'))..restore()),
           ],
           child: const KitchenLinkMarketApp(),
         ));

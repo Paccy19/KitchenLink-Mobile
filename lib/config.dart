@@ -25,13 +25,15 @@ const String kMarketplaceUrl = String.fromEnvironment('MARKETPLACE_URL', default
 /// Milliseconds before a request is abandoned (the website's `VITE_API_TIMEOUT`).
 const int kApiTimeoutMs = int.fromEnvironment('API_TIMEOUT', defaultValue: 8000);
 
-/// Optional CARTO basemap key (the website's `VITE_CARTO_API_KEY`).
+/// CARTO basemap key (the website's `VITE_CARTO_API_KEY`). CARTO now draws
+/// "API KEY REQUIRED" on tiles requested without one. It goes in `?key=`;
+/// CARTO ignores `?api_key=`.
 const String kCartoApiKey = String.fromEnvironment('CARTO_API_KEY');
 
 /// CARTO Voyager raster tiles: the same basemap the website draws with MapLibre.
 String get cartoTileUrl =>
     'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-    '${kCartoApiKey.isEmpty ? '' : '?api_key=$kCartoApiKey'}';
+    '${kCartoApiKey.isEmpty ? '' : '?key=${Uri.encodeQueryComponent(kCartoApiKey)}'}';
 
 /// Kigali city centre: where maps start when there is no position yet.
 const double kKigaliLat = -1.9441;

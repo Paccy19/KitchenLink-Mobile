@@ -13,6 +13,11 @@ import '../widgets/cards.dart';
 import '../widgets/chrome.dart';
 import '../widgets/header.dart';
 import '../widgets/home_bars.dart';
+import '../widgets/role_select_sheet.dart';
+import '../customer_session.dart';
+import '../widgets/customer_auth_sheet.dart';
+import 'vendor_login_screen.dart';
+import '../../main_admin.dart' show openAdminPanel;
 
 /// One request's state (the website uses React Query for this).
 class _Load<T> {
@@ -191,6 +196,83 @@ class _HomeScreenState extends State<HomeScreen> {
       ..showSnackBar(SnackBar(content: Text("$page isn't in the mobile app yet.")));
   }
 
+  /// Sign In: the website's "How do you want to sign in?" popup. Only the
+  /// admin sign-in exists in the mobile app so far.
+  Future<void> _signIn() async {
+    final session = context.read<CustomerSession>();
+    if (session.isSignedIn) return _accountSheet(session);
+    final role = await showRoleSelect(context);
+    if (role == null || !mounted) return;
+    switch (role) {
+      case SignInRole.admin:
+        await openAdminPanel(context);
+      case SignInRole.customer:
+        final signedIn = await showCustomerSignIn(context);
+        if (signedIn && mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text('Welcome, ${context.read<CustomerSession>().firstName}!')));
+        }
+      case SignInRole.vendor:
+        await _staffSignIn(VendorLoginScreen(), who: 'a vendor', dashboard: 'vendor dashboard');
+      case SignInRole.driver:
+        await _staffSignIn(DriverLoginScreen(), who: 'a delivery worker', dashboard: 'delivery dashboard');
+    }
+  }
+
+  /// Vendor / delivery-worker login. Their dashboards aren't in the app yet,
+  /// so a successful sign-in is confirmed and the app stays on the marketplace.
+  Future<void> _staffSignIn(StaffLoginScreen screen, {required String who, required String dashboard}) async {
+    final signedIn = await Navigator.of(context).push<StaffSignIn>(MaterialPageRoute(builder: (_) => screen));
+    if (signedIn == null || !mounted) return;
+    // One role at a time, as on the website.
+    await context.read<CustomerSession>().logout();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(
+          'Signed in as ${signedIn.name.isEmpty ? who : signedIn.name}. '
+          "The $dashboard isn't in the mobile app yet.",
+        ),
+      ));
+  }
+
+  /// Signed in: who is signed in, and Sign out.
+  Future<void> _accountSheet(CustomerSession session) => showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.white,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(session.name, style: kText(18, weight: w900, color: K.gray900)),
+                if (session.phone.isNotEmpty) Text(session.phone, style: kText(12, color: K.stone500)),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    session.logout();
+                  },
+                  icon: const Icon(Icons.logout, size: 16),
+                  label: const Text('Sign out'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: K.brown700,
+                    side: const BorderSide(color: K.brown200),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
   void _gpsUnavailable() {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -217,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          MarketHeader(cartCount: 0, onCart: () => _soon('The basket'), onSignIn: () => _soon('Sign in'), onTheme: () => _soon('Dark mode'), onLink: _soon),
+          MarketHeader(cartCount: 0, onCart: () => _soon('The basket'), onSignIn: _signIn, signedInName: context.watch<CustomerSession>().isSignedIn ? context.watch<CustomerSession>().firstName : null, onTheme: () => _soon('Dark mode'), onLink: _soon),
           Expanded(
             child: RefreshIndicator(
               color: K.brown700,

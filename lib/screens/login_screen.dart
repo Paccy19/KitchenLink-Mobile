@@ -34,7 +34,11 @@ const _shadowMd = [
 /// Admin sign-in, laid out like the website's /admin-login page: email +
 /// password, then the SMS code when two-step sign-in is on.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.onBackToMarketplace});
+
+  /// "Back to marketplace": returns to the marketplace app when set,
+  /// otherwise opens the website.
+  final VoidCallback? onBackToMarketplace;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -150,7 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   Center(
                     child: InkWell(
-                      onTap: () => launchUrl(Uri.parse(kMarketplaceUrl), mode: LaunchMode.externalApplication),
+                      onTap: widget.onBackToMarketplace ??
+                          () => launchUrl(Uri.parse(kMarketplaceUrl), mode: LaunchMode.externalApplication),
                       child: const Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(Icons.storefront_outlined, size: 14, color: _stone500),
                         SizedBox(width: 6),

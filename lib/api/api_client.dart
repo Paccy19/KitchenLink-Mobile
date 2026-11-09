@@ -10,7 +10,7 @@ typedef Json = Map<String, dynamic>;
 
 /// An API failure with the message to show the user, as the website's ApiError.
 class ApiException implements Exception {
-  ApiException(this.message, {this.status = 0, this.path = '', this.code = ''});
+  ApiException(this.message, {this.status = 0, this.path = '', this.code = '', this.details = const {}});
 
   final String message;
   final int status;
@@ -18,6 +18,9 @@ class ApiException implements Exception {
 
   /// Machine-readable error code from the API (e.g. 'CHALLENGE_EXPIRED').
   final String code;
+
+  /// Extra facts the API sent with the error (e.g. why a vendor is blocked).
+  final Map<String, dynamic> details;
 
   @override
   String toString() => message;
@@ -65,10 +68,23 @@ class ApiClient {
     final hasBody = body != null;
     final request = http.Request(method, _uri(path))..headers.addAll(_headers(json: hasBody));
     if (hasBody) request.body = jsonEncode(body);
+    return _send(request, path, method, const Duration(milliseconds: kApiTimeoutMs));
+  }
 
+  /// A multipart form POST (text fields + files), like the website's FormData requests.
+  Future<dynamic> upload(String path, {required Map<String, String> fields, List<http.MultipartFile> files = const []}) {
+    final request = http.MultipartRequest('POST', _uri(path))
+      ..headers.addAll(_headers())
+      ..fields.addAll(fields)
+      ..files.addAll(files);
+    // Documents can take a while on a slow connection.
+    return _send(request, path, 'POST', const Duration(seconds: 90));
+  }
+
+  Future<dynamic> _send(http.BaseRequest request, String path, String method, Duration timeout) async {
     http.Response response;
     try {
-      final streamed = await request.send().timeout(const Duration(milliseconds: kApiTimeoutMs));
+      final streamed = await request.send().timeout(timeout);
       response = await http.Response.fromStream(streamed);
     } on TimeoutException {
       throw ApiException('The request took too long. Check your connection.', path: path);
@@ -86,6 +102,7 @@ class ApiClient {
     final error = data is Map ? data['error'] : null;
     final errorCode = error is Map ? (error['code'] ?? '').toString() : '';
     final errorMessage = error is Map ? error['message']?.toString() : null;
+    final errorDetails = error is Map && error['details'] is Map ? Map<String, dynamic>.from(error['details'] as Map) : const <String, dynamic>{};
 
     if (response.statusCode == 401) {
       token = null;
@@ -102,6 +119,7 @@ class ApiClient {
         status: response.statusCode,
         path: path,
         code: errorCode,
+        details: errorDetails,
       );
     }
     if (data == null && response.body.isNotEmpty) {
