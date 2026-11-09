@@ -61,6 +61,8 @@ class Wallet {
     this.totalSalesRwf = 0,
     this.withdrawnRwf = 0,
     this.pendingBalanceRwf = 0,
+    this.processingRwf = 0,
+    this.totalEarningsRwf = 0,
     this.commissionPercent = 0,
     this.payoutPhone,
     this.payoutName = '',
@@ -72,6 +74,8 @@ class Wallet {
         totalSalesRwf: intOf(json['total_sales_rwf']),
         withdrawnRwf: intOf(json['withdrawn_rwf']),
         pendingBalanceRwf: intOf(json['pending_balance_rwf']),
+        processingRwf: intOf(json['processing_rwf']),
+        totalEarningsRwf: intOf(json['total_earnings_rwf']),
         commissionPercent: doubleOrNull(json['commission_percent']) ?? 0,
         payoutPhone: strOrNull(json['payout_phone']),
         payoutName: str(json['payout_name']),
@@ -82,6 +86,12 @@ class Wallet {
   final int totalSalesRwf;
   final int withdrawnRwf;
   final int pendingBalanceRwf;
+
+  /// Delivery worker wallet: withdrawals requested but not yet paid out.
+  final int processingRwf;
+
+  /// Delivery worker wallet: everything earned from completed deliveries.
+  final int totalEarningsRwf;
   final double commissionPercent;
 
   /// The registered phone, suggested for mobile-money payouts.

@@ -14,6 +14,21 @@ class AppColors {
   static const creamDeep = Color(0xFFF5EBE1);
 }
 
+/// The delivery worker app's moss green, the same palette as the website's
+/// delivery worker pages (`app-theme-driver`).
+class DriverColors {
+  const DriverColors._();
+
+  static const moss950 = Color(0xFF12200B);
+  static const moss900 = Color(0xFF1C2B12);
+  static const brand = Color(0xFF3B5327);
+  static const accent = Color(0xFF4A6A34);
+  static const leaf = Color(0xFFB8D49A);
+  static const sage = Color(0xFFD9E5D0);
+  static const mist = Color(0xFFF5F8F2);
+  static const mistDeep = Color(0xFFE8F0E0);
+}
+
 /// Meaning of a status colour, resolved against the current theme.
 enum Tone { neutral, brand, info, success, warning, danger }
 
@@ -43,9 +58,9 @@ ToneColors toneColors(BuildContext context, Tone tone) {
           ? const ToneColors(Color(0xFF8CC4F0), Color(0xFF12293A))
           : const ToneColors(Color(0xFF1B5E91), Color(0xFFE4F1FB));
     case Tone.brand:
-      return dark
-          ? const ToneColors(AppColors.caramel, Color(0xFF3A2416))
-          : const ToneColors(AppColors.brand, AppColors.creamDeep);
+      // The app's own brand colour (brown for kitchens, moss for delivery workers).
+      final scheme = Theme.of(context).colorScheme;
+      return ToneColors(scheme.primary, scheme.primaryContainer);
     case Tone.neutral:
       return dark
           ? const ToneColors(Color(0xFFCDBFB5), Color(0xFF2E221B))
@@ -118,6 +133,69 @@ class AppTheme {
           onInverseSurface: AppColors.brown900,
         ),
         scaffold: const Color(0xFF150D08),
+      );
+
+  /// The delivery worker app (lib/main_driver.dart).
+  static ThemeData driverLight() => _build(
+        const ColorScheme(
+          brightness: Brightness.light,
+          primary: DriverColors.brand,
+          onPrimary: Colors.white,
+          primaryContainer: DriverColors.mistDeep,
+          onPrimaryContainer: DriverColors.moss900,
+          secondary: DriverColors.accent,
+          onSecondary: Colors.white,
+          secondaryContainer: DriverColors.sage,
+          onSecondaryContainer: DriverColors.moss900,
+          tertiary: Color(0xFF1E6B3F),
+          onTertiary: Colors.white,
+          error: Color(0xFFB3261E),
+          onError: Colors.white,
+          surface: Colors.white,
+          onSurface: Color(0xFF151C10),
+          onSurfaceVariant: Color(0xFF5B6653),
+          outline: Color(0xFFA3AE99),
+          outlineVariant: Color(0xFFE1E8DA),
+          surfaceContainerLowest: Colors.white,
+          surfaceContainerLow: DriverColors.mist,
+          surfaceContainer: Color(0xFFF0F4EC),
+          surfaceContainerHigh: DriverColors.mistDeep,
+          surfaceContainerHighest: Color(0xFFDDE7D3),
+          inverseSurface: DriverColors.moss900,
+          onInverseSurface: Colors.white,
+        ),
+        scaffold: const Color(0xFFF6F7F3),
+      );
+
+  static ThemeData driverDark() => _build(
+        const ColorScheme(
+          brightness: Brightness.dark,
+          primary: DriverColors.leaf,
+          onPrimary: DriverColors.moss950,
+          primaryContainer: Color(0xFF26361A),
+          onPrimaryContainer: Color(0xFFE3EED8),
+          secondary: Color(0xFF9DBF7E),
+          onSecondary: DriverColors.moss950,
+          secondaryContainer: Color(0xFF2F4321),
+          onSecondaryContainer: Color(0xFFE3EED8),
+          tertiary: Color(0xFF7FD4A0),
+          onTertiary: Color(0xFF0B2A17),
+          error: Color(0xFFFFB4AB),
+          onError: Color(0xFF690005),
+          surface: Color(0xFF151B11),
+          onSurface: Color(0xFFE6ECE0),
+          onSurfaceVariant: Color(0xFFB4C0AA),
+          outline: Color(0xFF7D8a73),
+          outlineVariant: Color(0xFF2E3A26),
+          surfaceContainerLowest: Color(0xFF0B1008),
+          surfaceContainerLow: Color(0xFF11170D),
+          surfaceContainer: Color(0xFF1A2214),
+          surfaceContainerHigh: Color(0xFF222C1B),
+          surfaceContainerHighest: Color(0xFF2C3824),
+          inverseSurface: Color(0xFFE6ECE0),
+          onInverseSurface: DriverColors.moss900,
+        ),
+        scaffold: const Color(0xFF0D120A),
       );
 
   static ThemeData _build(ColorScheme scheme, {required Color scaffold}) {
