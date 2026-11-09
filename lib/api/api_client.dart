@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
-import '../demo/demo_server.dart';
 
 typedef Json = Map<String, dynamic>;
 
@@ -35,10 +34,6 @@ class ApiClient {
   String? token;
   void Function(String? message)? onUnauthorized;
 
-  /// When set, every call is answered on the device with demo data and no
-  /// backend is contacted (demo mode).
-  DemoServer? demo;
-
   /// Bumped after every successful write, so open screens refetch
   /// (the website's notifyDataChanged + invalidateQueries).
   final StreamController<void> _changes = StreamController<void>.broadcast();
@@ -66,27 +61,7 @@ class ApiClient {
         if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
       };
 
-  /// Makes every open screen refetch (e.g. after the demo data is reset).
-  void notifyChanged() => _changes.add(null);
-
-  Future<dynamic> _demoRequest(String path, String method, Object? body) async {
-    dynamic data;
-    try {
-      data = await demo!.handle(method, path, body, token);
-    } on ApiException catch (err) {
-      if (err.status == 401 && token != null) {
-        token = null;
-        onUnauthorized?.call(err.message);
-      }
-      rethrow;
-    }
-    if (method != 'GET') _changes.add(null);
-    // A copy, so screens never hold the demo state itself.
-    return jsonDecode(jsonEncode(data));
-  }
-
   Future<dynamic> request(String path, {String method = 'GET', Object? body}) async {
-    if (demo != null) return _demoRequest(path, method, body);
     final hasBody = body != null;
     final request = http.Request(method, _uri(path))..headers.addAll(_headers(json: hasBody));
     if (hasBody) request.body = jsonEncode(body);
@@ -139,7 +114,6 @@ class ApiClient {
   /// A private file (e.g. a vendor's verification document) fetched with the
   /// admin's sign-in. Returns the bytes and the content type.
   Future<(Uint8List, String)> file(String path) async {
-    if (demo != null) return demo!.file(path);
     http.Response response;
     try {
       response = await http.get(_uri(path), headers: _headers()).timeout(const Duration(seconds: 60));
@@ -158,7 +132,6 @@ class ApiClient {
 
   /// Fire-and-forget sign-out on the server, so a copy of the token stops working.
   Future<void> logout(String oldToken) async {
-    if (demo != null) return;
     try {
       await http
           .post(_uri('/admin/auth/logout'), headers: {'Authorization': 'Bearer $oldToken'})
