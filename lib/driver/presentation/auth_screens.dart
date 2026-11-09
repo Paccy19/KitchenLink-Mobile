@@ -13,6 +13,7 @@ import '../../core/widgets/forms.dart';
 import '../../core/widgets/server_address.dart';
 import '../application/session.dart';
 import '../models/driver_account.dart';
+import '../../root/role_switcher.dart';
 import 'widgets/motion.dart';
 
 /// The KitchenLink mark with the "Delivery" app name.
@@ -256,6 +257,7 @@ class _DriverLoginScreenState extends ConsumerState<DriverLoginScreen> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
+                const Align(alignment: Alignment.centerLeft, child: OtherSignInButton()),
                 const Row(children: [Expanded(child: DriverBrandHeader()), ServerAddressButton()]),
                 const SizedBox(height: 40),
                 SoftSwitcher(

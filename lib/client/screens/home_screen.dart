@@ -14,6 +14,8 @@ import '../widgets/chrome.dart';
 import '../widgets/header.dart';
 import '../widgets/home_bars.dart';
 
+import '../../root/role_switcher.dart';
+
 /// One request's state (the website uses React Query for this).
 class _Load<T> {
   T? data;
@@ -217,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          MarketHeader(cartCount: 0, onCart: () => _soon('The basket'), onSignIn: () => _soon('Sign in'), onTheme: () => _soon('Dark mode'), onLink: _soon),
+          MarketHeader(cartCount: 0, onCart: () => _soon('The basket'), onSignIn: () => showSignInChooser(context), onTheme: () => _soon('Dark mode'), onLink: _soon),
           Expanded(
             child: RefreshIndicator(
               color: K.brown700,

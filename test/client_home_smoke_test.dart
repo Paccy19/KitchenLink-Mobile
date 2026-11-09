@@ -11,7 +11,7 @@ import 'package:kitchenlink_mobile/api/api_client.dart';
 import 'package:kitchenlink_mobile/client/customer_api.dart';
 import 'package:kitchenlink_mobile/client/location.dart';
 import 'package:kitchenlink_mobile/client/widgets/home_bars.dart';
-import 'package:kitchenlink_mobile/main_client.dart';
+import 'package:kitchenlink_mobile/client/market_app.dart';
 
 Map<String, Object?> vendor(String id, String name) => {
       'id': id,

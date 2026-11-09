@@ -135,7 +135,7 @@ class AppTheme {
         scaffold: const Color(0xFF150D08),
       );
 
-  /// The delivery worker app (lib/main_driver.dart).
+  /// The delivery worker screens (lib/driver).
   static ThemeData driverLight() => _build(
         const ColorScheme(
           brightness: Brightness.light,

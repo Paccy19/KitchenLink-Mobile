@@ -1,15 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Talks to the KitchenLink API and loads map tiles. -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- Delivery worker app (lib/main_driver.dart): offers come from kitchens
+    <!-- Delivery worker screens (lib/driver): offers come from kitchens
          near the rider, and the customer follows the rider during a delivery.
          Only while the app is in use; no background location. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <!-- usesCleartextTraffic lets the app reach a development backend on plain
          http (e.g. http://10.0.2.2:4000). Live builds should use https.
-         One label for all entry points (admin: lib/main.dart, vendor: lib/main_vendor.dart,
-         delivery worker: lib/main_driver.dart). -->
+         One app for every role (lib/main.dart). -->
     <application
         android:label="KitchenLink"
         android:name="${applicationName}"

@@ -7,6 +7,7 @@ import '../api/api_client.dart';
 import '../config.dart';
 import '../state/admin_session.dart';
 import '../ui/validation.dart';
+import '../root/role_switcher.dart';
 
 // The website's admin sign-in colours (Tailwind stone / gray / red).
 const _page = Color(0xFFF5F6F8);
@@ -116,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 448),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const Align(alignment: Alignment.centerLeft, child: OtherSignInButton()),
                   Center(
                     child: Container(
                       width: 56,

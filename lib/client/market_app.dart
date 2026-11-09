@@ -1,31 +1,24 @@
-/// The KitchenLink marketplace (customer app). Run it with
-/// `flutter run -t lib/main_client.dart`; the admin app is lib/main.dart.
-library;
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'api/api_client.dart';
-import 'client/client_theme.dart';
-import 'client/customer_api.dart';
-import 'client/location.dart';
-import 'client/screens/home_screen.dart';
-import 'client/widgets/home_bars.dart';
-import 'config.dart';
+import '../api/api_client.dart';
+import '../config.dart';
+import 'client_theme.dart';
+import 'customer_api.dart';
+import 'location.dart';
+import 'screens/home_screen.dart';
+import 'widgets/home_bars.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    MultiProvider(
+/// The public marketplace (customers), as one role of the app. Everyone
+/// starts here, like on the website.
+Widget buildMarketApp() => MultiProvider(
       providers: [
         Provider(create: (_) => CustomerApi(ApiClient(baseUrl: kDefaultApiBaseUrl))),
         ChangeNotifierProvider(create: (_) => ClientLocation()..restore()),
         ChangeNotifierProvider(create: (_) => RecentSearches()..restore()),
       ],
       child: const KitchenLinkMarketApp(),
-    ),
-  );
-}
+    );
 
 class KitchenLinkMarketApp extends StatelessWidget {
   const KitchenLinkMarketApp({super.key});
