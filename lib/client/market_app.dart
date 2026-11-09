@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../config.dart';
 import 'client_theme.dart';
 import 'customer_api.dart';
+import 'customer_session.dart';
 import 'location.dart';
 import 'screens/home_screen.dart';
 import 'widgets/home_bars.dart';
@@ -14,6 +15,7 @@ import 'widgets/home_bars.dart';
 Widget buildMarketApp() => MultiProvider(
       providers: [
         Provider(create: (_) => CustomerApi(ApiClient(baseUrl: kDefaultApiBaseUrl))),
+        ChangeNotifierProvider(create: (_) => CustomerSession(ApiClient(baseUrl: kDefaultApiBaseUrl))..restore()),
         ChangeNotifierProvider(create: (_) => ClientLocation()..restore()),
         ChangeNotifierProvider(create: (_) => RecentSearches()..restore()),
       ],

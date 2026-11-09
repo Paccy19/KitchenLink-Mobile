@@ -10,7 +10,7 @@ void main() {
     expect(AppRole.parse('nonsense'), AppRole.marketplace);
   });
 
-  Future<List<AppRole>> pumpChooser(WidgetTester tester) async {
+  Future<List<AppRole>> pumpChooser(WidgetTester tester, {Future<void> Function()? onCustomerSignIn}) async {
     final opened = <AppRole>[];
     await tester.pumpWidget(RoleSwitcher(
       current: AppRole.marketplace,
@@ -18,7 +18,10 @@ void main() {
       child: MaterialApp(
         home: Scaffold(
           body: Builder(
-            builder: (context) => TextButton(onPressed: () => showSignInChooser(context), child: const Text('Sign in')),
+            builder: (context) => TextButton(
+              onPressed: () => showSignInChooser(context, onCustomerSignIn: onCustomerSignIn ?? () async {}),
+              child: const Text('Sign in'),
+            ),
           ),
         ),
       ),
@@ -56,12 +59,13 @@ void main() {
     expect(opened, [AppRole.admin]);
   });
 
-  testWidgets('Customer stays on the marketplace (no customer sign-in in the app yet)', (tester) async {
-    final opened = await pumpChooser(tester);
+  testWidgets('choosing Customer opens customer sign-in without changing role', (tester) async {
+    var customerSignInOpened = false;
+    final opened = await pumpChooser(tester, onCustomerSignIn: () async => customerSignInOpened = true);
     await tester.tap(find.text('Customer'));
     await tester.pumpAndSettle();
     expect(opened, isEmpty);
-    expect(find.textContaining('coming to the app soon'), findsOneWidget);
+    expect(customerSignInOpened, isTrue);
   });
 
   testWidgets('"Other ways to sign in" goes back to the marketplace', (tester) async {

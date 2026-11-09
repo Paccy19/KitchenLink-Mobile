@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import 'package:kitchenlink_mobile/api/api_client.dart';
 import 'package:kitchenlink_mobile/client/customer_api.dart';
+import 'package:kitchenlink_mobile/client/customer_session.dart';
 import 'package:kitchenlink_mobile/client/location.dart';
 import 'package:kitchenlink_mobile/client/widgets/home_bars.dart';
 import 'package:kitchenlink_mobile/client/market_app.dart';
@@ -80,6 +81,7 @@ void main() {
         await tester.pumpWidget(MultiProvider(
           providers: [
             Provider(create: (_) => CustomerApi(ApiClient(baseUrl: 'http://localhost:4000/api/v1'))),
+            ChangeNotifierProvider(create: (_) => CustomerSession(ApiClient(baseUrl: 'http://localhost:4000/api/v1'))),
             ChangeNotifierProvider(create: (_) => ClientLocation()..restore()),
             ChangeNotifierProvider(create: (_) => RecentSearches()..restore()),
           ],

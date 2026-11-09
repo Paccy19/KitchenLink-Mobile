@@ -13,6 +13,8 @@ import '../widgets/cards.dart';
 import '../widgets/chrome.dart';
 import '../widgets/header.dart';
 import '../widgets/home_bars.dart';
+import '../customer_session.dart';
+import '../widgets/customer_auth_sheet.dart';
 
 import '../../root/role_switcher.dart';
 
@@ -193,6 +195,58 @@ class _HomeScreenState extends State<HomeScreen> {
       ..showSnackBar(SnackBar(content: Text("$page isn't in the mobile app yet.")));
   }
 
+  Future<void> _signIn() async {
+    final session = context.read<CustomerSession>();
+    if (session.isSignedIn) {
+      await _accountSheet(session);
+      return;
+    }
+    await showSignInChooser(context, onCustomerSignIn: () async {
+      final signedIn = await showCustomerSignIn(context);
+      if (signedIn && mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Welcome, ${context.read<CustomerSession>().firstName}!')));
+      }
+    });
+  }
+
+  Future<void> _accountSheet(CustomerSession session) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(session.name, style: kText(18, weight: w900, color: K.gray900)),
+              if (session.phone.isNotEmpty) Text(session.phone, style: kText(12, color: K.stone500)),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  await session.logout();
+                },
+                icon: const Icon(Icons.logout, size: 16),
+                label: const Text('Sign out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: K.brown700,
+                  side: const BorderSide(color: K.brown200),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _gpsUnavailable() {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -213,13 +267,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final customerSession = context.watch<CustomerSession>();
     context.watch<ClientLocation>();
     final width = MediaQuery.sizeOf(context).width;
     final pad = pagePadding(width);
     return Scaffold(
       body: Column(
         children: [
-          MarketHeader(cartCount: 0, onCart: () => _soon('The basket'), onSignIn: () => showSignInChooser(context), onTheme: () => _soon('Dark mode'), onLink: _soon),
+          MarketHeader(
+            cartCount: 0,
+            onCart: () => _soon('The basket'),
+            onSignIn: _signIn,
+            signedInName: customerSession.isSignedIn ? customerSession.firstName : null,
+            onTheme: () => _soon('Dark mode'),
+            onLink: _soon,
+          ),
           Expanded(
             child: RefreshIndicator(
               color: K.brown700,

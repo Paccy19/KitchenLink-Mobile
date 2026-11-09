@@ -14,11 +14,12 @@ double pagePadding(double width) => width >= lgWidth ? 32 : (width >= smWidth ? 
 /// dark mode, saved dishes and Sign In. Below 1024 px the shortcuts move to
 /// their own row under the logo, as on the website.
 class MarketHeader extends StatelessWidget {
-  const MarketHeader({super.key, required this.cartCount, required this.onCart, required this.onSignIn, required this.onLink, required this.onTheme});
+  const MarketHeader({super.key, required this.cartCount, required this.onCart, required this.onSignIn, required this.onLink, required this.onTheme, this.signedInName});
 
   final int cartCount;
   final VoidCallback onCart;
   final VoidCallback onSignIn;
+  final String? signedInName;
   final VoidCallback onTheme;
 
   /// A shortcut the app doesn't have yet ("Tomorrow's Specials", "Nearby Map", "Saved").
@@ -260,7 +261,7 @@ class MarketHeader extends StatelessWidget {
               const Icon(Icons.person_outline, size: 14, color: K.brown300),
               const SizedBox(width: 6),
               Text(
-                'Sign In',
+                signedInName ?? 'Sign In',
                 style: kText(12, weight: FontWeight.w700, color: Colors.white),
               ),
             ],

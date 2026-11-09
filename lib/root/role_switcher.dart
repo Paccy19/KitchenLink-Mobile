@@ -55,7 +55,7 @@ class RoleSwitcher extends InheritedWidget {
 }
 
 /// "How do you want to sign in?": the same four choices as the website.
-Future<void> showSignInChooser(BuildContext context) {
+Future<void> showSignInChooser(BuildContext context, {required Future<void> Function() onCustomerSignIn}) {
   final switcher = RoleSwitcher.maybeOf(context);
   return showModalBottomSheet<void>(
     context: context,
@@ -63,9 +63,13 @@ Future<void> showSignInChooser(BuildContext context) {
     isScrollControlled: true,
     builder: (sheetContext) {
       final theme = Theme.of(sheetContext);
-      void choose(AppRole role) {
+      Future<void> choose(AppRole role) async {
         Navigator.of(sheetContext).pop();
-        switcher?.open(role);
+        if (role == AppRole.marketplace) {
+          await onCustomerSignIn();
+        } else {
+          switcher?.open(role);
+        }
       }
 
       return SafeArea(
@@ -87,12 +91,7 @@ Future<void> showSignInChooser(BuildContext context) {
               colors: const [Color(0xFF2B1206), Color(0xFF481F0D)],
               title: 'Customer',
               subtitle: 'Order food from home cooks and kitchens around you',
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-                  content: Text('Customer accounts are coming to the app soon. You can already browse kitchens and dishes.'),
-                ));
-              },
+              onTap: () => choose(AppRole.marketplace),
             ),
             _RoleTile(
               icon: Icons.storefront_rounded,
