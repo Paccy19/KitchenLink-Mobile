@@ -1,9 +1,10 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Where the vendor's bearer token lives between app launches.
+/// Where the signed-in user's bearer token lives between app launches.
 ///
-/// Only the vendor token is ever stored: the customer, delivery and admin
-/// tokens of the web app have no place in this app.
+/// Each app stores only its own role's token under its own key (the vendor
+/// app `ofk_vendor_token`, the delivery worker app `ofk_driver_token`), the
+/// same keys the website uses, so the two apps never share a session.
 abstract interface class TokenStore {
   Future<String?> read();
   Future<void> write(String token);
@@ -12,10 +13,13 @@ abstract interface class TokenStore {
 
 /// Android Keystore / iOS Keychain backed storage.
 class SecureTokenStore implements TokenStore {
-  SecureTokenStore([FlutterSecureStorage? storage])
+  SecureTokenStore([FlutterSecureStorage? storage, this._key = vendorKey])
       : _storage = storage ?? const FlutterSecureStorage();
 
-  static const _key = 'ofk_vendor_token';
+  static const vendorKey = 'ofk_vendor_token';
+  static const driverKey = 'ofk_driver_token';
+
+  final String _key;
   final FlutterSecureStorage _storage;
 
   @override

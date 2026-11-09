@@ -66,5 +66,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>KitchenLink uses your location while you are online to offer deliveries near you, and during a delivery so the customer can follow it.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>KitchenLink uses the camera for dish photos, your profile picture and delivery proof photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>KitchenLink lets you choose photos for dishes, documents and your profile.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>sms</string>
+		<string>https</string>
+	</array>
 </dict>
 </plist>

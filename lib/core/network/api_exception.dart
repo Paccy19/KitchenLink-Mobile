@@ -20,6 +20,8 @@ class ApiCodes {
   static const vendorPendingReview = 'VENDOR_PENDING_REVIEW';
   static const vendorSuspended = 'VENDOR_SUSPENDED';
   static const vendorRejected = 'VENDOR_REJECTED';
+  static const driverSuspended = 'DRIVER_SUSPENDED';
+  static const driverRejected = 'DRIVER_REJECTED';
   static const otpResendTooSoon = 'OTP_RESEND_TOO_SOON';
   static const pickupCodeIncorrect = 'PICKUP_CODE_INCORRECT';
   static const pickupCodeLocked = 'PICKUP_CODE_LOCKED';
@@ -47,7 +49,10 @@ class ApiException implements Exception {
   bool get isUnauthorized => kind == ApiErrorKind.unauthorized;
   bool get isPendingReview => code == ApiCodes.vendorPendingReview;
   bool get isBlockedAccount =>
-      code == ApiCodes.vendorSuspended || code == ApiCodes.vendorRejected;
+      code == ApiCodes.vendorSuspended ||
+      code == ApiCodes.vendorRejected ||
+      code == ApiCodes.driverSuspended ||
+      code == ApiCodes.driverRejected;
 
   /// `details` entries that are plain strings, keyed by field name
   /// (`{ phone: 'expected …' }`), for showing next to form fields.
