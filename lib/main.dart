@@ -1,5 +1,3 @@
-// The admin app, KitchenLink Admin (the default entry point).
-// The vendor app starts from lib/main_vendor.dart.
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
