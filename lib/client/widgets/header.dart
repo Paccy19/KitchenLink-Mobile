@@ -14,13 +14,17 @@ double pagePadding(double width) => width >= lgWidth ? 32 : (width >= smWidth ? 
 /// dark mode, saved dishes and Sign In. Below 1024 px the shortcuts move to
 /// their own row under the logo, as on the website.
 class MarketHeader extends StatelessWidget {
-  const MarketHeader({super.key, required this.cartCount, required this.onCart, required this.onSignIn, required this.onLink, required this.onTheme, this.signedInName});
+  const MarketHeader({super.key, required this.cartCount, required this.onCart, required this.onSignIn, required this.onLink, required this.onTheme, this.signedInName, this.unreadNotifications, this.onNotifications});
 
   final int cartCount;
   final VoidCallback onCart;
   final VoidCallback onSignIn;
   final String? signedInName;
   final VoidCallback onTheme;
+
+  /// Unread notifications (null while signed out: no bell).
+  final int? unreadNotifications;
+  final VoidCallback? onNotifications;
 
   /// A shortcut the app doesn't have yet ("Tomorrow's Specials", "Nearby Map", "Saved").
   final ValueChanged<String> onLink;
@@ -63,6 +67,7 @@ class MarketHeader extends StatelessWidget {
                           ],
                           _cartButton(),
                           SizedBox(width: gap),
+                          if (unreadNotifications != null) ...[_bell(), SizedBox(width: gap)],
                           _squareButton(Icons.dark_mode_outlined, 'Switch to dark mode', onTheme, color: K.stone600, border: K.stone200),
                           if (lg) ...[
                             SizedBox(width: gap),
@@ -220,6 +225,27 @@ class MarketHeader extends StatelessWidget {
           ),
       ],
     ),
+  );
+
+  /// The notifications bell with its unread count.
+  Widget _bell() => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      _squareButton(Icons.notifications_none, 'Notifications', onNotifications ?? () {}, color: K.stone600, border: K.stone200),
+      if ((unreadNotifications ?? 0) > 0)
+        Positioned(
+          top: -6,
+          right: -6,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 20),
+            height: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: K.red500, borderRadius: BorderRadius.circular(99)),
+            child: Text(unreadNotifications! > 9 ? '9+' : '$unreadNotifications', style: kText(10, weight: FontWeight.w700, color: Colors.white)),
+          ),
+        ),
+    ],
   );
 
   /// A `rounded-xl border` icon button (basket, dark mode, saved dishes).

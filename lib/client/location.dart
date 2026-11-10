@@ -143,4 +143,4 @@ class ClientLocation extends ChangeNotifier {
 }
 
 /// True when this build can read the device position.
-bool get gpsAvailable => kIsWeb && gpsSupported;
+bool get gpsAvailable => gpsSupported;

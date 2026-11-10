@@ -23,7 +23,7 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// Thin HTTP client for the `/admin/*` endpoints with the admin bearer token.
+/// Thin HTTP client for the KitchenLink API with the signed-in bearer token.
 ///
 /// A 401, or a 403 telling a deactivated / not-yet-joined member to leave,
 /// calls [onUnauthorized] so the session signs out, like the website.

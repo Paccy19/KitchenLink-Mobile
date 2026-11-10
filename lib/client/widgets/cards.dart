@@ -721,16 +721,20 @@ class GradientButton extends StatelessWidget {
             onTap: onTap,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: padding),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[Icon(icon, size: fontSize + 2, color: iconColor), const SizedBox(width: 6)],
-                  Text(
-                    label,
-                    style: kText(fontSize, weight: w900, color: Colors.white),
-                  ),
-                ],
+              // A long label scales down instead of overflowing on a narrow phone.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[Icon(icon, size: fontSize + 2, color: iconColor), const SizedBox(width: 6)],
+                    Text(
+                      label,
+                      style: kText(fontSize, weight: w900, color: Colors.white),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
