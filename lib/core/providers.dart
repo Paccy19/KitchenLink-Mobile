@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/data/auth_repository.dart';
@@ -22,8 +23,15 @@ final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.current);
 
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 
+/// Replaces the network with something else. Null (always, in the real app)
+/// means the real network. Only vendor preview mode sets it, to answer from
+/// sample data on the device (see `lib/preview/`).
+final httpAdapterProvider = Provider<HttpClientAdapter?>((ref) => null);
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final client = ApiClient(config: ref.watch(appConfigProvider));
+  final adapter = ref.watch(httpAdapterProvider);
+  if (adapter != null) client.dio.httpClientAdapter = adapter;
   client.onConnectivity = (online) =>
       Future.microtask(() => ref.read(connectionProvider.notifier).report(online: online));
   return client;

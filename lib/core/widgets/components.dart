@@ -80,11 +80,16 @@ class CountBadge extends StatelessWidget {
     final badge = Container(
       constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      alignment: Alignment.center,
       decoration: BoxDecoration(color: scheme.error, borderRadius: BorderRadius.circular(999)),
-      child: Text(
-        count > 99 ? '99+' : '$count',
-        style: TextStyle(color: scheme.onError, fontSize: 11, fontWeight: FontWeight.w800, height: 1.1),
+      // Not `alignment:` (that makes the badge fill all the width it is given,
+      // which broke ListTile trailing slots); a shrink-wrapped Center instead.
+      child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: Text(
+          count > 99 ? '99+' : '$count',
+          style: TextStyle(color: scheme.onError, fontSize: 11, fontWeight: FontWeight.w800, height: 1.1),
+        ),
       ),
     );
     if (child == null) return count > 0 ? badge : const SizedBox.shrink();
@@ -278,7 +283,8 @@ class SkeletonList extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, _) => AppCard(
           child: SizedBox(
-            height: height - 32,
+            // The three bars and gaps below are 66 high; a smaller box overflowed by 2px.
+            height: height - 30,
             child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               SkeletonBox(width: 140),
               SizedBox(height: 10),

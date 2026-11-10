@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../preview/preview_mode.dart';
 import '../../core/widgets/components.dart';
 import '../auth/application/session.dart';
 import '../auth/presentation/status_screens.dart';
@@ -23,6 +24,7 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vendor = ref.watch(vendorProvider);
     final online = ref.watch(connectionProvider);
+    final preview = ref.watch(previewModeProvider);
     final newOrders = ref.watch(dashboardProvider).value?.newOrders ?? 0;
     // Keep the unread count fresh for the bell on every tab.
     ref.watch(notificationsProvider);
@@ -44,6 +46,12 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       body: Column(children: [
+        if (preview)
+          const _Banner(
+            icon: Icons.visibility_outlined,
+            text: 'PREVIEW MODE: sample data only. Nothing is saved or sent to the server.',
+            tone: Tone.info,
+          ),
         if (!online) const _Banner(icon: Icons.wifi_off_rounded, text: 'No connection. Showing the last data we loaded.', tone: Tone.danger),
         if (vendor.isPending)
           _Banner(

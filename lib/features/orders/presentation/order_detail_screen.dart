@@ -132,7 +132,7 @@ class _OrderBodyState extends ConsumerState<_OrderBody> {
             Row(children: [
               Icon(Icons.schedule_rounded, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: 6),
-              Text('For ${formatDateTime(order.scheduledFor)}', style: theme.textTheme.titleSmall),
+              Expanded(child: Text('For ${formatDateTime(order.scheduledFor)}', style: theme.textTheme.titleSmall)),
             ]),
           ],
           if (order.cancelReason != null && order.status == OrderStatus.cancelled) ...[
