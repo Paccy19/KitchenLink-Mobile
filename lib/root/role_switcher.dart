@@ -42,16 +42,62 @@ class RoleStore {
 
 /// Lets any screen, in any of the role apps, move to another role.
 class RoleSwitcher extends InheritedWidget {
-  const RoleSwitcher({super.key, required this.current, required this.open, required super.child});
+  const RoleSwitcher({
+    super.key,
+    required this.current,
+    required this.open,
+    this.returnTo,
+    this.onVisitMarketplace,
+    required super.child,
+  });
 
   final AppRole current;
   final void Function(AppRole role) open;
+
+  /// The signed-in role that is visiting the marketplace (a kitchen or a
+  /// delivery worker), so the marketplace can offer the way back. Null for
+  /// everyone else.
+  final AppRole? returnTo;
+
+  final VoidCallback? onVisitMarketplace;
+
+  /// Opens the marketplace while staying signed in: the marketplace then
+  /// offers "Back to …", and reopening the app still lands on this role.
+  void visitMarketplace() => onVisitMarketplace != null ? onVisitMarketplace!() : open(AppRole.marketplace);
 
   /// Null when the screen runs outside the combined app (e.g. in a test).
   static RoleSwitcher? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<RoleSwitcher>();
 
   @override
-  bool updateShouldNotify(RoleSwitcher oldWidget) => current != oldWidget.current;
+  bool updateShouldNotify(RoleSwitcher oldWidget) => current != oldWidget.current || returnTo != oldWidget.returnTo;
+}
+
+/// On the marketplace, for a kitchen or delivery worker who came to look
+/// around: one tap back to their own screens, still signed in. Build it only
+/// when [RoleSwitcher.returnTo] is set.
+class ReturnToRoleButton extends StatelessWidget {
+  const ReturnToRoleButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final switcher = RoleSwitcher.maybeOf(context);
+    final role = switcher?.returnTo;
+    if (switcher == null || role == null) return const SizedBox.shrink();
+    final (icon, label) = switch (role) {
+      AppRole.driver => (Icons.delivery_dining_rounded, 'Back to deliveries'),
+      AppRole.vendor => (Icons.storefront_rounded, 'Back to my kitchen'),
+      AppRole.admin => (Icons.admin_panel_settings_rounded, 'Back to admin'),
+      AppRole.marketplace => (Icons.arrow_back_rounded, 'Back'),
+    };
+    return FloatingActionButton.extended(
+      heroTag: null,
+      backgroundColor: const Color(0xFF2B1206),
+      foregroundColor: Colors.white,
+      onPressed: () => switcher.open(role),
+      icon: Icon(icon),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+    );
+  }
 }
 
 /// "How do you want to sign in?": the same four choices as the website.

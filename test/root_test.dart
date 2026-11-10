@@ -79,6 +79,50 @@ void main() {
     expect(opened, [AppRole.marketplace]);
   });
 
+  testWidgets('a delivery worker visiting the marketplace gets one tap back to deliveries', (tester) async {
+    final opened = <AppRole>[];
+    await tester.pumpWidget(RoleSwitcher(
+      current: AppRole.marketplace,
+      returnTo: AppRole.driver,
+      open: opened.add,
+      child: const MaterialApp(home: Scaffold(floatingActionButton: ReturnToRoleButton())),
+    ));
+    expect(find.text('Back to deliveries'), findsOneWidget);
+    await tester.tap(find.text('Back to deliveries'));
+    expect(opened, [AppRole.driver]);
+  });
+
+  testWidgets('a kitchen visiting the marketplace is offered its kitchen back', (tester) async {
+    await tester.pumpWidget(RoleSwitcher(
+      current: AppRole.marketplace,
+      returnTo: AppRole.vendor,
+      open: (_) {},
+      child: const MaterialApp(home: Scaffold(floatingActionButton: ReturnToRoleButton())),
+    ));
+    expect(find.text('Back to my kitchen'), findsOneWidget);
+  });
+
+  testWidgets('nobody visiting means no way-back button', (tester) async {
+    await tester.pumpWidget(RoleSwitcher(
+      current: AppRole.marketplace,
+      open: (_) {},
+      child: const MaterialApp(home: Scaffold(body: ReturnToRoleButton())),
+    ));
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  test('visiting the marketplace is a visit when the app supports it, else a plain switch', () {
+    var visited = 0;
+    final opened = <AppRole>[];
+    RoleSwitcher(current: AppRole.driver, open: opened.add, onVisitMarketplace: () => visited++, child: const SizedBox())
+        .visitMarketplace();
+    expect(visited, 1);
+    expect(opened, isEmpty);
+
+    RoleSwitcher(current: AppRole.driver, open: opened.add, child: const SizedBox()).visitMarketplace();
+    expect(opened, [AppRole.marketplace]);
+  });
+
   testWidgets('a sign-in screen on its own shows no back button', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: OtherSignInButton())));
     expect(find.text('Other ways to sign in'), findsNothing);

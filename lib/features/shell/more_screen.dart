@@ -100,7 +100,7 @@ class MoreScreen extends ConsumerWidget {
                   title: const Text('Back to the marketplace', style: TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: const Text('Stay signed in as this kitchen'),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => switcher.open(AppRole.marketplace),
+                  onTap: switcher.visitMarketplace,
                 ),
               ),
             ],

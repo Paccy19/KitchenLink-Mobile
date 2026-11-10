@@ -23,6 +23,9 @@ class KitchenLinkRoot extends StatefulWidget {
 class _KitchenLinkRootState extends State<KitchenLinkRoot> {
   AppRole? _role;
 
+  /// The signed-in role visiting the marketplace, if any.
+  AppRole? _returnTo;
+
   @override
   void initState() {
     super.initState();
@@ -33,8 +36,23 @@ class _KitchenLinkRootState extends State<KitchenLinkRoot> {
 
   void _open(AppRole role) {
     if (role == _role) return;
-    setState(() => _role = role);
+    setState(() {
+      _role = role;
+      _returnTo = null;
+    });
     widget.store.write(role);
+  }
+
+  /// A visit, not a switch: the saved role is left alone, so reopening the
+  /// app goes straight back to the kitchen or delivery screens, and the
+  /// role's token stays on the phone.
+  void _visitMarketplace() {
+    final from = _role;
+    if (from == null || from == AppRole.marketplace) return;
+    setState(() {
+      _role = AppRole.marketplace;
+      _returnTo = from;
+    });
   }
 
   Widget _app(AppRole role) {
@@ -61,6 +79,8 @@ class _KitchenLinkRootState extends State<KitchenLinkRoot> {
     return RoleSwitcher(
       current: role,
       open: _open,
+      returnTo: _returnTo,
+      onVisitMarketplace: _visitMarketplace,
       child: KeyedSubtree(key: ValueKey(role), child: _app(role)),
     );
   }

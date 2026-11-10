@@ -273,7 +273,9 @@ class _HomeScreenState extends State<HomeScreen> {
     context.watch<ClientLocation>();
     final width = MediaQuery.sizeOf(context).width;
     final pad = pagePadding(width);
+    final visiting = RoleSwitcher.maybeOf(context)?.returnTo != null;
     return Scaffold(
+      floatingActionButton: visiting ? const ReturnToRoleButton() : null,
       body: Column(
         children: [
           MarketHeader(
