@@ -97,7 +97,7 @@ class PreviewData {
           return {
             'tickets': _tickets.map((t) => {...t}..remove('messages')).toList(),
             'unread_count': _tickets.where((t) => t['unread'] == true).length,
-            'categories': ['order', 'delivery', 'payment', 'account', 'other'],
+            'categories': ['order', 'delivery', 'payment', 'refund', 'app', 'vendor', 'driver', 'account', 'other'],
           };
         }
         final ticket = _tickets.where((t) => t['id'] == at(2));
@@ -742,21 +742,22 @@ class PreviewData {
         'id': 'tkt-1',
         'reference': 'SUP-1042',
         'subject': 'Withdrawal still processing',
-        'status': 'in_progress',
-        'status_label': 'In progress',
+        'status': 'in_review',
+        'status_label': 'Support is on it',
         'category': 'payment',
         'order_id': null,
         'unread': true,
         'message_count': 2,
         'last_message_at': _ago(60 * 20),
         'last_message': {
+          'from': 'support',
           'body': 'We are checking with the mobile money provider and will update you today.',
         },
         'messages': [
           {
             'id': 'sm1',
             'body': 'My withdrawal of 150,000 RWF has been processing since this morning.',
-            'from': 'vendor',
+            'from': 'you',
             'author_name': 'Aline Uwase',
             'at': _ago(60 * 22),
           },
@@ -787,7 +788,7 @@ class PreviewData {
           {
             'id': 'sm3',
             'body': 'How do I add Offer Days?',
-            'from': 'vendor',
+            'from': 'you',
             'author_name': 'Aline Uwase',
             'at': _ago(60 * 24 * 12 + 30),
           },

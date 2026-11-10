@@ -14,6 +14,7 @@ import 'package:kitchenlink_mobile/features/auth/application/session.dart';
 import 'package:kitchenlink_mobile/features/orders/models/order.dart';
 import 'package:kitchenlink_mobile/preview/preview_adapter.dart';
 import 'package:kitchenlink_mobile/preview/preview_mode.dart';
+import 'package:kitchenlink_mobile/root/role_switcher.dart';
 
 /// Records every request that reaches the adapter.
 class _Recording extends PreviewAdapter {
@@ -164,4 +165,32 @@ void main() {
       container.dispose();
     });
   }
+
+  testWidgets('inside the unified app, More offers a way back to the marketplace', (tester) async {
+    tester.view.devicePixelRatio = 2;
+    tester.view.physicalSize = const Size(390, 844) * 2;
+    addTearDown(tester.view.reset);
+
+    final container = _container(_Recording());
+    AppRole? opened;
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: RoleSwitcher(current: AppRole.vendor, open: (role) => opened = role, child: const KitchenLinkApp()),
+    ));
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    await tester.tap(find.text('More').last);
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    // The list builds lazily: scroll the visible tab until the entry exists.
+    await tester.scrollUntilVisible(find.text('Back to the marketplace'), 200, scrollable: find.byType(Scrollable).hitTestable().first);
+    await tester.tap(find.text('Back to the marketplace'));
+    await tester.pump();
+    expect(opened, AppRole.marketplace);
+
+    await tester.pumpWidget(const SizedBox());
+    container.dispose();
+  });
 }
