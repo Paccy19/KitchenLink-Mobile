@@ -195,11 +195,15 @@ class _StatsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      GridView.count(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.55,
+      GridView(
+        // A fixed tile height (grown with the text size), not an aspect ratio:
+        // a ratio made the tiles too short for their content on narrow phones.
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          mainAxisExtent: 140 * MediaQuery.textScalerOf(context).scale(14).clamp(14, 28) / 14,
+        ),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [

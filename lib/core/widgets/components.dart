@@ -80,11 +80,16 @@ class CountBadge extends StatelessWidget {
     final badge = Container(
       constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      alignment: Alignment.center,
       decoration: BoxDecoration(color: scheme.error, borderRadius: BorderRadius.circular(999)),
-      child: Text(
-        count > 99 ? '99+' : '$count',
-        style: TextStyle(color: scheme.onError, fontSize: 11, fontWeight: FontWeight.w800, height: 1.1),
+      // Not `alignment:` (that makes the badge fill all the width it is given,
+      // which broke ListTile trailing slots); a shrink-wrapped Center instead.
+      child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: Text(
+          count > 99 ? '99+' : '$count',
+          style: TextStyle(color: scheme.onError, fontSize: 11, fontWeight: FontWeight.w800, height: 1.1),
+        ),
       ),
     );
     if (child == null) return count > 0 ? badge : const SizedBox.shrink();
