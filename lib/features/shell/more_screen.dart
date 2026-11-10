@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/app_config.dart';
 import '../../core/widgets/components.dart';
 import '../../core/widgets/feedback.dart';
+import '../../preview/preview_mode.dart';
+import '../../root/role_switcher.dart';
 import '../auth/application/session.dart';
 import '../chat/application/chat_providers.dart';
 import '../notifications/application/notifications_providers.dart';
@@ -16,6 +18,9 @@ class MoreScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final preview = ref.watch(previewModeProvider);
+    // Null outside the unified app (tests, the preview entry point).
+    final switcher = RoleSwitcher.maybeOf(context);
     final vendor = ref.watch(vendorProvider);
     final chats = ref.watch(chatUnreadProvider).value ?? 0;
     final support = ref.watch(supportUnreadProvider).value ?? 0;
@@ -86,7 +91,34 @@ class MoreScreen extends ConsumerWidget {
             ),
             const SectionHeader('Help'),
             AppCard(padding: EdgeInsets.zero, child: tile(Icons.support_agent_rounded, 'Help & support', '/support', badge: support)),
+            if (switcher != null) ...[
+              const SectionHeader('KitchenLink'),
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: Icon(Icons.storefront_rounded, color: theme.colorScheme.primary),
+                  title: const Text('Back to the marketplace', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('Stay signed in as this kitchen'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: switcher.visitMarketplace,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
+            if (preview)
+              const AppCard(
+                child: Row(children: [
+                  Icon(Icons.visibility_outlined),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Preview mode. You are not signed in: every screen shows sample data and changes are not saved. '
+                      'Run the app with `flutter run` and choose Vendor to sign in for real.',
+                    ),
+                  ),
+                ]),
+              )
+            else ...[
             OutlinedButton.icon(
               onPressed: () async {
                 final yes = await confirm(context, title: 'Sign out?', message: 'You will need a new SMS code to sign in again.', confirmLabel: 'Sign out');
@@ -108,10 +140,11 @@ class MoreScreen extends ConsumerWidget {
               },
               child: const Text('Sign out of all devices'),
             ),
+            ],
             const SizedBox(height: 8),
             Center(
               child: Text(
-                'KitchenLink Kitchen · ${AppConfig.current.apiBaseUrl}',
+                preview ? 'KitchenLink Kitchen · preview (no server)' : 'KitchenLink Kitchen · ${AppConfig.current.apiBaseUrl}',
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
