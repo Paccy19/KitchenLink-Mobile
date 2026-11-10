@@ -63,13 +63,14 @@ class SessionController extends Notifier<SessionState> {
       final vendor = await _auth.me();
       state = SessionState(status: SessionStatus.authenticated, vendor: vendor);
     } on ApiException catch (error) {
-      // 401 / blocked are handled by the client hooks; only a network failure
-      // reaches here with the token still valid.
-      if (error.isNetwork) {
-        state = const SessionState(status: SessionStatus.unreachable);
-      } else if (!error.isUnauthorized && !error.isBlockedAccount) {
+      // 401 / blocked are handled by the client hooks; anything else (no
+      // network, a server error) keeps the token and offers "Try again".
+      if (!error.isUnauthorized && !error.isBlockedAccount) {
         state = const SessionState(status: SessionStatus.unreachable);
       }
+    } catch (_) {
+      // Any other failure must not leave the app on the splash screen forever.
+      state = const SessionState(status: SessionStatus.unreachable);
     }
   }
 

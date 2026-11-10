@@ -103,12 +103,25 @@ class _NewSupportRequestScreenState extends ConsumerState<NewSupportRequestScree
     super.dispose();
   }
 
+  static const _fallbackCategories = ['order', 'payment', 'account', 'app', 'other'];
+
+  /// The server's categories; the built-in list while they load, or if the
+  /// server sent none (an empty list would crash the dropdown).
+  static List<String> _categoriesOf(SupportList? list) {
+    final fromServer = list?.categories ?? const <String>[];
+    return fromServer.isEmpty ? _fallbackCategories : fromServer;
+  }
+
+  /// The category the dropdown shows, which is the one sent.
+  String _selected(List<String> categories) => categories.contains(_category) ? _category : categories.first;
+
   Future<void> _send() async {
     if (_saving || !(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
+    final category = _selected(_categoriesOf(ref.read(supportListProvider).value));
     final ticket = await runAction(
       context,
-      () => ref.read(supportActionsProvider).create(subject: _subject.text, message: _message.text, category: _category),
+      () => ref.read(supportActionsProvider).create(subject: _subject.text, message: _message.text, category: category),
       success: 'Your request was sent. We will reply here.',
     );
     if (!mounted) return;
@@ -118,7 +131,7 @@ class _NewSupportRequestScreenState extends ConsumerState<NewSupportRequestScree
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(supportListProvider).value?.categories ?? const ['order', 'payment', 'account', 'app', 'other'];
+    final categories = _categoriesOf(ref.watch(supportListProvider).value);
     return Scaffold(
       appBar: AppBar(title: const Text('New support request')),
       body: SafeArea(
@@ -126,7 +139,7 @@ class _NewSupportRequestScreenState extends ConsumerState<NewSupportRequestScree
           key: _formKey,
           child: FormPage(children: [
             DropdownButtonFormField<String>(
-              initialValue: categories.contains(_category) ? _category : categories.first,
+              initialValue: _selected(categories),
               decoration: const InputDecoration(labelText: 'What is it about?'),
               items: [for (final c in categories) DropdownMenuItem(value: c, child: Text(humanize(c)))],
               onChanged: (value) => setState(() => _category = value ?? 'other'),

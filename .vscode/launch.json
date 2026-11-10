@@ -2,6 +2,10 @@
   // Pick the device (e.g. the Android emulator) in VS Code's status bar,
   // then press F5. The Android emulator reaches this computer's backend at
   // 10.0.2.2:4000, which is the app's default.
+  //
+  // Both read dart_defines.json (CARTO_API_KEY for the maps, API_BASE_URL,
+  // API_TIMEOUT, MARKETPLACE_URL). Without it the maps show CARTO's grey
+  // "API KEY REQUIRED" tiles.
   "version": "0.2.0",
   "configurations": [
     {
@@ -9,13 +13,7 @@
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
-      "args": ["--dart-define=DEMO_MODE=false"]
-    },
-    {
-      "name": "KitchenLink (admin demo data)",
-      "request": "launch",
-      "type": "dart",
-      "program": "lib/main.dart"
+      "args": ["--dart-define-from-file=dart_defines.json"]
     }
   ]
 }

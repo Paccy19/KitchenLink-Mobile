@@ -177,7 +177,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final query = _query;
     await _results.run(() => _api.search(query, _location, _vendorTypes), _changed);
     final data = _results.data;
-    if (data == null || !mounted) return;
+    // A newer search (or clearing the box) replaced this one: its results
+    // must not pick the tab.
+    if (data == null || !mounted || query != _query) return;
     // Searching for a kitchen by name opens the Kitchens tab; otherwise the
     // tab that actually has results.
     final term = query.toLowerCase();

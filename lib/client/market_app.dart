@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
-import '../config.dart';
+import '../core/config/app_config.dart';
 import 'client_theme.dart';
 import 'customer_api.dart';
 import 'customer_session.dart';
@@ -14,8 +14,10 @@ import 'widgets/home_bars.dart';
 /// starts here, like on the website.
 Widget buildMarketApp() => MultiProvider(
       providers: [
-        Provider(create: (_) => CustomerApi(ApiClient(baseUrl: kDefaultApiBaseUrl))),
-        ChangeNotifierProvider(create: (_) => CustomerSession(ApiClient(baseUrl: kDefaultApiBaseUrl))..restore()),
+        // The address saved on a sign-in screen (a phone on the computer's
+        // Wi-Fi), else the build default: the same one every role uses.
+        Provider(create: (_) => CustomerApi(ApiClient(baseUrl: AppConfig.current.apiBaseUrl))),
+        ChangeNotifierProvider(create: (_) => CustomerSession(ApiClient(baseUrl: AppConfig.current.apiBaseUrl))..restore()),
         ChangeNotifierProvider(create: (_) => ClientLocation()..restore()),
         ChangeNotifierProvider(create: (_) => RecentSearches()..restore()),
       ],

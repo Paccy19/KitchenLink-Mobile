@@ -233,7 +233,12 @@ class _DutyCardState extends ConsumerState<_DutyCard> {
               : SnackBarAction(label: 'SETTINGS', onPressed: () => ref.read(locationServiceProvider).openSettings(access)),
         ));
       } else if (!change.online && change.reassigned > 0) {
-        showSuccess(context, 'You are offline. ${change.reassigned} delivery was handed to another worker.');
+        showSuccess(
+          context,
+          change.reassigned == 1
+              ? 'You are offline. 1 delivery was handed to another worker.'
+              : 'You are offline. ${change.reassigned} deliveries were handed to other workers.',
+        );
       }
     } on ApiException catch (error) {
       if (mounted) showError(context, error);

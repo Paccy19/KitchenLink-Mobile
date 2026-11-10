@@ -66,6 +66,9 @@ class DriverSessionController extends Notifier<DriverSessionState> {
       if (!error.isUnauthorized && !error.isBlockedAccount) {
         state = const DriverSessionState(status: DriverSessionStatus.unreachable);
       }
+    } catch (_) {
+      // Any other failure must not leave the app on the splash screen forever.
+      state = const DriverSessionState(status: DriverSessionStatus.unreachable);
     }
   }
 
