@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// every write is refused.
 ///
 /// It is off everywhere except the dedicated entry point
-/// `lib/main_vendor_preview.dart`. The real app (`lib/main_vendor.dart`) never
+/// `lib/main_vendor_preview.dart`. The unified app (`lib/main.dart`) never
 /// turns it on, and the real sign-in code is not touched by it.
 final previewModeProvider = Provider<bool>((ref) => false);
 

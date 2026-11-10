@@ -5,8 +5,8 @@
 //
 // Everything on screen is sample data made up on the device (lib/preview/).
 // Nothing is sent to the KitchenLink server and every write is refused.
-// The real app, `lib/main_vendor.dart`, is unchanged: it uses the real
-// sign-in and the real backend.
+// The real vendor app is the "Vendor" role of the unified app (`flutter run`,
+// lib/main.dart): it uses the real sign-in and the real backend.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

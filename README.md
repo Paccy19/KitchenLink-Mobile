@@ -1,12 +1,11 @@
 # kitchenlink_mobile
 
-Two Flutter apps in one project:
+One app for every role (marketplace, vendor, delivery worker, admin):
 
-| App | Entry point | What it is |
+| Run | Entry point | What it is |
 | --- | --- | --- |
-| Admin | `lib/main.dart` | KitchenLink Admin |
-| Vendor (kitchen) | `lib/main_vendor.dart` | KitchenLink Kitchen, real sign-in + real backend |
-| Vendor **preview** | `lib/main_vendor_preview.dart` | Same vendor app, no sign-in, sample data only |
+| `flutter run` | `lib/main.dart` | The unified app. Choose **Vendor** at "Sign in" for the kitchen app, real sign-in + real backend |
+| `flutter run -t lib/main_vendor_preview.dart` | `lib/main_vendor_preview.dart` | **Vendor preview**: the same vendor app, no sign-in, sample data only |
 
 ## Vendor preview mode (development only)
 
@@ -20,7 +19,7 @@ without an account:
 - No request ever reaches a server, and every write (create, edit, status
   change, withdrawal, upload, sign-out) is refused with a "Preview mode" message.
 - A banner on every screen says it is preview mode.
-- Real sign-in is untouched: `flutter run -t lib/main_vendor.dart` uses the real
+- Real sign-in is untouched: `flutter run` (then Sign in → Vendor) uses the real
   backend (`--dart-define=API_BASE_URL=http://<host>:4000/api/v1`).
 
 ## Getting Started

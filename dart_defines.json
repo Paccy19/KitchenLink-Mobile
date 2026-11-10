@@ -1,0 +1,6 @@
+{
+  "API_BASE_URL": "",
+  "MARKETPLACE_URL": "http://localhost:3000/",
+  "API_TIMEOUT": "8000",
+  "CARTO_API_KEY": "cb1_4hue_2_de9cbc729193bdf2645905e8"
+}

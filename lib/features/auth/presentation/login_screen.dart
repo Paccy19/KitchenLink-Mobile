@@ -12,6 +12,7 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/server_address.dart';
 import '../../../core/widgets/forms.dart';
 import '../application/session.dart';
+import '../../../root/role_switcher.dart';
 import 'widgets/brand_header.dart';
 
 enum _Step { phone, code }
@@ -133,6 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
+                const Align(alignment: Alignment.centerLeft, child: OtherSignInButton()),
                 Row(children: [const Expanded(child: BrandHeader()), const ServerAddressButton()]),
                 const SizedBox(height: 36),
                 Text(

@@ -22,10 +22,6 @@ String get kDefaultApiBaseUrl => _apiBaseUrlOverride.isNotEmpty
 /// (`--dart-define=MARKETPLACE_URL=https://…`).
 const String kMarketplaceUrl = String.fromEnvironment('MARKETPLACE_URL', defaultValue: 'http://localhost:3000/');
 
-/// Demo mode (no backend) unless turned off at build time with
-/// `--dart-define=DEMO_MODE=false`.
-const bool kDemoModeDefault = bool.fromEnvironment('DEMO_MODE', defaultValue: true);
-
 /// Milliseconds before a request is abandoned (the website's `VITE_API_TIMEOUT`).
 const int kApiTimeoutMs = int.fromEnvironment('API_TIMEOUT', defaultValue: 8000);
 

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 /// Build-time configuration.
 ///
 /// The API address is chosen when the app is started/built, never by editing
@@ -14,10 +16,12 @@ class AppConfig {
   /// Android emulator → host computer.
   static const String emulatorApiBaseUrl = 'http://10.0.2.2:4000/api/v1';
 
-  static const String _fromEnvironment = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: emulatorApiBaseUrl,
-  );
+  /// Browser → the computer the page was served from (like `lib/config.dart`).
+  static const String webApiBaseUrl = 'http://localhost:4000/api/v1';
+
+  // No `defaultValue` here: a define that is present but empty (as in
+  // dart_defines.json) must fall back too, which `defaultValue` would not do.
+  static const String _fromEnvironment = String.fromEnvironment('API_BASE_URL');
 
   static String? _override;
 
@@ -25,10 +29,11 @@ class AppConfig {
   /// over the build-time default until it is reset.
   static void overrideApiBaseUrl(String? url) => _override = url;
 
-  static String get defaultApiBaseUrl => _fromEnvironment;
+  static String get defaultApiBaseUrl =>
+      _fromEnvironment.isNotEmpty ? _fromEnvironment : (kIsWeb ? webApiBaseUrl : emulatorApiBaseUrl);
 
   /// Configuration used by the running app.
-  static AppConfig get current => AppConfig(apiBaseUrl: _override ?? _fromEnvironment);
+  static AppConfig get current => AppConfig(apiBaseUrl: _override ?? defaultApiBaseUrl);
 
   /// Full API address including `/api/v1`, without a trailing slash.
   final String apiBaseUrl;

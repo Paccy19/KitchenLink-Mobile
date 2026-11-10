@@ -1,0 +1,21 @@
+{
+  // Pick the device (e.g. the Android emulator) in VS Code's status bar,
+  // then press F5. The Android emulator reaches this computer's backend at
+  // 10.0.2.2:4000, which is the app's default.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "KitchenLink (local backend)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--dart-define=DEMO_MODE=false"]
+    },
+    {
+      "name": "KitchenLink (admin demo data)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    }
+  ]
+}
