@@ -433,10 +433,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
     ]);
   }
 
-  /// Answer the vendor's type change request, or set the type directly.
+  /// Answer the vendor's type change request, or set the type directly while
+  /// the application is still being reviewed. Once the kitchen is approved
+  /// (`vendor_type_locked`), the type only changes through the vendor's request.
   Widget _typeCard(Json vendor, bool canWrite) {
     final request = vendor['vendor_type_request'] is Map ? jmap(vendor['vendor_type_request']) : null;
     final currentCode = vendorTypeOf(vendor['vendor_type']).code;
+    final locked = vendor['vendor_type_locked'] == true;
     return SectionCard(
       title: 'Vendor type',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spaced([
@@ -466,7 +469,12 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                 ]),
             ], 8)),
           ),
-        if (canWrite)
+        if (locked && request == null)
+          Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            VendorTypeBadge(vendor['vendor_type']),
+            const Hint('This kitchen is approved, so its type only changes when the vendor asks for it from their profile.'),
+          ]),
+        if (canWrite && !locked)
           Row(children: [
             Expanded(
               child: Dropdown<String>(

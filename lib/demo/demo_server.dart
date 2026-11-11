@@ -478,11 +478,16 @@ class DemoServer {
 
   // ---- Projections --------------------------------------------------------
 
+  /// Like the backend: approved (or suspended) kitchens change type only on request.
+  static bool _typeLocked(Json v) => const ['approved', 'suspended'].contains(v['status'] ?? 'approved');
+
   Json _adminVendor(Json v) {
     final override = v['nationwide_override'];
     final byType = v['vendor_type'] == 'caterer';
     return {
       ...v,
+      // Approved kitchens: the type only changes through the vendor's request.
+      'vendor_type_locked': _typeLocked(v),
       'nationwide': {
         'enabled': override ?? byType,
         'source': override == null ? 'type' : 'admin',
@@ -1296,8 +1301,13 @@ class DemoServer {
         case ('PATCH', 'vendors', 'type'):
           final vendor = _must('vendors', id, 'Vendor');
           final request = vendor['vendor_type_request'];
-          if (body['decision'] == 'approve' && request is Map) vendor['vendor_type'] = request['vendor_type'];
-          if (body['vendor_type'] != null) vendor['vendor_type'] = body['vendor_type'];
+          final decision = body['decision'] == 'approve' || body['decision'] == 'reject' ? body['decision'] : null;
+          if (decision != null && request is! Map) _fail(409, 'This vendor has no pending type change request.', 'NO_TYPE_REQUEST');
+          if (decision == null && _typeLocked(vendor)) {
+            _fail(409, 'This kitchen is approved, so its type can only change when the vendor asks for it from their profile.', 'VENDOR_TYPE_LOCKED');
+          }
+          if (decision == 'approve' && request is Map) vendor['vendor_type'] = request['vendor_type'];
+          if (decision == null && body['vendor_type'] != null) vendor['vendor_type'] = body['vendor_type'];
           vendor['vendor_type_request'] = null;
           _log('vendor.type_changed', 'vendor', vendor['name']);
           return {'vendor': _adminVendor(vendor)};
