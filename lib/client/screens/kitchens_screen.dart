@@ -273,7 +273,7 @@ class _KitchensScreenState extends State<KitchensScreen> {
               const SizedBox(height: 12),
             ] else ...[
               Row(children: [
-                const Icon(Icons.tune, size: 16, color: K.stone500),
+                Icon(Icons.tune, size: 16, color: K.stone500),
                 const SizedBox(width: 6),
                 Text('Sort', style: kText(12, weight: FontWeight.w700, color: K.stone600)),
                 const SizedBox(width: 8),
@@ -284,7 +284,7 @@ class _KitchensScreenState extends State<KitchensScreen> {
                     showCheckmark: false,
                     labelStyle: kText(12, weight: FontWeight.w700, color: _sort == id ? Colors.white : K.stone600),
                     selectedColor: K.brown800,
-                    backgroundColor: Colors.white,
+                    backgroundColor: K.surface,
                     onSelected: (_) => _set(() => _sort = id),
                   ),
                   const SizedBox(width: 6),

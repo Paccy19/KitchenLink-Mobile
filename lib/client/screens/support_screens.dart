@@ -27,9 +27,9 @@ const _categoryLabels = {
 };
 
 (Color, Color) _statusTone(String status) => switch (status) {
-      'open' => (const Color(0xFFFFFBEB), const Color(0xFFB45309)),
-      'in_review' => (const Color(0xFFF0F9FF), const Color(0xFF0369A1)),
-      'resolved' => (const Color(0xFFECFDF5), const Color(0xFF047857)),
+      'open' => (K.tone(const Color(0xFFFFFBEB)), K.tone(const Color(0xFFB45309))),
+      'in_review' => (K.tone(const Color(0xFFF0F9FF)), K.tone(const Color(0xFF0369A1))),
+      'resolved' => (K.tone(const Color(0xFFECFDF5)), K.tone(const Color(0xFF047857))),
       _ => (K.stone100, K.stone600),
     };
 
@@ -151,8 +151,8 @@ class _SupportScreenState extends State<SupportScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Material(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: K.stone200)),
+                  color: K.surface,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: K.stone200)),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(18),
                     onTap: () => _openTicket('${ticket['id']}'),
@@ -375,7 +375,7 @@ class _TicketScreenState extends State<TicketScreen> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               gradient: mine ? K.buttonGradient : null,
-                              color: mine ? null : Colors.white,
+                              color: mine ? null : K.surface,
                               border: mine ? null : Border.all(color: K.stone200),
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -396,7 +396,7 @@ class _TicketScreenState extends State<TicketScreen> {
           top: false,
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: K.stone200))),
+            decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200))),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               if (_error != null && ticket != null) Padding(padding: const EdgeInsets.only(bottom: 6), child: Notice(_error!)),
               Row(children: [
@@ -413,7 +413,7 @@ class _TicketScreenState extends State<TicketScreen> {
                 const SizedBox(width: 8),
                 IconButton.filled(
                   tooltip: 'Send',
-                  style: IconButton.styleFrom(backgroundColor: K.brown700),
+                  style: IconButton.styleFrom(backgroundColor: K.fillBrown700),
                   onPressed: _busy || _reply.text.trim().isEmpty || ticket == null ? null : _send,
                   icon: const Icon(Icons.send, size: 18),
                 ),

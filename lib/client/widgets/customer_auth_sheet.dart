@@ -169,8 +169,8 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
         alignment: Alignment.centerLeft,
         child: _badge(
           Icons.verified_user_outlined,
-          background: const Color(0xFFD1FAE5),
-          color: const Color(0xFF059669),
+          background: K.tone(const Color(0xFFD1FAE5)),
+          color: K.tone(const Color(0xFF059669)),
         ),
       ),
       const SizedBox(height: 20),
@@ -185,7 +185,7 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
               style: kText(
                 12,
                 weight: FontWeight.w700,
-                color: const Color(0xFF1F2937),
+                color: K.tone(const Color(0xFF1F2937)),
               ),
             ),
           ],
@@ -225,7 +225,7 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
           ),
         ),
       if (_error.isNotEmpty) _errorBox(),
-      _label('Enter 6-Digit Code', color: const Color(0xFF6B7280)),
+      _label('Enter 6-Digit Code', color: K.tone(const Color(0xFF6B7280))),
       TextField(
         controller: _code,
         autofocus: true,
@@ -304,15 +304,15 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
     ),
     child: Text(
       _error,
-      style: kText(12, weight: FontWeight.w600, color: const Color(0xFFDC2626)),
+      style: kText(12, weight: FontWeight.w600, color: K.tone(const Color(0xFFDC2626))),
     ),
   );
 
-  Widget _label(String text, {Color color = K.stone500}) => Padding(
+  Widget _label(String text, {Color? color}) => Padding(
     padding: const EdgeInsets.only(bottom: 4),
     child: Text(
       text.toUpperCase(),
-      style: kText(12, weight: FontWeight.w700, color: color),
+      style: kText(12, weight: FontWeight.w700, color: color ?? K.stone500),
     ),
   );
 
@@ -328,7 +328,7 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
           hintStyle ?? kText(14, weight: FontWeight.w600, color: K.stone400),
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: K.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       enabledBorder: border(K.stone200),
       focusedBorder: border(K.brown700, 1.5),

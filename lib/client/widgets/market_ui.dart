@@ -19,10 +19,10 @@ class MarketPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFFAF7F4),
+        backgroundColor: K.tone(const Color(0xFFFAF7F4)),
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
+          backgroundColor: K.surface,
+          surfaceTintColor: K.surface,
           foregroundColor: K.gray900,
           elevation: 0,
           scrolledUnderElevation: 1,
@@ -44,18 +44,18 @@ class MarketPage extends StatelessWidget {
 
 /// `bg-white rounded-3xl border border-stone-200/80 shadow-sm` card.
 class Panel extends StatelessWidget {
-  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.color = Colors.white, this.border = K.stone200});
+  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.color, this.border});
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final Color color;
-  final Color border;
+  final Color? color;
+  final Color? border;
 
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
         padding: padding,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(22), border: Border.all(color: border), boxShadow: K.shadowSm),
+        decoration: BoxDecoration(color: color ?? K.surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: border ?? K.stone200), boxShadow: K.shadowSm),
         child: child,
       );
 }
@@ -112,11 +112,11 @@ InputDecoration marketInput(String hint, {Widget? prefix}) => InputDecoration(
       prefixIcon: prefix,
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: K.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: K.stone200)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: K.stone200)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: K.brown700, width: 1.5)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: K.stone200)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: K.stone200)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: K.brown700, width: 1.5)),
     );
 
 /// A selectable option card (delivery / pickup, payment method, package…).
@@ -131,7 +131,7 @@ class ChoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: selected ? K.brown50 : Colors.white,
+        color: selected ? K.brown50 : K.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: selected ? K.brown700 : K.stone200, width: selected ? 1.5 : 1),
@@ -187,10 +187,10 @@ class Notice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg, border) = switch (tone) {
-      NoticeTone.error => (const Color(0xFFFEF2F2), const Color(0xFFB91C1C), const Color(0xFFFECACA)),
-      NoticeTone.warning => (const Color(0xFFFFFBEB), const Color(0xFF92400E), const Color(0xFFFDE68A)),
-      NoticeTone.success => (const Color(0xFFECFDF5), const Color(0xFF047857), const Color(0xFFA7F3D0)),
-      NoticeTone.info => (const Color(0xFFF0F9FF), const Color(0xFF0369A1), const Color(0xFFBAE6FD)),
+      NoticeTone.error => (K.tone(const Color(0xFFFEF2F2)), K.tone(const Color(0xFFB91C1C)), K.tone(const Color(0xFFFECACA))),
+      NoticeTone.warning => (K.tone(const Color(0xFFFFFBEB)), K.tone(const Color(0xFF92400E)), K.tone(const Color(0xFFFDE68A))),
+      NoticeTone.success => (K.tone(const Color(0xFFECFDF5)), K.tone(const Color(0xFF047857)), K.tone(const Color(0xFFA7F3D0))),
+      NoticeTone.info => (K.tone(const Color(0xFFF0F9FF)), K.tone(const Color(0xFF0369A1)), K.tone(const Color(0xFFBAE6FD))),
       NoticeTone.brand => (K.brown50, K.brown850, K.brown200),
     };
     return Container(
@@ -209,23 +209,23 @@ enum NoticeTone { error, warning, success, info, brand }
 
 /// The outlined secondary button (`border border-stone-200 bg-white`).
 class OutlineAction extends StatelessWidget {
-  const OutlineAction({super.key, required this.label, required this.onTap, this.icon, this.color = K.stone700, this.dense = false});
+  const OutlineAction({super.key, required this.label, required this.onTap, this.icon, this.color, this.dense = false});
 
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
-  final Color color;
+  final Color? color;
   final bool dense;
 
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
         onPressed: onTap,
         icon: icon == null ? const SizedBox.shrink() : Icon(icon, size: 15),
-        label: Text(label, style: kText(dense ? 11.5 : 12.5, weight: FontWeight.w700, color: onTap == null ? K.stone400 : color)),
+        label: Text(label, style: kText(dense ? 11.5 : 12.5, weight: FontWeight.w700, color: onTap == null ? K.stone400 : color ?? K.stone700)),
         style: OutlinedButton.styleFrom(
-          foregroundColor: color,
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: K.stone200),
+          foregroundColor: color ?? K.stone700,
+          backgroundColor: K.surface,
+          side: BorderSide(color: K.stone200),
           padding: EdgeInsets.symmetric(horizontal: dense ? 10 : 14, vertical: dense ? 8 : 12),
           minimumSize: Size.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -248,8 +248,8 @@ class QuantityStepper extends StatelessWidget {
     Widget button(IconData icon, String tooltip, VoidCallback? onTap) => Tooltip(
           message: tooltip,
           child: Material(
-            color: Colors.white,
-            shape: const CircleBorder(side: BorderSide(color: K.stone200)),
+            color: K.surface,
+            shape: CircleBorder(side: BorderSide(color: K.stone200)),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onTap,
@@ -281,13 +281,13 @@ String phoneDisplay(String phone) {
 /// one-tap call and a copy button (the website's CallKitchenButton).
 Future<void> showCallSheet(BuildContext context, {required String phone, required String who}) => showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       showDragHandle: true,
       builder: (sheet) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const CircleAvatar(radius: 26, backgroundColor: K.brown50, child: Icon(Icons.phone, color: K.brown700)),
+            CircleAvatar(radius: 26, backgroundColor: K.brown50, child: Icon(Icons.phone, color: K.brown700)),
             const SizedBox(height: 10),
             Text('Call $who', textAlign: TextAlign.center, style: kText(15, weight: w900)),
             const SizedBox(height: 4),

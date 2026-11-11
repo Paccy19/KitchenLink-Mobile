@@ -22,7 +22,7 @@ class NetImage extends StatelessWidget {
     final empty = Container(
       color: K.stone100,
       alignment: Alignment.center,
-      child: fallback ?? const Icon(Icons.restaurant, size: 32, color: K.stone300),
+      child: fallback ?? Icon(Icons.restaurant, size: 32, color: K.stone300),
     );
     return ClipRRect(
       borderRadius: radius,
@@ -88,7 +88,7 @@ class TapCard extends StatelessWidget {
       child: Container(
         width: width,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: K.surface,
           borderRadius: radius,
           border: Border.all(color: borderColor ?? K.stone200.withValues(alpha: 0.8)),
           boxShadow: K.shadowSm,
@@ -216,7 +216,7 @@ class VendorCard extends StatelessWidget {
                 const Positioned(
                   bottom: 12,
                   right: 12,
-                  child: Pill('Near you', icon: Icons.near_me_outlined, background: K.amber400, foreground: K.brown850),
+                  child: Pill('Near you', icon: Icons.near_me_outlined, background: K.amber400, foreground: K.fillBrown850),
                 ),
             ],
           ),
@@ -254,7 +254,7 @@ class VendorCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
+                    Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -276,12 +276,12 @@ class VendorCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 12),
-                const Divider(height: 1, color: K.stone100),
+                Divider(height: 1, color: K.stone100),
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     if (distance) ...[
-                      const Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
+                      Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
                       const SizedBox(width: 4),
                       Text(
                         '${numText(vendor.distanceKm)} km',
@@ -289,7 +289,7 @@ class VendorCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                     ],
-                    const Icon(Icons.schedule, size: 14, color: K.stone400),
+                    Icon(Icons.schedule, size: 14, color: K.stone400),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
@@ -301,7 +301,7 @@ class VendorCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     if (vendor.deliveryFee > 0) ...[
-                      const Icon(Icons.pedal_bike, size: 14, color: K.brown500),
+                      Icon(Icons.pedal_bike, size: 14, color: K.brown500),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
@@ -349,7 +349,7 @@ class DishCard extends StatelessWidget {
                 left: 10,
                 child: dish.isAvailable
                     ? Pill('Available', size: 10, background: K.forest600.withValues(alpha: 0.95), foreground: Colors.white)
-                    : Pill('Sold out', size: 10, background: K.stone800.withValues(alpha: 0.9), foreground: Colors.white),
+                    : Pill('Sold out', size: 10, background: K.fillStone800.withValues(alpha: 0.9), foreground: Colors.white),
               ),
             ],
           ),
@@ -380,7 +380,7 @@ class DishCard extends StatelessWidget {
                   style: kText(11, color: K.stone500),
                 ),
                 const SizedBox(height: 10),
-                const Divider(height: 1, color: K.stone100),
+                Divider(height: 1, color: K.stone100),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -408,7 +408,7 @@ class DishCard extends StatelessWidget {
                         ),
                     ],
                     if (dish.hasPrep) ...[
-                      const Icon(Icons.schedule, size: 12, color: K.brown500),
+                      Icon(Icons.schedule, size: 12, color: K.brown500),
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(
@@ -459,7 +459,7 @@ class DishRow extends StatelessWidget {
                     spacing: 8,
                     children: [
                       Pill(dish.category.toUpperCase(), size: 10, shadow: false, background: K.stone100, foreground: K.stone600),
-                      if (!dish.isAvailable) const Pill('SOLD OUT', size: 10, shadow: false, background: K.stone100, foreground: K.stone500),
+                      if (!dish.isAvailable) Pill('SOLD OUT', size: 10, shadow: false, background: K.stone100, foreground: K.stone500),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -492,7 +492,7 @@ class DishRow extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.schedule, size: 12, color: K.brown500),
+                        Icon(Icons.schedule, size: 12, color: K.brown500),
                         const SizedBox(width: 3),
                         Text(
                           dish.prepTime,
@@ -526,7 +526,7 @@ class SpecialCard extends StatelessWidget {
     return TapCard(
       width: 300,
       onTap: onTap,
-      borderColor: const Color(0xFFD9DCC0),
+      borderColor: K.tone(const Color(0xFFD9DCC0)),
       label: '${vendor.name} special: ${special.text}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -628,8 +628,8 @@ class OfferDayCard extends StatelessWidget {
           _bannerWithName(
             vendor,
             media(vendor.bannerUrl.isNotEmpty ? vendor.bannerUrl : vendor.avatarUrl),
-            topLeft: const Pill('Offer Day', icon: Icons.card_giftcard, background: K.amber400, foreground: K.brown850),
-            topRight: Pill(offerCountdown(offer.offerDate), background: Colors.white.withValues(alpha: 0.95), foreground: K.brown850),
+            topLeft: const Pill('Offer Day', icon: Icons.card_giftcard, background: K.amber400, foreground: K.fillBrown850),
+            topRight: Pill(offerCountdown(offer.offerDate), background: Colors.white.withValues(alpha: 0.95), foreground: K.fillBrown850),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -639,7 +639,7 @@ class OfferDayCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.calendar_month_outlined, size: 14, color: K.amber800),
+                    Icon(Icons.calendar_month_outlined, size: 14, color: K.amber800),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -686,7 +686,7 @@ class GradientButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.icon,
-    this.iconColor = K.brown300,
+    this.iconColor,
     this.height = 48,
     this.fontSize = 14,
     this.radius = 16,
@@ -697,7 +697,7 @@ class GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
-  final Color iconColor;
+  final Color? iconColor;
   final double height;
   final double fontSize;
   final double radius;
@@ -728,7 +728,7 @@ class GradientButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (icon != null) ...[Icon(icon, size: fontSize + 2, color: iconColor), const SizedBox(width: 6)],
+                    if (icon != null) ...[Icon(icon, size: fontSize + 2, color: iconColor ?? K.brown300), const SizedBox(width: 6)],
                     Text(
                       label,
                       style: kText(fontSize, weight: w900, color: Colors.white),
@@ -793,9 +793,9 @@ class DishCardSkeleton extends StatelessWidget {
 Widget _skeletonCard(double width, Widget top, List<double> lines) => Container(
   width: width,
   decoration: BoxDecoration(
-    color: Colors.white,
+    color: K.surface,
     borderRadius: BorderRadius.circular(24),
-    border: Border.all(color: const Color(0xFFF3F4F6)),
+    border: Border.all(color: K.tone(const Color(0xFFF3F4F6))),
   ),
   clipBehavior: Clip.antiAlias,
   child: Column(
@@ -834,7 +834,7 @@ class EmptyCard extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: K.surface,
       borderRadius: BorderRadius.circular(24),
       border: Border.all(color: K.stone200.withValues(alpha: 0.8)),
       boxShadow: K.shadowSm,
@@ -890,7 +890,7 @@ class ErrorCard extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 56),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: K.surface,
       borderRadius: BorderRadius.circular(24),
       border: Border.all(color: K.red100),
       boxShadow: K.shadowSm,

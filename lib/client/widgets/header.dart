@@ -68,7 +68,7 @@ class MarketHeader extends StatelessWidget {
                           _cartButton(),
                           SizedBox(width: gap),
                           if (unreadNotifications != null) ...[_bell(), SizedBox(width: gap)],
-                          _squareButton(Icons.dark_mode_outlined, 'Switch to dark mode', onTheme, color: K.stone600, border: K.stone200),
+                          _squareButton(K.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, K.dark ? 'Switch to light mode' : 'Switch to dark mode', onTheme,color: K.stone600, border: K.stone200),
                           if (lg) ...[
                             SizedBox(width: gap),
                             _squareButton(Icons.favorite_border, 'Saved dishes', () => onLink('Saved dishes'), color: K.rose600, border: K.gray200),
@@ -117,7 +117,7 @@ class MarketHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: K.brown700,
+            color: K.fillBrown700,
             borderRadius: BorderRadius.circular(99),
             border: Border.all(color: const Color(0xFF7A3A19).withValues(alpha: 0.5)),
           ),
@@ -214,7 +214,7 @@ class MarketHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [K.brown900, K.brown700]),
+                gradient: const LinearGradient(colors: [K.brown900, K.fillBrown700]),
                 borderRadius: BorderRadius.circular(99),
               ),
               child: Text(
@@ -249,9 +249,9 @@ class MarketHeader extends StatelessWidget {
   );
 
   /// A `rounded-xl border` icon button (basket, dark mode, saved dishes).
-  Widget _squareButton(IconData icon, String? label, VoidCallback onTap, {required Color color, required Color border, Color background = Colors.white}) {
+  Widget _squareButton(IconData icon, String? label, VoidCallback onTap, {required Color color, required Color border, Color? background}) {
     final button = Material(
-      color: background,
+      color: background ?? K.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: border),
@@ -284,7 +284,7 @@ class MarketHeader extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.person_outline, size: 14, color: K.brown300),
+              Icon(Icons.person_outline, size: 14, color: K.brown300),
               const SizedBox(width: 6),
               Text(
                 signedInName ?? 'Sign In',
@@ -301,7 +301,7 @@ class MarketHeader extends StatelessWidget {
   Widget _pill(IconData icon, String label, VoidCallback onTap, {bool saved = false}) {
     final fg = saved ? K.rose600 : K.brown850;
     return Material(
-      color: saved ? Colors.white : K.brown50,
+      color: saved ? K.surface : K.brown50,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: saved ? K.gray200 : K.brown200),

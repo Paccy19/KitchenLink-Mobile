@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -220,12 +221,8 @@ class _HomeScreenState extends State<HomeScreen> {
     showDishSheet(context, MenuDish.fromDish(dish), KitchenRef(id: dish.vendorId, name: dish.vendorName.isEmpty ? 'Kitchen' : dish.vendorName), showKitchenLink: true);
   }
 
-  /// Dark mode is the one website setting the marketplace screens don't have.
-  void _darkMode() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text("Dark mode isn't in the mobile marketplace yet.")));
-  }
+  /// The header's moon / sun button: light or dark, remembered on the device.
+  void _darkMode() => context.read<MarketTheme>().toggle((key, value) => const FlutterSecureStorage().write(key: key, value: value));
 
   Future<void> _signIn() async {
     final session = context.read<CustomerSession>();
@@ -246,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _accountSheet(CustomerSession session) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
         child: Padding(
@@ -272,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(icon, color: K.brown700),
                   title: Text(label, style: kText(14, weight: FontWeight.w700)),
-                  trailing: const Icon(Icons.chevron_right, color: K.stone400),
+                  trailing: Icon(Icons.chevron_right, color: K.stone400),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     open(context);
@@ -288,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: const Text('Sign out'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: K.brown700,
-                  side: const BorderSide(color: K.brown200),
+                  side: BorderSide(color: K.brown200),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -418,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _bigEventButton() => Container(
     decoration: const BoxDecoration(shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(99)), boxShadow: K.shadowSm),
     child: Material(
-      color: K.brown700,
+      color: K.fillBrown700,
       shape: const StadiumBorder(),
       child: InkWell(
         customBorder: const StadiumBorder(),
@@ -453,8 +450,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: const BoxDecoration(shape: BoxShape.circle, boxShadow: K.shadowSm),
         child: Material(
-          color: Colors.white,
-          shape: const CircleBorder(side: BorderSide(color: K.stone200)),
+          color: K.surface,
+          shape: CircleBorder(side: BorderSide(color: K.stone200)),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: refreshing ? null : _refresh,
@@ -462,11 +459,11 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 36,
               height: 36,
               child: refreshing
-                  ? const Padding(
+                  ? Padding(
                       padding: EdgeInsets.all(10),
                       child: CircularProgressIndicator(strokeWidth: 2, color: K.stone500),
                     )
-                  : const Icon(Icons.refresh, size: 16, color: K.stone500),
+                  : Icon(Icons.refresh, size: 16, color: K.stone500),
             ),
           ),
         ),
@@ -479,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 1),
           child: Icon(Icons.location_off_outlined, size: 14, color: K.gray400),
         ),
@@ -790,7 +787,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: active ? K.buttonGradient : null,
-        color: active ? null : Colors.white,
+        color: active ? null : K.surface,
         borderRadius: radius,
         border: active ? null : Border.all(color: K.stone200),
         boxShadow: active ? K.brownShadow : null,

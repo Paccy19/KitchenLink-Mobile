@@ -41,7 +41,7 @@ Future<void> showNotificationsSheet(BuildContext context) {
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    backgroundColor: Colors.white,
+    backgroundColor: K.surface,
     builder: (sheet) => FractionallySizedBox(
       heightFactor: 0.8,
       child: Consumer<Notifications>(
@@ -61,7 +61,7 @@ Future<void> showNotificationsSheet(BuildContext context) {
                   ])
                 : ListView.separated(
                     itemCount: notifications.items.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1, color: K.stone100),
+                    separatorBuilder: (_, _) => Divider(height: 1, color: K.stone100),
                     itemBuilder: (_, i) {
                       final n = notifications.items[i];
                       final unread = n['read'] != true;

@@ -154,7 +154,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
   Widget build(BuildContext context) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: K.stone200),
+      borderSide: BorderSide(color: K.stone200),
     );
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -190,10 +190,10 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
                     hintText: 'What are you craving? (Isombe, Pizza, Burger…)',
                     hintStyle: kText(16, weight: FontWeight.w400, color: K.stone400),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: K.surface,
                     isDense: false,
                     contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                    prefixIcon: const Padding(
+                    prefixIcon: Padding(
                       padding: EdgeInsets.only(left: 16, right: 10),
                       child: Icon(Icons.search, size: 20, color: K.gray400),
                     ),
@@ -212,14 +212,14 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
                                   widget.onChanged('');
                                   _focus.requestFocus();
                                 },
-                                child: const SizedBox(width: 32, height: 32, child: Icon(Icons.close, size: 16, color: K.stone500)),
+                                child: SizedBox(width: 32, height: 32, child: Icon(Icons.close, size: 16, color: K.stone500)),
                               ),
                             ),
                           ),
                     suffixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 32),
                     border: border,
                     enabledBorder: border,
-                    focusedBorder: border.copyWith(borderSide: const BorderSide(color: K.brown700, width: 1.5)),
+                    focusedBorder: border.copyWith(borderSide: BorderSide(color: K.brown700, width: 1.5)),
                   ),
                 ),
               ),
@@ -234,7 +234,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
     final recent = widget.recent.items;
     final label = kText(11, weight: FontWeight.w700, color: K.stone400, spacing: 0.6);
     return Material(
-      color: Colors.white,
+      color: K.surface,
       elevation: 0,
       borderRadius: BorderRadius.circular(24),
       child: Container(
@@ -250,7 +250,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
             if (recent.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: K.stone100)),
                 ),
                 child: Column(
@@ -291,7 +291,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.schedule, size: 12, color: K.stone400),
+                                      Icon(Icons.schedule, size: 12, color: K.stone400),
                                       const SizedBox(width: 6),
                                       Text(
                                         query,
@@ -306,7 +306,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
                                   onTap: () => widget.recent.remove(query),
                                   child: Semantics(
                                     label: 'Remove $query from recent searches',
-                                    child: const SizedBox(width: 20, height: 20, child: Icon(Icons.close, size: 12, color: K.stone400)),
+                                    child: SizedBox(width: 20, height: 20, child: Icon(Icons.close, size: 12, color: K.stone400)),
                                   ),
                                 ),
                               ],
@@ -326,7 +326,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
                     padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
                     child: Row(
                       children: [
-                        const Icon(Icons.auto_awesome, size: 12, color: K.brown500),
+                        Icon(Icons.auto_awesome, size: 12, color: K.brown500),
                         const SizedBox(width: 4),
                         Text('TRY SEARCHING FOR', style: label),
                       ],
@@ -357,7 +357,7 @@ class SuggestionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: K.brown50,
-    shape: const StadiumBorder(side: BorderSide(color: K.brown200)),
+    shape: StadiumBorder(side: BorderSide(color: K.brown200)),
     child: InkWell(
       customBorder: const StadiumBorder(),
       onTap: onTap,
@@ -437,8 +437,8 @@ class _CategoryBarState extends State<CategoryBar> {
     child: Container(
       decoration: const BoxDecoration(shape: BoxShape.circle, boxShadow: K.shadowSm),
       child: Material(
-        color: Colors.white,
-        shape: const CircleBorder(side: BorderSide(color: K.stone200)),
+        color: K.surface,
+        shape: CircleBorder(side: BorderSide(color: K.stone200)),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
@@ -516,7 +516,7 @@ class _CategoryBarState extends State<CategoryBar> {
         gradient: active
             ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [K.brown900, K.brown800, Color(0xFF200D05)])
             : null,
-        color: active ? null : Colors.white,
+        color: active ? null : K.surface,
         borderRadius: radius,
         border: active ? null : Border.all(color: K.stone200.withValues(alpha: 0.8)),
         boxShadow: active ? const [BoxShadow(color: Color(0x4D2B1206), blurRadius: 15, offset: Offset(0, 10), spreadRadius: -3)] : null,
@@ -594,7 +594,7 @@ class KitchenTypeFilter extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: active ? K.buttonGradient : null,
-        color: active ? null : Colors.white,
+        color: active ? null : K.surface,
         borderRadius: radius,
         border: Border.all(color: active ? Colors.transparent : K.stone200),
         boxShadow: active ? K.shadowMd : null,
@@ -645,8 +645,8 @@ class LocationPill extends StatelessWidget {
       button: true,
       label: 'Delivering to ${location.label}. Change location',
       child: Material(
-        color: Colors.white,
-        shape: const StadiumBorder(side: BorderSide(color: K.stone200)),
+        color: K.surface,
+        shape: StadiumBorder(side: BorderSide(color: K.stone200)),
         elevation: 0,
         child: InkWell(
           customBorder: const StadiumBorder(),
@@ -656,7 +656,7 @@ class LocationPill extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
+                Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
                 const SizedBox(width: 8),
                 Flexible(
                   child: ConstrainedBox(
@@ -679,7 +679,7 @@ class LocationPill extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.keyboard_arrow_down, size: 15, color: K.stone400),
+                Icon(Icons.keyboard_arrow_down, size: 15, color: K.stone400),
               ],
             ),
           ),
@@ -694,7 +694,7 @@ Future<void> showLocationPicker(BuildContext context, ClientLocation location, {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: K.surface,
     barrierColor: Colors.black.withValues(alpha: 0.6),
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
     builder: (sheet) => ListenableBuilder(
@@ -720,7 +720,7 @@ Future<void> showLocationPicker(BuildContext context, ClientLocation location, {
                       child: InkWell(
                         customBorder: const CircleBorder(),
                         onTap: () => Navigator.pop(sheet),
-                        child: const SizedBox(width: 36, height: 36, child: Icon(Icons.close, size: 16, color: K.stone600)),
+                        child: SizedBox(width: 36, height: 36, child: Icon(Icons.close, size: 16, color: K.stone600)),
                       ),
                     ),
                   ],
@@ -730,7 +730,7 @@ Future<void> showLocationPicker(BuildContext context, ClientLocation location, {
                   color: K.brown50,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: K.brown200),
+                    side: BorderSide(color: K.brown200),
                   ),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
@@ -754,11 +754,11 @@ Future<void> showLocationPicker(BuildContext context, ClientLocation location, {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [K.brown900, K.brown700]),
+                              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [K.brown900, K.fillBrown700]),
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: K.shadowSm,
                             ),
-                            child: const Icon(Icons.near_me_outlined, size: 20, color: K.brown300),
+                            child: Icon(Icons.near_me_outlined, size: 20, color: K.brown300),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -792,7 +792,7 @@ Future<void> showLocationPicker(BuildContext context, ClientLocation location, {
                 ),
                 const SizedBox(height: 8),
                 for (var i = 0; i < kigaliNeighborhoods.length; i++) ...[
-                  if (i > 0) const Divider(height: 1, color: K.stone100),
+                  if (i > 0) Divider(height: 1, color: K.stone100),
                   _areaRow(sheet, location, kigaliNeighborhoods[i]),
                 ],
               ],
@@ -825,7 +825,7 @@ Widget _areaRow(BuildContext sheet, ClientLocation location, Neighborhood area) 
             area.district,
             style: kText(12, weight: FontWeight.w400, color: K.stone400),
           ),
-          if (active) ...[const SizedBox(width: 8), const Icon(Icons.check, size: 16, color: K.brown700)],
+          if (active) ...[const SizedBox(width: 8), Icon(Icons.check, size: 16, color: K.brown700)],
         ],
       ),
     ),
@@ -843,7 +843,7 @@ Future<void> showLocationPrimer(BuildContext context, ClientLocation location, {
       builder: (dialog, _) {
         final requesting = location.status == LocationStatus.requesting;
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: K.surface,
           insetPadding: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           clipBehavior: Clip.antiAlias,

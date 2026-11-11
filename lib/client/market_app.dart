@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -23,6 +24,7 @@ Widget buildMarketApp() {
 
 /// The customer's state, all on one [ApiClient].
 List<SingleChildWidget> marketProviders(ApiClient client) => [
+      ChangeNotifierProvider(create: (_) => MarketTheme()..restore((key) => const FlutterSecureStorage().read(key: key))),
       ChangeNotifierProvider(create: (_) => CustomerSession(client)..restore()),
       // Requests always go through the session's own connection, so they
       // carry its sign-in token (checkout, basket, orders, chats…).
@@ -39,6 +41,44 @@ class KitchenLinkMarketApp extends StatelessWidget {
   const KitchenLinkMarketApp({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      MaterialApp(title: 'KitchenLink', debugShowCheckedModeBanner: false, theme: buildClientTheme(), home: const HomeScreen());
+  Widget build(BuildContext context) {
+    final dark = context.watch<MarketTheme>().isDark;
+    return _PaletteScope(
+      dark: dark,
+      child: MaterialApp(title: 'KitchenLink', debugShowCheckedModeBanner: false, theme: buildClientTheme(dark: dark), home: const HomeScreen()),
+    );
+  }
+}
+
+/// The palette ([K]) is read while building, and many widgets are `const`,
+/// so a theme switch marks every screen (and open sheet) to build again,
+/// keeping where the customer is.
+class _PaletteScope extends StatefulWidget {
+  const _PaletteScope({required this.dark, required this.child});
+
+  final bool dark;
+  final Widget child;
+
+  @override
+  State<_PaletteScope> createState() => _PaletteScopeState();
+}
+
+class _PaletteScopeState extends State<_PaletteScope> {
+  @override
+  void didUpdateWidget(_PaletteScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dark == widget.dark) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      void rebuild(Element element) {
+        element.markNeedsBuild();
+        element.visitChildren(rebuild);
+      }
+
+      (context as Element).visitChildren(rebuild);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

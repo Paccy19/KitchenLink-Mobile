@@ -83,7 +83,7 @@ class WishlistScreen extends StatelessWidget {
                       wishlist.remove(entry.dish.id);
                       showMarketSnack(context, '${entry.dish.name} removed from your wishlist');
                     },
-                    icon: const Icon(Icons.delete_outline, color: K.stone400),
+                    icon: Icon(Icons.delete_outline, color: K.stone400),
                   ),
                 ]),
               ),
@@ -195,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 right: 0,
                 bottom: 0,
                 child: Material(
-                  color: K.brown700,
+                  color: K.fillBrown700,
                   shape: const CircleBorder(side: BorderSide(color: Colors.white, width: 2)),
                   child: InkWell(
                     customBorder: const CircleBorder(),
@@ -214,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(session.name, style: kText(20, weight: w900)),
             Text([session.phone, session.email].where((s) => s.isNotEmpty).join(' · '), style: kText(12, color: K.stone500)),
             const SizedBox(height: 6),
-            const StatusPill('Verified Customer Account', background: Color(0xFFD1FAE5), foreground: Color(0xFF065F46)),
+            StatusPill('Verified Customer Account', background: K.tone(const Color(0xFFD1FAE5)), foreground: K.tone(const Color(0xFF065F46))),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
               OutlineAction(label: 'Order History', icon: Icons.receipt_long_outlined, onTap: () => MarketNav.orders(context)),
@@ -256,15 +256,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: address.isDefault ? K.brown50 : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: address.isDefault ? K.brown200 : K.stone200)),
+                  decoration: BoxDecoration(color: address.isDefault ? K.brown50 : K.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: address.isDefault ? K.brown200 : K.stone200)),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Icon(Icons.location_on_outlined, size: 18, color: K.brown500),
+                    Icon(Icons.location_on_outlined, size: 18, color: K.brown500),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
                           Text(address.title, style: kText(13.5, weight: w900)),
-                          if (address.isDefault) ...[const SizedBox(width: 6), const StatusPill('Default', background: K.brown100, foreground: K.brown850)],
+                          if (address.isDefault) ...[const SizedBox(width: 6), StatusPill('Default', background: K.brown100, foreground: K.brown850)],
                         ]),
                         Text(address.street, style: kText(12.5, color: K.stone700)),
                         Text('${address.district}, Kigali', style: kText(12, color: K.stone500)),
@@ -275,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             : GestureDetector(onTap: () => session.setDefaultAddress(address.id), child: Text('Set as Default', style: kText(11.5, weight: FontWeight.w700, color: K.brown700))),
                       ]),
                     ),
-                    IconButton(tooltip: 'Delete ${address.title}', onPressed: () => session.deleteAddress(address.id), icon: const Icon(Icons.delete_outline, color: K.stone400)),
+                    IconButton(tooltip: 'Delete ${address.title}', onPressed: () => session.deleteAddress(address.id), icon: Icon(Icons.delete_outline, color: K.stone400)),
                   ]),
                 ),
           ]),

@@ -47,13 +47,13 @@ class MarketDialogCard extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 448),
             child: Material(
-              color: Colors.white,
+              color: K.surface,
               clipBehavior: Clip.antiAlias,
               elevation: 24,
               shadowColor: const Color(0x40000000),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
-                side: const BorderSide(color: K.stone100),
+                side: BorderSide(color: K.stone100),
               ),
               child: Stack(
                 children: [
@@ -71,7 +71,7 @@ class MarketDialogCard extends StatelessWidget {
                     child: IconButton(
                       tooltip: 'Close',
                       onPressed: onClose ?? () => Navigator.of(context).pop(),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close,
                         size: 20,
                         color: K.stone400,

@@ -147,7 +147,7 @@ class _KitchensMapScreenState extends State<KitchensMapScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: pin.vendor.id == _selected ? K.amber400 : Colors.white, width: 3),
+                            border: Border.all(color: pin.vendor.id == _selected ? K.amber400 : K.surface, width: 3),
                             boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
                           ),
                           child: VendorAvatar(vendor: pin.vendor, media: media, size: 34),
@@ -180,7 +180,7 @@ class _KitchensMapScreenState extends State<KitchensMapScreen> {
                 right: 60,
                 bottom: 12,
                 child: Material(
-                  color: Colors.white,
+                  color: K.surface,
                   elevation: 4,
                   borderRadius: BorderRadius.circular(16),
                   child: ListTile(
@@ -244,7 +244,7 @@ class _KitchensMapScreenState extends State<KitchensMapScreen> {
   }
 
   Widget _mapButton(IconData icon, String tooltip, VoidCallback onTap) => Material(
-        color: Colors.white,
+        color: K.surface,
         shape: const CircleBorder(),
         elevation: 2,
         child: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon, size: 20, color: K.stone700)),
@@ -258,7 +258,7 @@ class _KitchensMapScreenState extends State<KitchensMapScreen> {
           showCheckmark: false,
           labelStyle: kText(12, weight: FontWeight.w700, color: active ? Colors.white : K.stone600),
           selectedColor: K.brown800,
-          backgroundColor: Colors.white,
+          backgroundColor: K.surface,
           onSelected: (_) => onTap(),
         ),
       );

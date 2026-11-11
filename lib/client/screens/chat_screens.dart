@@ -141,7 +141,7 @@ class _ChatRow extends StatelessWidget {
     final avatar = media('${other['avatar_url'] ?? ''}');
     return ListTile(
       onTap: onOpen,
-      leading: CircleAvatar(backgroundColor: K.brown50, backgroundImage: avatar == null ? null : NetworkImage(avatar), child: avatar == null ? const Icon(Icons.storefront_outlined, color: K.brown700) : null),
+      leading: CircleAvatar(backgroundColor: K.brown50, backgroundImage: avatar == null ? null : NetworkImage(avatar), child: avatar == null ? Icon(Icons.storefront_outlined, color: K.brown700) : null),
       title: Row(children: [
         Expanded(child: Text('${other['name'] ?? 'Kitchen'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(14, weight: w900))),
         Text(_when(chat['last_message_at']), style: kText(11, color: K.stone400)),
@@ -155,7 +155,7 @@ class _ChatRow extends StatelessWidget {
             style: kText(12, weight: unread > 0 ? FontWeight.w700 : FontWeight.w400, color: unread > 0 ? K.gray900 : K.stone500),
           ),
         ),
-        if (unread > 0) Badge(label: Text('$unread'), backgroundColor: K.brown700),
+        if (unread > 0) Badge(label: Text('$unread'), backgroundColor: K.fillBrown700),
       ]),
     );
   }
@@ -312,7 +312,7 @@ class _ChatScreenState extends State<ChatScreen> {
           top: false,
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: K.stone200))),
+            decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200))),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               if (_error != null && _conversation != null) Padding(padding: const EdgeInsets.only(bottom: 6), child: Notice(_error!)),
               Row(children: [
@@ -330,7 +330,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(width: 8),
                 IconButton.filled(
                   tooltip: 'Send message',
-                  style: IconButton.styleFrom(backgroundColor: K.brown700),
+                  style: IconButton.styleFrom(backgroundColor: K.fillBrown700),
                   onPressed: _draft.text.trim().isEmpty || _sending || _conversation == null ? null : _send,
                   icon: const Icon(Icons.send, size: 18),
                 ),
@@ -359,7 +359,7 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
               gradient: mine ? K.buttonGradient : null,
-              color: mine ? null : Colors.white,
+              color: mine ? null : K.surface,
               border: mine ? null : Border.all(color: K.stone200),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),

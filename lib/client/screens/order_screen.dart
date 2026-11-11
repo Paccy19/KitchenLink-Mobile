@@ -51,7 +51,7 @@ class _OrderScreenState extends State<OrderScreen> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: K.surface,
         title: Text('Cancel this order?', style: kText(17, weight: w900)),
         content: Text('The kitchen is told straight away. If you already paid, the money goes back to you.', style: kText(13, color: K.stone600, height: 1.5)),
         actions: [
@@ -120,7 +120,7 @@ class _OrderScreenState extends State<OrderScreen> {
       actions: [
         TextButton.icon(
           onPressed: () => MarketNav.support(context, orderId: order.id),
-          icon: const Icon(Icons.support_agent, size: 16, color: K.brown700),
+          icon: Icon(Icons.support_agent, size: 16, color: K.brown700),
           label: Text('Get help', style: kText(12, weight: FontWeight.w700, color: K.brown700)),
         ),
       ],
@@ -150,14 +150,14 @@ class _OrderScreenState extends State<OrderScreen> {
               if (current != null && !cancelled) Text(current.description, style: kText(12.5, color: K.stone600)),
               const SizedBox(height: 10),
               Wrap(spacing: 6, runSpacing: 6, children: [
-                if (order.isPickup) const StatusPill('You pick up', background: K.brown100, foreground: K.brown850),
-                if (order.kitchenDelivers) const StatusPill('The kitchen delivers', background: K.brown100, foreground: K.brown850),
+                if (order.isPickup) StatusPill('You pick up', background: K.brown100, foreground: K.brown850),
+                if (order.kitchenDelivers) StatusPill('The kitchen delivers', background: K.brown100, foreground: K.brown850),
                 if (order.orderType != 'immediate')
-                  StatusPill('${order.orderTypeLabel}${order.scheduledFor.isNotEmpty ? ' · ${formatScheduledFor(order.scheduledFor)}' : ''}', background: const Color(0xFFEDE9FE), foreground: K.violet700),
+                  StatusPill('${order.orderTypeLabel}${order.scheduledFor.isNotEmpty ? ' · ${formatScheduledFor(order.scheduledFor)}' : ''}', background: K.tone(const Color(0xFFEDE9FE)), foreground: K.violet700),
               ]),
-              const Divider(height: 24, color: K.stone100),
+              Divider(height: 24, color: K.stone100),
               Text(order.isPickup ? 'EXPECTED READY' : 'ESTIMATED DELIVERY', style: kText(10.5, weight: FontWeight.w700, color: K.stone500, spacing: 0.6)),
-              Row(children: [const Icon(Icons.schedule, size: 16, color: K.brown500), const SizedBox(width: 6), Text(order.estimatedTime, style: kText(15, weight: w900))]),
+              Row(children: [Icon(Icons.schedule, size: 16, color: K.brown500), const SizedBox(width: 6), Text(order.estimatedTime, style: kText(15, weight: w900))]),
               const SizedBox(height: 4),
               Text('${order.vendorName}${order.vendorLocation.isNotEmpty ? ' (${order.vendorLocation})' : ''}', style: kText(12, weight: FontWeight.w600, color: K.stone600)),
               const SizedBox(height: 10),
@@ -200,7 +200,7 @@ class _OrderScreenState extends State<OrderScreen> {
             const SizedBox(height: 14),
             Panel(
               child: Row(children: [
-                const CircleAvatar(backgroundColor: K.brown50, child: Icon(Icons.pedal_bike, color: K.brown700)),
+                CircleAvatar(backgroundColor: K.brown50, child: Icon(Icons.pedal_bike, color: K.brown700)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -218,7 +218,7 @@ class _OrderScreenState extends State<OrderScreen> {
           if (order.isPickup)
             Panel(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [const Icon(Icons.storefront_outlined, size: 16, color: K.brown500), const SizedBox(width: 6), Text('PICK UP AT', style: kText(11, weight: FontWeight.w700, color: K.stone500))]),
+                Row(children: [Icon(Icons.storefront_outlined, size: 16, color: K.brown500), const SizedBox(width: 6), Text('PICK UP AT', style: kText(11, weight: FontWeight.w700, color: K.stone500))]),
                 const SizedBox(height: 6),
                 Text(order.vendorName, style: kText(15, weight: w900)),
                 Text([pickup['address'], pickup['neighborhood']].where((s) => s != null && '$s'.isNotEmpty).join(', ').ifEmpty('Kitchen address unavailable'), style: kText(12.5, color: K.stone600)),
@@ -239,7 +239,7 @@ class _OrderScreenState extends State<OrderScreen> {
           else
             Panel(
               child: Row(children: [
-                const Icon(Icons.location_on_outlined, color: K.brown500),
+                Icon(Icons.location_on_outlined, color: K.brown500),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -262,7 +262,7 @@ class _OrderScreenState extends State<OrderScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       showDragHandle: true,
       builder: (_) => _SwitchToDelivery(order: order),
     );
@@ -287,7 +287,7 @@ class _OrderScreenState extends State<OrderScreen> {
         Text('Order Receipt', style: kText(16, weight: w900)),
         const SizedBox(height: 10),
         for (final item in order.items) MoneyRow('${item.quantity}x ${item.name}', rwf(item.price * item.quantity)),
-        const Divider(height: 20, color: K.stone100),
+        Divider(height: 20, color: K.stone100),
         MoneyRow('Subtotal', rwf(order.subtotal)),
         MoneyRow(order.kitchenDelivers ? "Kitchen's travel fee" : 'Delivery Fee${order.isPickup ? ' (you pick up)' : ''}', order.isPickup ? 'Free' : rwf(order.deliveryFee)),
         MoneyRow(unpaidBalance ? 'Total' : 'Total Paid', rwf(order.total), strong: true),
@@ -324,7 +324,7 @@ class _Progress extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: i == index ? K.logoGradient : null,
-                  color: i < index ? const Color(0xFF059669) : (i == index ? null : Colors.white),
+                  color: i < index ? const Color(0xFF059669) : (i == index ? null : K.surface),
                   border: i > index ? Border.all(color: K.stone200, width: 2) : null,
                 ),
                 child: Icon(i < index ? Icons.check : Icons.circle, size: i < index ? 15 : 7, color: i <= index ? Colors.white : K.stone300),
@@ -354,7 +354,7 @@ class _CodeCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(gradient: K.logoGradient, borderRadius: BorderRadius.circular(22)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const Icon(Icons.verified_user_outlined, size: 16, color: K.brown300), const SizedBox(width: 6), Text(title.toUpperCase(), style: kText(11, weight: FontWeight.w700, color: K.brown300, spacing: 0.6))]),
+          Row(children: [Icon(Icons.verified_user_outlined, size: 16, color: K.brown300), const SizedBox(width: 6), Text(title.toUpperCase(), style: kText(11, weight: FontWeight.w700, color: K.brown300, spacing: 0.6))]),
           const SizedBox(height: 10),
           SelectableText(code, style: kText(34, weight: w900, color: Colors.white, spacing: 8)),
           const SizedBox(height: 6),
@@ -598,7 +598,7 @@ class _LiveTrackerState extends State<_LiveTracker> {
           if (driver.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(children: [
-              const CircleAvatar(backgroundColor: K.brown50, child: Icon(Icons.pedal_bike, color: K.brown700)),
+              CircleAvatar(backgroundColor: K.brown50, child: Icon(Icons.pedal_bike, color: K.brown700)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -731,7 +731,7 @@ class _SwitchToDeliveryState extends State<_SwitchToDelivery> {
         const SizedBox(height: 14),
         const FieldLabel('Deliver to'),
         Row(children: [
-          const Icon(Icons.location_on_outlined, color: K.brown500),
+          Icon(Icons.location_on_outlined, color: K.brown500),
           const SizedBox(width: 8),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -794,7 +794,7 @@ Future<void> showDirections(BuildContext context, {required double lat, required
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       showDragHandle: true,
       builder: (_) => FractionallySizedBox(heightFactor: 0.9, child: _Directions(lat: lat, lng: lng, name: name, address: address)),
     );
@@ -901,7 +901,7 @@ class _DirectionsState extends State<_Directions> {
         ListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.turn_right, color: K.brown500),
+          leading: Icon(Icons.turn_right, color: K.brown500),
           title: Text('${step['instruction']}', style: kText(12.5, weight: FontWeight.w600)),
           trailing: (step['distance_m'] is num && (step['distance_m'] as num) > 0) ? Text(distance(step['distance_m'] as num), style: kText(11, color: K.stone500)) : null,
         ),
@@ -973,14 +973,14 @@ class _OrderCard extends StatelessWidget {
     final (bg, fg) = order.isLive
         ? (K.brown100, K.brown850)
         : order.status == 'cancelled'
-            ? (K.red100, const Color(0xFF991B1B))
-            : (const Color(0xFFD1FAE5), const Color(0xFF065F46));
+            ? (K.red100, K.tone(const Color(0xFF991B1B)))
+            : (K.tone(const Color(0xFFD1FAE5)), K.tone(const Color(0xFF065F46)));
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Panel(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const CircleAvatar(radius: 18, backgroundColor: K.brown50, child: Icon(Icons.soup_kitchen_outlined, size: 18, color: K.brown700)),
+            CircleAvatar(radius: 18, backgroundColor: K.brown50, child: Icon(Icons.soup_kitchen_outlined, size: 18, color: K.brown700)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -995,13 +995,13 @@ class _OrderCard extends StatelessWidget {
             if (refund != null)
               StatusPill(
                 '${refund['status_label'] ?? 'Refund'}',
-                background: refund['status'] == 'completed' ? const Color(0xFFECFDF5) : refund['status'] == 'failed' ? const Color(0xFFFFF1F2) : const Color(0xFFF0F9FF),
-                foreground: refund['status'] == 'completed' ? const Color(0xFF047857) : refund['status'] == 'failed' ? const Color(0xFFBE123C) : const Color(0xFF0369A1),
+                background: refund['status'] == 'completed' ? K.tone(const Color(0xFFECFDF5)) : refund['status'] == 'failed' ? K.tone(const Color(0xFFFFF1F2)) : K.tone(const Color(0xFFF0F9FF)),
+                foreground: refund['status'] == 'completed' ? K.tone(const Color(0xFF047857)) : refund['status'] == 'failed' ? K.tone(const Color(0xFFBE123C)) : K.tone(const Color(0xFF0369A1)),
               ),
           ]),
           const SizedBox(height: 10),
           for (final item in order.items) MoneyRow('${item.quantity}x ${item.name}', rwf(item.price * item.quantity)),
-          const Divider(height: 18, color: K.stone100),
+          Divider(height: 18, color: K.stone100),
           Text('Total: ${rwf(order.total)} via ${order.paymentMethod}', style: kText(12.5, weight: FontWeight.w700, color: K.stone700)),
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, children: [

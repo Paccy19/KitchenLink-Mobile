@@ -206,7 +206,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 4),
             // The delivery fee and the worker use the map position.
             Row(children: [
-              const Icon(Icons.my_location, size: 14, color: K.brown500),
+              Icon(Icons.my_location, size: 14, color: K.brown500),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -250,7 +250,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       action: TextButton(onPressed: () => MarketNav.cart(context), child: Text('Change', style: kText(12, weight: FontWeight.w700, color: K.brown700))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          const Icon(Icons.schedule, size: 18, color: K.brown700),
+          Icon(Icons.schedule, size: 18, color: K.brown700),
           const SizedBox(width: 8),
           Text(label, style: kText(14, weight: w900)),
         ]),
@@ -287,7 +287,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (cart.vendor != null) Text(cart.vendor!.name, style: kText(12, color: K.stone500)),
           const SizedBox(height: 10),
           for (final line in cart.lines) MoneyRow('${line.quantity}x ${line.name}', rwf(line.price * line.quantity)),
-          const Divider(height: 20, color: K.stone100),
+          Divider(height: 20, color: K.stone100),
           MoneyRow('Subtotal', rwf(cart.subtotal)),
           MoneyRow(cart.feeLabel, cart.feeValue),
           MoneyRow('Total', rwf(cart.total), strong: true),
@@ -372,7 +372,7 @@ class PaymentFields extends StatelessWidget {
 Future<SavedAddress?> showAddressForm(BuildContext context) => showModalBottomSheet<SavedAddress>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       showDragHandle: true,
       builder: (_) => const _AddressForm(),
     );
@@ -412,7 +412,7 @@ class _AddressFormState extends State<_AddressForm> {
           ActionChip(
             label: Text(area, style: kText(11.5, weight: FontWeight.w600, color: K.stone700)),
             backgroundColor: K.stone50,
-            side: const BorderSide(color: K.stone200),
+            side: BorderSide(color: K.stone200),
             onPressed: () => setState(() => _district.text = area),
           ),
       ]),

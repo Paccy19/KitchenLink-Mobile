@@ -113,7 +113,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
     final columns = width >= 900 ? 4 : width >= 600 ? 3 : 2;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F4),
+      backgroundColor: K.tone(const Color(0xFFFAF7F4)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: CustomScrollView(slivers: [
@@ -142,8 +142,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       VendorTypeBadge(vendor.typeCode),
                       vendor.isOpen
                           ? const Pill('Open now', background: K.forest600, foreground: Colors.white)
-                          : const Pill('Closed now · schedule for later', background: K.stone700, foreground: Colors.white),
-                      if (vendor.deliveryAvailable) const Pill('Delivery available', icon: Icons.pedal_bike, background: Colors.white, foreground: K.forest700),
+                          : const Pill('Closed now · schedule for later', background: K.fillStone700, foreground: Colors.white),
+                      if (vendor.deliveryAvailable) Pill('Delivery available', icon: Icons.pedal_bike, background: K.surface, foreground: K.forest700),
                     ]),
                     const SizedBox(height: 10),
                     Row(children: [
@@ -178,7 +178,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       ])
                     else
                       Row(children: [
-                        const Icon(Icons.chat_bubble_outline, size: 13, color: K.stone400),
+                        Icon(Icons.chat_bubble_outline, size: 13, color: K.stone400),
                         const SizedBox(width: 6),
                         Expanded(child: Text('Place an order to message or call this kitchen', style: kText(11, weight: FontWeight.w600, color: K.stone400))),
                       ]),
@@ -194,7 +194,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(color: K.stone50, borderRadius: BorderRadius.circular(99), border: Border.all(color: K.stone200)),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            const Icon(Icons.event_available, size: 12, color: K.stone600),
+                            Icon(Icons.event_available, size: 12, color: K.stone600),
                             const SizedBox(width: 4),
                             Text(line, style: kText(11, weight: FontWeight.w600, color: K.stone600)),
                           ]),
@@ -205,7 +205,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       const Notice('Fully booked today — you can still schedule your order for another day.', tone: NoticeTone.warning),
                     ],
                     if (vendor.description.isNotEmpty) ...[
-                      const Divider(height: 28, color: K.stone100),
+                      Divider(height: 28, color: K.stone100),
                       Text(vendor.description, style: kText(13, color: K.stone600, height: 1.6)),
                     ],
                   ]),
@@ -230,7 +230,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         onSelected: (_) => setState(() => _category = categories[i]),
                         labelStyle: kText(12.5, weight: FontWeight.w700, color: active ? Colors.white : K.stone700),
                         selectedColor: K.brown800,
-                        backgroundColor: Colors.white,
+                        backgroundColor: K.surface,
                         side: BorderSide(color: active ? K.brown900 : K.stone200),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       );
@@ -276,8 +276,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
     );
   }
 
-  Widget _fact(IconData icon, String text, {Color iconColor = K.brown500}) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 16, color: iconColor),
+  Widget _fact(IconData icon, String text, {Color? iconColor}) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 16, color: iconColor ?? K.brown500),
         const SizedBox(width: 5),
         Text(text, style: kText(13, weight: FontWeight.w700, color: K.stone700)),
       ]);
@@ -287,14 +287,14 @@ class _KitchenScreenState extends State<KitchenScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFF5F6E9), Color(0xFFEEF0DC)]),
+        gradient: LinearGradient(colors: [K.tone(const Color(0xFFF5F6E9)), K.tone(const Color(0xFFEEF0DC))]),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD9DCC0)),
+        border: Border.all(color: K.tone(const Color(0xFFD9DCC0))),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Pill("Tomorrow's Special", background: Color(0xFFC9CDA2), foreground: Color(0xFF2B3317), shadow: false),
         const SizedBox(height: 8),
-        Text(special.text, style: kText(15, weight: w900, color: const Color(0xFF2B3317))),
+        Text(special.text, style: kText(15, weight: w900, color: K.tone(const Color(0xFF2B3317)))),
         const SizedBox(height: 6),
         Text('Order before ${formatScheduledFor(special.cutoffAt)}  ·  Arrives ${formatScheduledFor(special.deliveryAt)}', style: kText(12, weight: FontWeight.w600, color: K.stone600)),
         const SizedBox(height: 12),
@@ -317,7 +317,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
   Widget _basketBar(int lines, num total, int count, String name) => Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.paddingOf(context).bottom),
-        decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: K.stone200)), boxShadow: K.shadowMd),
+        decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200)), boxShadow: K.shadowMd),
         child: Row(children: [
           Expanded(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -341,8 +341,8 @@ class _DishTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: K.stone200)),
+        color: K.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: BorderSide(color: K.stone200)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => showDishSheet(context, dish, kitchen),
@@ -370,10 +370,10 @@ class _DishTile extends StatelessWidget {
               const SizedBox(height: 16),
               Wrap(spacing: 4, runSpacing: 4, children: [
                 dish.isAvailable
-                    ? const Pill('AVAILABLE', background: K.forest100, foreground: K.forest700, size: 9.5, shadow: false)
-                    : const Pill('SOLD OUT', background: K.stone100, foreground: K.stone500, size: 9.5, shadow: false),
-                if (dish.popular) const Pill('POPULAR', background: K.brown100, foreground: K.brown850, size: 9.5, shadow: false),
-                if (dish.isPreorder) const Pill('PRE-ORDER', background: K.brown50, foreground: K.brown700, size: 9.5, shadow: false),
+                    ? Pill('AVAILABLE', background: K.forest100, foreground: K.forest700, size: 9.5, shadow: false)
+                    : Pill('SOLD OUT', background: K.stone100, foreground: K.stone500, size: 9.5, shadow: false),
+                if (dish.popular) Pill('POPULAR', background: K.brown100, foreground: K.brown850, size: 9.5, shadow: false),
+                if (dish.isPreorder) Pill('PRE-ORDER', background: K.brown50, foreground: K.brown700, size: 9.5, shadow: false),
               ]),
               const SizedBox(height: 6),
               Text(dish.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(14, weight: w900, height: 1.25)),
@@ -419,7 +419,7 @@ Future<void> showDishSheet(BuildContext context, MenuDish dish, KitchenRef kitch
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => _DishSheet(dish: dish, kitchen: kitchen, showKitchenLink: showKitchenLink),
     );
@@ -474,7 +474,7 @@ class _DishSheetState extends State<_DishSheet> {
             ]),
             if (dish.prepTime.isNotEmpty && dish.prepTime != '—') ...[
               const SizedBox(height: 6),
-              Row(children: [const Icon(Icons.schedule, size: 14, color: K.brown500), const SizedBox(width: 4), Text(dish.prepTime, style: kText(12, weight: FontWeight.w600, color: K.stone600))]),
+              Row(children: [Icon(Icons.schedule, size: 14, color: K.brown500), const SizedBox(width: 4), Text(dish.prepTime, style: kText(12, weight: FontWeight.w600, color: K.stone600))]),
             ],
             if (dish.description.isNotEmpty) ...[const SizedBox(height: 12), Text(dish.description, style: kText(13.5, color: K.stone600, height: 1.6))],
             if (dish.isPreorder) ...[
@@ -485,7 +485,7 @@ class _DishSheetState extends State<_DishSheet> {
               const SizedBox(height: 12),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.storefront_outlined, color: K.brown700),
+                leading: Icon(Icons.storefront_outlined, color: K.brown700),
                 title: Text('See all dishes from ${widget.kitchen.name}', style: kText(13, weight: FontWeight.w700)),
                 subtitle: Text('Optional — you can add this dish right here', style: kText(11, color: K.stone500)),
                 trailing: const Icon(Icons.chevron_right),

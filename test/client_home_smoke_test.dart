@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
 import 'package:kitchenlink_mobile/api/api_client.dart';
+import 'package:kitchenlink_mobile/client/client_theme.dart';
 import 'package:kitchenlink_mobile/client/market_app.dart';
 
 Map<String, Object?> vendor(String id, String name) => {
@@ -122,6 +123,65 @@ void main() {
       }, () => mock);
     });
   }
+
+  group('dark mode', () {
+    Future<void> openHome(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1280, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MultiProvider(
+        providers: marketProviders(ApiClient(baseUrl: 'http://localhost:4000/api/v1')),
+        child: const KitchenLinkMarketApp(),
+      ));
+      await settle(tester);
+      await tester.tap(find.text('Continue with Kigali city centre'));
+      await settle(tester);
+    }
+
+    Color pageColor(WidgetTester tester) => tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ?? Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
+    Color? textColor(WidgetTester tester, String text) => tester.widget<Text>(find.text(text).first).style?.color;
+
+    final mock = MockClient((request) async {
+      final body = responses[request.url.path.replaceFirst('/api/v1', '')];
+      return http.Response(jsonEncode(body ?? {}), body == null ? 404 : 200, headers: {'content-type': 'application/json'});
+    });
+
+    testWidgets('the moon button switches the marketplace to dark and back, and remembers it', (tester) async {
+      FlutterSecureStorage.setMockInitialValues({});
+      await http.runWithClient(() async {
+        await openHome(tester);
+        expect(K.dark, isFalse);
+        final lightText = textColor(tester, 'Explore by Category');
+
+        await tester.tap(find.byIcon(Icons.dark_mode_outlined));
+        await settle(tester);
+
+        expect(K.dark, isTrue);
+        expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+        expect(pageColor(tester).computeLuminance(), lessThan(0.05), reason: 'chocolate page background');
+        // Text inside const widgets is rebuilt too: light on dark.
+        expect(textColor(tester, 'Explore by Category'), isNot(lightText));
+        expect(textColor(tester, 'Explore by Category')!.computeLuminance(), greaterThan(0.8));
+        expect(await const FlutterSecureStorage().read(key: MarketTheme.storageKey), 'dark');
+
+        await tester.tap(find.byIcon(Icons.light_mode_outlined));
+        await settle(tester);
+        expect(K.dark, isFalse);
+        expect(textColor(tester, 'Explore by Category'), lightText);
+        expect(await const FlutterSecureStorage().read(key: MarketTheme.storageKey), 'light');
+      }, () => mock);
+    });
+
+    testWidgets('a saved dark choice opens the marketplace in dark', (tester) async {
+      FlutterSecureStorage.setMockInitialValues({MarketTheme.storageKey: 'dark'});
+      await http.runWithClient(() async {
+        await openHome(tester);
+        expect(K.dark, isTrue);
+        expect(pageColor(tester).computeLuminance(), lessThan(0.05));
+        expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+      }, () => mock);
+    });
+  });
 }
 
 /// Lets requests finish and animations play without waiting for endless ones.

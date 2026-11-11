@@ -38,7 +38,7 @@ class MarketFooter extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 64, 16, 48 + MediaQuery.paddingOf(context).bottom),
       decoration: BoxDecoration(
         color: K.footer,
-        border: Border(top: BorderSide(color: K.brown850.withValues(alpha: 0.6))),
+        border: Border(top: BorderSide(color: K.fillBrown850.withValues(alpha: 0.6))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,10 +50,10 @@ class MarketFooter extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [K.brown850, K.brown600]),
+                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [K.fillBrown850, K.fillBrown600]),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.restaurant, size: 20, color: K.brown100),
+                child: Icon(Icons.restaurant, size: 20, color: K.brown100),
               ),
               const SizedBox(width: 12),
               Text.rich(
@@ -75,7 +75,7 @@ class MarketFooter extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 16, color: K.brown500),
+              Icon(Icons.location_on_outlined, size: 16, color: K.brown500),
               const SizedBox(width: 8),
               Text(
                 'Kigali, Rwanda',
@@ -140,7 +140,7 @@ class MarketFooter extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.only(top: 32),
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: K.brown850.withValues(alpha: 0.6))),
+              border: Border(top: BorderSide(color: K.fillBrown850.withValues(alpha: 0.6))),
             ),
             child: Column(
               children: [

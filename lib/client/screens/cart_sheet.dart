@@ -23,7 +23,7 @@ Future<bool> addDishToCart(BuildContext context, MenuDish dish, KitchenRef kitch
   final replace = await showDialog<bool>(
     context: context,
     builder: (dialog) => AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: K.surface,
       title: Text('Start a new basket?', style: kText(18, weight: w900)),
       content: Text(
         'Your basket already contains items from $current. Do you want to clear your current basket and start fresh with items from ${kitchen.name}?',
@@ -32,7 +32,7 @@ Future<bool> addDishToCart(BuildContext context, MenuDish dish, KitchenRef kitch
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text('Keep Current', style: kText(13, weight: FontWeight.w700, color: K.stone600))),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: K.brown700),
+          style: FilledButton.styleFrom(backgroundColor: K.fillBrown700),
           onPressed: () => Navigator.pop(dialog, true),
           child: Text('Start New Basket', style: kText(13, weight: FontWeight.w700, color: Colors.white)),
         ),
@@ -54,7 +54,7 @@ Future<void> showCartSheet(BuildContext context) => showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: const Color(0xFFFAF7F4),
+      backgroundColor: K.tone(const Color(0xFFFAF7F4)),
       showDragHandle: true,
       builder: (_) => const FractionallySizedBox(heightFactor: 0.92, child: _CartBody()),
     );
@@ -73,7 +73,7 @@ class _CartBody extends StatelessWidget {
     final header = Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
       child: Row(children: [
-        const Icon(Icons.shopping_bag_outlined, color: K.brown700),
+        Icon(Icons.shopping_bag_outlined, color: K.brown700),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -86,7 +86,7 @@ class _CartBody extends StatelessWidget {
         ),
         if (cart.lines.isNotEmpty)
           IconButton(tooltip: 'Clear basket', onPressed: cart.clear, icon: const Icon(Icons.delete_outline, color: K.red500)),
-        IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: K.stone500)),
+        IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: K.stone500)),
       ]),
     );
 
@@ -119,7 +119,7 @@ class _CartBody extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Row(children: [
-                const Icon(Icons.storefront_outlined, size: 16, color: K.brown500),
+                Icon(Icons.storefront_outlined, size: 16, color: K.brown500),
                 const SizedBox(width: 6),
                 Expanded(child: Text(cart.vendor!.name, style: kText(13, weight: w900))),
               ]),
@@ -186,7 +186,7 @@ class _CartBody extends StatelessWidget {
       // Totals and checkout.
       Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.paddingOf(context).bottom),
-        decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: K.stone200))),
+        decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           MoneyRow('Items Subtotal', rwf(cart.subtotal)),
           MoneyRow(cart.feeLabel, cart.feeValue),
@@ -220,7 +220,7 @@ class _TimingChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: active ? K.brown800 : Colors.white,
+        color: active ? K.brown800 : K.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: active ? K.brown900 : K.stone200)),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

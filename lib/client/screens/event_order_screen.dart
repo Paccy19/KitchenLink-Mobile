@@ -508,7 +508,7 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
                     '${pkg['service_style_label']}${'${pkg['service_details'] ?? ''}'.isNotEmpty ? ' — ${pkg['service_details']}' : ''}',
                     style: kText(11.5, color: K.stone500),
                   ),
-                const Divider(height: 20, color: K.stone100),
+                Divider(height: 20, color: K.stone100),
                 if (quoteMatches) ...[
                   MoneyRow(
                     '${quote['guests']} ${quote['guests'] == 1 ? 'plate' : 'plates'} × ${rwf(n(quote['price_per_plate_rwf']))}',
@@ -619,7 +619,7 @@ class VenuePicker extends StatelessWidget {
                         width: 36,
                         height: 36,
                         alignment: Alignment.topCenter,
-                        child: const Icon(
+                        child: Icon(
                           Icons.location_on,
                           size: 36,
                           color: K.brown700,
