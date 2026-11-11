@@ -32,8 +32,11 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   final client = ApiClient(config: ref.watch(appConfigProvider));
   final adapter = ref.watch(httpAdapterProvider);
   if (adapter != null) client.dio.httpClientAdapter = adapter;
-  client.onConnectivity = (online) =>
-      Future.microtask(() => ref.read(connectionProvider.notifier).report(online: online));
+  // A request can finish after this scope is gone (sign-out, switching role): then there is
+  // nobody to tell, and reading a disposed ref would throw.
+  client.onConnectivity = (online) => Future.microtask(() {
+        if (ref.mounted) ref.read(connectionProvider.notifier).report(online: online);
+      });
   return client;
 });
 

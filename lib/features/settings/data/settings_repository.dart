@@ -25,15 +25,22 @@ class SettingsRepository {
       _vendor(await _api.patch('/vendor/profile', data: fields));
 
   /// Banner and/or profile photo (multipart; images up to 5 MB).
+  ///
+  /// The backend accepts ONE file per request on `PATCH /vendor/profile` (its upload limit is
+  /// `files: 1`; two files answer 400 LIMIT_FILE_COUNT), so two photos are sent one after the other.
   Future<VendorAccount> updateImages({
     PickedUpload? banner,
     PickedUpload? profile,
     void Function(int sent, int total)? onProgress,
   }) async {
-    final form = FormData();
-    if (banner != null) form.files.add(MapEntry('banner_image', await banner.toMultipart()));
-    if (profile != null) form.files.add(MapEntry('profile_image', await profile.toMultipart()));
-    return _vendor(await _api.multipart('PATCH', '/vendor/profile', form, onProgress: onProgress));
+    VendorAccount? latest;
+    for (final (field, upload) in [('banner_image', banner), ('profile_image', profile)]) {
+      if (upload == null) continue;
+      final form = FormData()..files.add(MapEntry(field, await upload.toMultipart()));
+      latest = _vendor(await _api.multipart('PATCH', '/vendor/profile', form, onProgress: onProgress));
+    }
+    if (latest == null) throw ArgumentError('Pick a banner or a profile photo.');
+    return latest;
   }
 
   Future<VendorAccount> requestTypeChange({required String vendorType, String reason = ''}) async =>
