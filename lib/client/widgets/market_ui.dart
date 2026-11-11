@@ -19,23 +19,22 @@ class MarketPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: K.tone(const Color(0xFFFAF7F4)),
+        backgroundColor: K.page,
         appBar: AppBar(
-          backgroundColor: K.surface,
-          surfaceTintColor: K.surface,
+          backgroundColor: K.page,
+          surfaceTintColor: Colors.transparent,
           foregroundColor: K.gray900,
           elevation: 0,
-          scrolledUnderElevation: 1,
-          titleSpacing: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
           title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(17, weight: w900)),
-              if (subtitle != null) Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(11, color: K.stone500)),
+              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(17, weight: FontWeight.w800, spacing: -0.3)),
+              if (subtitle != null) Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(12, color: K.stone500)),
             ],
           ),
           actions: actions,
-          bottom: PreferredSize(preferredSize: const Size.fromHeight(1), child: Container(height: 1, color: K.stone200)),
+          bottom: PreferredSize(preferredSize: const Size.fromHeight(0.6), child: Container(height: 0.6, color: K.stone200)),
         ),
         body: body,
         bottomNavigationBar: bottom,
@@ -55,7 +54,7 @@ class Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: double.infinity,
         padding: padding,
-        decoration: BoxDecoration(color: color ?? K.surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: border ?? K.stone200), boxShadow: K.shadowSm),
+        decoration: BoxDecoration(color: color ?? K.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: border ?? K.stone200.withValues(alpha: 0.6))),
         child: child,
       );
 }

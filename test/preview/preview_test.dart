@@ -185,7 +185,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
     }
     // The list builds lazily: scroll the visible tab until the entry exists.
-    await tester.scrollUntilVisible(find.text('Back to the marketplace'), 200, scrollable: find.byType(Scrollable).hitTestable().first);
+    final list = find.byType(Scrollable).hitTestable().first;
+    await tester.scrollUntilVisible(find.text('Back to the marketplace'), 200, scrollable: list);
+    // Clear of the bottom bar, then tap.
+    await tester.drag(list, const Offset(0, -150));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Back to the marketplace'));
     await tester.pump();
     expect(opened, AppRole.marketplace);

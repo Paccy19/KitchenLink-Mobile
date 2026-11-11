@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/motion.dart';
 import '../../ui/vendor_types.dart';
 import '../client_theme.dart';
 import '../models.dart';
@@ -7,8 +8,8 @@ import '../models.dart';
 /// Turns an API image path into a loadable URL (see CustomerApi.media).
 typedef MediaResolver = String? Function(String url);
 
-/// The website's LazyImage: a fixed-aspect picture with a grey placeholder,
-/// and a utensils icon (or [fallback]) when there is no picture.
+/// A fixed-aspect photo that fades in once loaded, on a warm placeholder,
+/// with a utensils icon (or [fallback]) when there is no picture or it fails.
 class NetImage extends StatelessWidget {
   const NetImage({super.key, required this.url, required this.aspect, this.fallback, this.radius = BorderRadius.zero});
 
@@ -22,7 +23,7 @@ class NetImage extends StatelessWidget {
     final empty = Container(
       color: K.stone100,
       alignment: Alignment.center,
-      child: fallback ?? Icon(Icons.restaurant, size: 32, color: K.stone300),
+      child: fallback ?? Icon(Icons.restaurant_rounded, size: 30, color: K.stone300),
     );
     return ClipRRect(
       borderRadius: radius,
@@ -33,8 +34,18 @@ class NetImage extends StatelessWidget {
             : Image.network(
                 url!,
                 fit: BoxFit.cover,
+                // Decode near the size it is drawn, not the full upload.
+                cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(200, 1400),
                 errorBuilder: (_, _, _) => empty,
-                loadingBuilder: (context, child, progress) => progress == null ? child : Container(color: K.stone200),
+                frameBuilder: (context, child, frame, synchronous) => synchronous
+                    ? child
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(color: K.stone100),
+                          AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: const Duration(milliseconds: 260), curve: Curves.easeOut, child: child),
+                        ],
+                      ),
               ),
       ),
     );
@@ -43,7 +54,7 @@ class NetImage extends StatelessWidget {
 
 /// A rounded "pill" label over a picture.
 class Pill extends StatelessWidget {
-  const Pill(this.text, {super.key, required this.background, required this.foreground, this.icon, this.size = 11, this.shadow = true});
+  const Pill(this.text, {super.key, required this.background, required this.foreground, this.icon, this.size = 11, this.shadow = false});
 
   final String text;
   final Color background;
@@ -69,7 +80,8 @@ class Pill extends StatelessWidget {
   );
 }
 
-/// White `rounded-3xl border-stone-200/80 shadow-sm` card that can be tapped.
+/// A card that can be tapped: surface, soft shadow, a faint hairline, and a
+/// press that starts on touch-down.
 class TapCard extends StatelessWidget {
   const TapCard({super.key, required this.child, required this.onTap, this.width, this.borderColor, this.label});
 
@@ -81,23 +93,26 @@ class TapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(24);
+    final radius = BorderRadius.circular(22);
     return Semantics(
       button: true,
       label: label,
-      child: Container(
-        width: width,
-        decoration: BoxDecoration(
-          color: K.surface,
-          borderRadius: radius,
-          border: Border.all(color: borderColor ?? K.stone200.withValues(alpha: 0.8)),
-          boxShadow: K.shadowSm,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(onTap: onTap, child: child),
+      child: PressScale(
+        pressedScale: 0.98,
+        child: Container(
+          width: width,
+          decoration: BoxDecoration(
+            color: K.surface,
+            borderRadius: radius,
+            border: Border.all(color: borderColor ?? K.stone200.withValues(alpha: 0.6)),
+            boxShadow: K.dark ? null : K.shadowSm,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: radius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(onTap: onTap, child: child),
+          ),
         ),
       ),
     );
@@ -119,11 +134,7 @@ class VendorAvatar extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: K.brown100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: K.brown200),
-      ),
+      decoration: BoxDecoration(color: K.brown100, borderRadius: BorderRadius.circular(size * 0.32)),
       child: Text(
         (vendor.name.isEmpty ? 'K' : vendor.name[0]).toUpperCase(),
         style: kText(14, weight: w900, color: K.brown700),
@@ -133,11 +144,7 @@ class VendorAvatar extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: K.stone200),
-        color: K.stone100,
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * 0.32), color: K.stone100),
       clipBehavior: Clip.antiAlias,
       child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => letter),
     );
@@ -154,8 +161,8 @@ Widget _shade(List<double> stops, List<Color> colors) => Positioned.fill(
   ),
 );
 
-/// The website's VendorCard: banner with type / rating / delivery badges,
-/// then name, neighbourhood, description and the prep time row.
+/// A kitchen: its photo (rating, delivery and "near you" over it, a veil
+/// when closed), then name, type and area, and prep time and delivery fee.
 class VendorCard extends StatelessWidget {
   const VendorCard({super.key, required this.vendor, required this.media, required this.onTap, this.tile = false, this.showDistance = false});
 
@@ -163,164 +170,148 @@ class VendorCard extends StatelessWidget {
   final MediaResolver media;
   final VoidCallback onTap;
 
-  /// `variant="tile"`: 268 wide, 16:9 banner, no description.
+  /// In a sideways row: 280 wide, no description.
   final bool tile;
   final bool showDistance;
 
   @override
   Widget build(BuildContext context) {
     final distance = showDistance && vendor.hasDistance;
+    final meta = TextStyle(
+      fontFamily: 'PlusJakartaSans',
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      color: K.stone600,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
     return TapCard(
-      width: tile ? 268 : null,
+      width: tile ? 280 : null,
       onTap: onTap,
-      label: '${vendor.name}, ${vendor.typeLabel}, rated ${numText(vendor.rating)}${distance ? ', ${numText(vendor.distanceKm)} kilometres away' : ''}',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            children: [
-              NetImage(url: media(vendor.bannerUrl.isNotEmpty ? vendor.bannerUrl : vendor.avatarUrl), aspect: tile ? 16 / 9 : 16 / 10),
-              _shade(const [0, 0.5, 1], const [Color(0x99000000), Color(0x1A000000), Color(0x33000000)]),
-              Positioned(top: 12, left: 12, child: VendorTypeBadge(vendor.typeCode)),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: K.photoChip, borderRadius: BorderRadius.circular(99), boxShadow: K.shadowMd),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.star_rounded, size: 15, color: K.amber400),
-                      const SizedBox(width: 3),
-                      Text(numText(vendor.rating), style: kText(12, weight: w900)),
-                      if (vendor.reviewsCount > 0) ...[const SizedBox(width: 3), Text('(${vendor.reviewsCount})', style: kText(10, color: K.stone500))],
-                    ],
-                  ),
-                ),
-              ),
-              if (vendor.nationwide)
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  child: Pill('Events nationwide', icon: Icons.public, background: K.violet700.withValues(alpha: 0.95), foreground: Colors.white),
-                )
-              else if (vendor.deliveryAvailable)
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  child: Pill('Delivery available', icon: Icons.pedal_bike, background: K.forest600.withValues(alpha: 0.95), foreground: Colors.white),
-                ),
-              if (vendor.isNearby)
-                const Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: Pill('Near you', icon: Icons.near_me_outlined, background: K.amber400, foreground: K.fillBrown850),
-                ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+      label:
+          '${vendor.name}, ${vendor.typeLabel}, rated ${numText(vendor.rating)}${distance ? ', ${numText(vendor.distanceKm)} kilometres away' : ''}${vendor.isOpen ? '' : ', closed now'}',
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
               children: [
-                Row(
-                  children: [
-                    VendorAvatar(vendor: vendor, media: media),
-                    const SizedBox(width: 10),
-                    Expanded(
+                NetImage(
+                  url: media(vendor.bannerUrl.isNotEmpty ? vendor.bannerUrl : vendor.avatarUrl),
+                  aspect: tile ? 16 / 9.5 : 16 / 9,
+                  radius: BorderRadius.circular(16),
+                ),
+                if (!vendor.isOpen)
+                  Positioned.fill(
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(16)),
                       child: Text(
-                        vendor.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: kText(tile ? 16 : 17, weight: w900),
+                        'Closed now',
+                        style: kText(14, weight: w900, color: Colors.white),
                       ),
                     ),
-                    if (!vendor.isOpen) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: K.stone100, borderRadius: BorderRadius.circular(99)),
-                        child: Text(
-                          'CLOSED',
-                          style: kText(10, weight: w900, color: K.stone500),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        vendor.neighborhood,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: kText(12, color: K.stone500),
-                      ),
-                    ),
-                  ],
-                ),
-                if (!tile && vendor.description.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    vendor.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: kText(12, weight: FontWeight.w400, color: K.stone500, height: 1.6),
                   ),
-                ],
-                const SizedBox(height: 12),
-                Divider(height: 1, color: K.stone100),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    if (distance) ...[
-                      Icon(Icons.location_on_outlined, size: 14, color: K.brown500),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${numText(vendor.distanceKm)} km',
-                        style: kText(12, weight: FontWeight.w600, color: K.stone600),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Icon(Icons.schedule, size: 14, color: K.stone400),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        vendor.prepTime,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: kText(12, weight: FontWeight.w600, color: K.stone600),
-                      ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: K.photoChip, borderRadius: BorderRadius.circular(99)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, size: 14, color: K.amber400),
+                        const SizedBox(width: 3),
+                        Text(vendor.rating > 0 ? numText(vendor.rating) : 'New', style: kText(12, weight: w900)),
+                        if (vendor.reviewsCount > 0) ...[const SizedBox(width: 3), Text('(${vendor.reviewsCount})', style: kText(10.5, color: K.stone500))],
+                      ],
                     ),
-                    const Spacer(),
-                    if (vendor.deliveryFee > 0) ...[
-                      Icon(Icons.pedal_bike, size: 14, color: K.brown500),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          formatRwf(vendor.deliveryFee),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: kText(12, weight: FontWeight.w700, color: K.stone800),
-                        ),
-                      ),
+                  ),
+                ),
+                Positioned(
+                  left: 10,
+                  bottom: 10,
+                  child: Row(
+                    children: [
+                      if (vendor.nationwide)
+                        Pill('Events nationwide', icon: Icons.public, size: 10.5, background: K.violet700.withValues(alpha: 0.92), foreground: Colors.white)
+                      else if (vendor.deliveryAvailable)
+                        Pill('Delivery', icon: Icons.delivery_dining_rounded, size: 10.5, background: K.photoChip, foreground: K.forest700),
+                      if (vendor.isNearby) ...[
+                        const SizedBox(width: 6),
+                        Pill('Near you', icon: Icons.near_me_rounded, size: 10.5, background: const Color(0xFFDDAE7E), foreground: K.brown950),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 12, 6, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      VendorAvatar(vendor: vendor, media: media, size: 30),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          vendor.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: kText(16, weight: w900, spacing: -0.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    [vendor.typeLabel, vendor.neighborhood].where((s) => s.isNotEmpty).join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: kText(12.5, color: K.stone500),
+                  ),
+                  if (!tile && vendor.description.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      vendor.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: kText(13, weight: FontWeight.w500, color: K.stone600, height: 1.45),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (distance) _meta(Icons.near_me_outlined, '${numText(vendor.distanceKm)} km', meta),
+                      _meta(Icons.schedule_rounded, vendor.prepTime, meta),
+                      if (vendor.deliveryFee > 0) _meta(Icons.delivery_dining_outlined, formatRwf(vendor.deliveryFee), meta),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _meta(IconData icon, String text, TextStyle style) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 15, color: K.brown500),
+      const SizedBox(width: 4),
+      Text(text, style: style),
+    ],
+  );
 }
 
 /// The website's DishCard tile (190 wide) for "Popular Dishes Near You".
@@ -341,17 +332,19 @@ class DishCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Stack(
-            children: [
-              NetImage(url: media(dish.image), aspect: 4 / 3),
-              Positioned(
-                top: 10,
-                left: 10,
-                child: dish.isAvailable
-                    ? Pill('Available', size: 10, background: K.forest600.withValues(alpha: 0.95), foreground: Colors.white)
-                    : Pill('Sold out', size: 10, background: K.fillStone800.withValues(alpha: 0.9), foreground: Colors.white),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: Stack(
+              children: [
+                NetImage(url: media(dish.image), aspect: 4 / 3, radius: BorderRadius.circular(16)),
+                if (!dish.isAvailable)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Pill('Sold out', size: 10, background: K.fillStone800.withValues(alpha: 0.9), foreground: Colors.white),
+                  ),
+              ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(14),
@@ -526,7 +519,6 @@ class SpecialCard extends StatelessWidget {
     return TapCard(
       width: 300,
       onTap: onTap,
-      borderColor: K.tone(const Color(0xFFD9DCC0)),
       label: '${vendor.name} special: ${special.text}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -535,7 +527,7 @@ class SpecialCard extends StatelessWidget {
           _bannerWithName(
             vendor,
             media(vendor.bannerUrl),
-            topLeft: const Pill("Tomorrow's Special", background: Color(0xFFC9CDA2), foreground: Color(0xFF2B3317)),
+            topLeft: const Pill("Tomorrow's special", icon: Icons.schedule_rounded, size: 10.5, background: Color(0xFFDDAE7E), foreground: K.brown950),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -554,7 +546,7 @@ class SpecialCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 _iconLine(Icons.event_available_outlined, 'Arrives ${formatScheduledFor(special.deliveryAt)}'),
                 const SizedBox(height: 16),
-                GradientButton(label: 'Pre-order now', onTap: onPreorder, height: 38, fontSize: 12, radius: 12),
+                GradientButton(label: 'Pre-order now', onTap: onPreorder, height: 44, fontSize: 14),
               ],
             ),
           ),
@@ -577,32 +569,38 @@ Widget _iconLine(IconData icon, String text) => Row(
   ],
 );
 
-Widget _bannerWithName(Vendor vendor, String? url, {required Widget topLeft, Widget? topRight}) => Stack(
-  children: [
-    NetImage(url: url, aspect: 16 / 9),
-    _shade(const [0, 0.5, 1], const [Color(0xB3000000), Color(0x33000000), Color(0x00000000)]),
-    Positioned(top: 12, left: 12, child: topLeft),
-    if (topRight != null) Positioned(top: 12, right: 12, child: topRight),
-    Positioned(
-      bottom: 12,
-      left: 12,
-      right: 12,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            vendor.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: kText(14, weight: w900, color: Colors.white),
+Widget _bannerWithName(Vendor vendor, String? url, {required Widget topLeft, Widget? topRight}) => Padding(
+  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(16),
+    child: Stack(
+      children: [
+        NetImage(url: url, aspect: 16 / 9),
+        _shade(const [0, 0.5, 1], const [Color(0xB3000000), Color(0x33000000), Color(0x00000000)]),
+        Positioned(top: 12, left: 12, child: topLeft),
+        if (topRight != null) Positioned(top: 12, right: 12, child: topRight),
+        Positioned(
+          bottom: 12,
+          left: 12,
+          right: 12,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                vendor.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: kText(14, weight: w900, color: Colors.white),
+              ),
+              const SizedBox(height: 4),
+              VendorTypeBadge(vendor.typeCode, small: true),
+            ],
           ),
-          const SizedBox(height: 4),
-          VendorTypeBadge(vendor.typeCode, small: true),
-        ],
-      ),
+        ),
+      ],
     ),
-  ],
+  ),
 );
 
 /// A kitchen's "Offer Day" card, shown next to Tomorrow's Specials.
@@ -619,7 +617,6 @@ class OfferDayCard extends StatelessWidget {
     return TapCard(
       width: 300,
       onTap: onTap,
-      borderColor: K.amber200,
       label: '${vendor.name} offer on ${formatOfferDay(offer.offerDate)}: ${offer.title}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -628,8 +625,8 @@ class OfferDayCard extends StatelessWidget {
           _bannerWithName(
             vendor,
             media(vendor.bannerUrl.isNotEmpty ? vendor.bannerUrl : vendor.avatarUrl),
-            topLeft: const Pill('Offer Day', icon: Icons.card_giftcard, background: K.amber400, foreground: K.fillBrown850),
-            topRight: Pill(offerCountdown(offer.offerDate), background: Colors.white.withValues(alpha: 0.95), foreground: K.fillBrown850),
+            topLeft: const Pill('Offer day', icon: Icons.local_offer_outlined, size: 10.5, background: Color(0xFFDDAE7E), foreground: K.brown950),
+            topRight: Pill(offerCountdown(offer.offerDate), size: 10.5, background: K.photoChip, foreground: K.gray900),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -666,9 +663,14 @@ class OfferDayCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Text(
-                  'View kitchen →',
-                  style: kText(12, weight: w900, color: K.brown700),
+                Row(
+                  children: [
+                    Text(
+                      'View kitchen',
+                      style: kText(13, weight: w900, color: K.brown600),
+                    ),
+                    Icon(Icons.chevron_right_rounded, size: 18, color: K.brown600),
+                  ],
                 ),
               ],
             ),
@@ -679,7 +681,9 @@ class OfferDayCard extends StatelessWidget {
   }
 }
 
-/// The brown gradient button (`bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05]`).
+/// The main action button: solid espresso (caramel in dark mode), a press
+/// that starts on touch-down, and a label that scales down rather than
+/// overflowing on a narrow phone.
 class GradientButton extends StatelessWidget {
   const GradientButton({
     super.key,
@@ -687,11 +691,11 @@ class GradientButton extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.iconColor,
-    this.height = 48,
-    this.fontSize = 14,
-    this.radius = 16,
+    this.height = 50,
+    this.fontSize = 15,
+    this.radius = 14,
     this.expand = true,
-    this.padding = 16,
+    this.padding = 18,
   });
 
   final String label;
@@ -707,33 +711,41 @@ class GradientButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = BorderRadius.circular(radius);
-    return Opacity(
-      opacity: onTap == null ? 0.7 : 1,
-      child: Container(
-        height: height,
-        width: expand ? double.infinity : null,
-        decoration: BoxDecoration(gradient: K.buttonGradient, borderRadius: r, boxShadow: K.brownShadow),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: r,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: padding),
-              // A long label scales down instead of overflowing on a narrow phone.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (icon != null) ...[Icon(icon, size: fontSize + 2, color: iconColor ?? K.brown300), const SizedBox(width: 6)],
-                    Text(
-                      label,
-                      style: kText(fontSize, weight: w900, color: Colors.white),
+    final bg = K.dark ? const Color(0xFFDDAE7E) : K.fillBrown700;
+    final fg = K.dark ? K.brown950 : Colors.white;
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      child: PressScale(
+        enabled: onTap != null,
+        child: Opacity(
+          opacity: onTap == null ? 0.5 : 1,
+          child: Container(
+            height: height,
+            width: expand ? double.infinity : null,
+            decoration: BoxDecoration(color: bg, borderRadius: r, boxShadow: onTap == null || K.dark ? null : K.brownShadow),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: r,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onTap,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: padding),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (icon != null) ...[Icon(icon, size: fontSize + 3, color: iconColor ?? fg), const SizedBox(width: 8)],
+                        Text(
+                          label,
+                          style: kText(fontSize, weight: FontWeight.w800, color: fg, spacing: -0.1),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -767,11 +779,11 @@ class _SkeletonBoxState extends State<SkeletonBox> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-    opacity: Tween(begin: 1.0, end: 0.5).animate(_pulse),
+    opacity: Tween(begin: 1.0, end: 0.55).animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
     child: Container(
       width: widget.width,
       height: widget.height,
-      decoration: BoxDecoration(color: K.gray200.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(widget.radius)),
+      decoration: BoxDecoration(color: K.stone100, borderRadius: BorderRadius.circular(widget.radius)),
     ),
   );
 }
@@ -794,8 +806,8 @@ Widget _skeletonCard(double width, Widget top, List<double> lines) => Container(
   width: width,
   decoration: BoxDecoration(
     color: K.surface,
-    borderRadius: BorderRadius.circular(24),
-    border: Border.all(color: K.tone(const Color(0xFFF3F4F6))),
+    borderRadius: BorderRadius.circular(22),
+    border: Border.all(color: K.stone200.withValues(alpha: 0.6)),
   ),
   clipBehavior: Clip.antiAlias,
   child: Column(
@@ -832,44 +844,34 @@ class EmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-    decoration: BoxDecoration(
-      color: K.surface,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: K.stone200.withValues(alpha: 0.8)),
-      boxShadow: K.shadowSm,
-    ),
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+    decoration: BoxDecoration(color: K.surface, borderRadius: BorderRadius.circular(24)),
     child: Column(
       children: [
         Container(
           width: 64,
           height: 64,
-          decoration: BoxDecoration(
-            color: K.brown50,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: K.brown200),
-            boxShadow: K.shadowSm,
-          ),
-          child: Icon(icon, size: 32, color: K.brown700),
+          decoration: BoxDecoration(color: K.brown100, shape: BoxShape.circle),
+          child: Icon(icon, size: 28, color: K.brown700),
         ),
         const SizedBox(height: 16),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: kText(18, weight: w900),
+          style: kText(17, weight: w900, spacing: -0.3),
         ),
         if (message != null) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             message!,
             textAlign: TextAlign.center,
-            style: kText(14, weight: FontWeight.w400, color: K.stone500),
+            style: kText(14, weight: FontWeight.w500, color: K.stone500, height: 1.45),
           ),
         ],
         if (child != null) ...[const SizedBox(height: 12), child!],
         if (actionLabel != null && onAction != null) ...[
           const SizedBox(height: 16),
-          GradientButton(label: actionLabel!, onTap: onAction, expand: false, height: 42, radius: 12, padding: 20),
+          GradientButton(label: actionLabel!, onTap: onAction, expand: false, height: 44, fontSize: 14, padding: 22),
         ],
       ],
     ),
@@ -888,20 +890,15 @@ class ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 56),
-    decoration: BoxDecoration(
-      color: K.surface,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: K.red100),
-      boxShadow: K.shadowSm,
-    ),
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+    decoration: BoxDecoration(color: K.surface, borderRadius: BorderRadius.circular(24)),
     child: Column(
       children: [
         Container(
           width: 64,
           height: 64,
-          decoration: BoxDecoration(color: K.red50, borderRadius: BorderRadius.circular(16)),
-          child: const Icon(Icons.warning_amber_rounded, size: 32, color: K.red500),
+          decoration: BoxDecoration(color: K.red50, shape: BoxShape.circle),
+          child: Icon(Icons.wifi_off_rounded, size: 28, color: K.rose600),
         ),
         const SizedBox(height: 16),
         Text(

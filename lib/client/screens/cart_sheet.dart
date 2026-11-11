@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../client_theme.dart';
@@ -71,22 +72,26 @@ class _CartBody extends StatelessWidget {
     final advanceOnly = rules != null && !rules.orderNow;
 
     final header = Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
+      padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
       child: Row(children: [
-        Icon(Icons.shopping_bag_outlined, color: K.brown700),
-        const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Your basket', style: kText(18, weight: w900)),
+            Text('Your basket', style: kDisplay(28)),
+            const SizedBox(height: 2),
             Text(
-              cart.syncing ? 'Syncing basket with your account…' : '${cart.itemCount} ${cart.itemCount == 1 ? 'dish' : 'dishes'} selected',
-              style: kText(11, color: K.stone500),
+              cart.syncing ? 'Syncing basket with your account…' : '${cart.itemCount} ${cart.itemCount == 1 ? 'dish' : 'dishes'}${cart.vendor != null ? ' from ${cart.vendor!.name}' : ''}',
+              style: kText(13, color: K.stone500),
             ),
           ]),
         ),
         if (cart.lines.isNotEmpty)
-          IconButton(tooltip: 'Clear basket', onPressed: cart.clear, icon: const Icon(Icons.delete_outline, color: K.red500)),
-        IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: K.stone500)),
+          IconButton(tooltip: 'Clear basket', onPressed: cart.clear, icon: Icon(Icons.delete_outline_rounded, color: K.rose600)),
+        IconButton(
+          tooltip: 'Close',
+          onPressed: () => Navigator.pop(context),
+          style: IconButton.styleFrom(backgroundColor: K.stone100, fixedSize: const Size(36, 36), minimumSize: const Size(36, 36)),
+          icon: Icon(Icons.close_rounded, size: 18, color: K.stone700),
+        ),
       ]),
     );
 
@@ -99,7 +104,7 @@ class _CartBody extends StatelessWidget {
               icon: Icons.shopping_bag_outlined,
               title: 'Your basket is empty',
               message: "Discover delicious dishes prepared by Kigali's home cooks, bakers, and restaurants.",
-              actionLabel: 'Explore Kitchens',
+              actionLabel: 'Explore kitchens',
               onAction: () => Navigator.pop(context),
             ),
           ]),
@@ -115,15 +120,6 @@ class _CartBody extends StatelessWidget {
             GestureDetector(onTap: cart.clearError, child: Notice(cart.error!, icon: Icons.error_outline)),
             const SizedBox(height: 10),
           ],
-          if (cart.vendor != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(children: [
-                Icon(Icons.storefront_outlined, size: 16, color: K.brown500),
-                const SizedBox(width: 6),
-                Expanded(child: Text(cart.vendor!.name, style: kText(13, weight: w900))),
-              ]),
-            ),
           // When the order comes.
           Panel(
             padding: const EdgeInsets.all(14),
@@ -133,15 +129,16 @@ class _CartBody extends StatelessWidget {
                 Notice('${vendorTypeOf(rules.vendorType).label} kitchens take advance orders only — order at least ${formatLead(rules.minLeadMinutes)} ahead.', tone: NoticeTone.warning),
                 const SizedBox(height: 8),
               ],
-              Row(children: [
-                if (!advanceOnly) ...[
-                  Expanded(child: _TimingChip(label: 'Order for Now', icon: Icons.bolt, active: cart.orderType == 'immediate', onTap: () => cart.setOrderType('immediate'))),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: _TimingChip(label: 'Schedule / Pre-Order', icon: Icons.calendar_month_outlined, active: cart.orderType == 'scheduled', onTap: () => cart.setOrderType('scheduled')),
-                ),
-              ]),
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(color: K.dark ? K.page : K.stone100, borderRadius: BorderRadius.circular(13)),
+                child: Row(children: [
+                  if (!advanceOnly) Expanded(child: _TimingChip(label: 'Order now', icon: Icons.bolt_rounded, active: cart.orderType == 'immediate', onTap: () => cart.setOrderType('immediate'))),
+                  Expanded(
+                    child: _TimingChip(label: 'Schedule', icon: Icons.calendar_month_outlined, active: cart.orderType == 'scheduled', onTap: () => cart.setOrderType('scheduled')),
+                  ),
+                ]),
+              ),
               if (cart.orderType == 'scheduled') ...[
                 const SizedBox(height: 10),
                 if (cart.days.isEmpty)
@@ -186,16 +183,15 @@ class _CartBody extends StatelessWidget {
       // Totals and checkout.
       Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.paddingOf(context).bottom),
-        decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200))),
+        decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200, width: 0.6))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          MoneyRow('Items Subtotal', rwf(cart.subtotal)),
+          MoneyRow('Subtotal', rwf(cart.subtotal)),
           MoneyRow(cart.feeLabel, cart.feeValue),
-          MoneyRow('Total Amount', rwf(cart.total), strong: true),
+          MoneyRow('Total', rwf(cart.total), strong: true),
           if (problem != null) ...[const SizedBox(height: 8), Notice(problem, tone: NoticeTone.warning)],
           const SizedBox(height: 10),
           GradientButton(
-            label: 'Proceed to Checkout',
-            icon: Icons.arrow_forward,
+            label: 'Go to checkout',
             onTap: cart.syncing || problem != null
                 ? null
                 : () {
@@ -203,7 +199,7 @@ class _CartBody extends StatelessWidget {
                     MarketNav.checkout(context);
                   },
           ),
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Continue shopping', style: kText(12, weight: FontWeight.w700, color: K.stone600))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Keep browsing', style: kText(14, weight: FontWeight.w700, color: K.brown600))),
         ]),
       ),
     ]);
@@ -219,19 +215,27 @@ class _TimingChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: active ? K.brown800 : K.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: active ? K.brown900 : K.stone200)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(icon, size: 14, color: active ? Colors.white : K.stone600),
-              const SizedBox(width: 4),
-              Flexible(child: Text(label, textAlign: TextAlign.center, style: kText(11.5, weight: FontWeight.w700, color: active ? Colors.white : K.stone700))),
-            ]),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        selected: active,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(color: active ? K.surface : Colors.transparent, borderRadius: BorderRadius.circular(10), boxShadow: active && !K.dark ? K.shadowSm : null),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(icon, size: 16, color: active ? K.brown700 : K.stone500),
+                const SizedBox(width: 6),
+                Flexible(child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(13.5, weight: FontWeight.w700, color: active ? K.gray900 : K.stone500))),
+              ]),
+            ),
           ),
         ),
       );
@@ -269,14 +273,14 @@ class _LineTile extends StatelessWidget {
       child: Panel(
         padding: const EdgeInsets.all(10),
         child: Row(children: [
-          SizedBox(width: 64, child: NetImage(url: media(line.image), aspect: 1, radius: BorderRadius.circular(14))),
+          SizedBox(width: 68, child: NetImage(url: media(line.image), aspect: 1, radius: BorderRadius.circular(14))),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(line.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(13.5, weight: w900)),
               if (!line.isAvailable) Text('Sold out now', style: kText(11, weight: FontWeight.w700, color: K.red500)),
               const SizedBox(height: 4),
-              Text(rwf(line.price * line.quantity), style: kText(13, weight: w900, color: K.brown750)),
+              Text(rwf(line.price * line.quantity), style: kText(14, weight: w900, color: K.brown750).copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
             ]),
           ),
           QuantityStepper(value: line.quantity, label: line.name, onChanged: (q) => cart.setQuantity(line.dishId, q)),

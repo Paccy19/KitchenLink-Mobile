@@ -92,6 +92,8 @@ void main() {
     expect(await tester.until(find.textContaining(w.orderNumber)), isTrue, reason: 'the order the customer placed is listed');
     await tester.tap(find.textContaining(w.orderNumber).first);
     expect(await tester.until(find.text('Accept order')), isTrue);
+    // The order page slides in; touches are ignored until it has arrived.
+    await tester.settle(rounds: 4);
     expect(find.textContaining('Fixture Dish'), findsWidgets);
     expect(find.textContaining('Fixture Customer'), findsWidgets);
 

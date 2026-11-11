@@ -428,7 +428,7 @@ class _GuestStepState extends State<_GuestStep> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('🎉', textAlign: TextAlign.center, style: TextStyle(fontSize: 40)),
               const SizedBox(height: 8),
-              Text('Plan a big event', textAlign: TextAlign.center, style: kText(20, weight: w900)),
+              Text('Plan a big event', textAlign: TextAlign.center, style: kDisplay(26)),
               Text("How many people are coming? We'll show the kitchens that can host them and what it will cost.", textAlign: TextAlign.center, style: kText(12.5, color: K.stone500)),
               const SizedBox(height: 16),
               const FieldLabel('Number of guests'),

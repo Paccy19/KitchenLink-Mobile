@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../design/motion.dart';
+import '../../design/tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -136,11 +139,15 @@ class HomeScreen extends ConsumerWidget {
         sliver: SliverList.separated(
           itemCount: list.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => OfferCard(
-            key: ValueKey(list[index].id),
-            delivery: list[index],
-            // One trip at a time keeps pickups on schedule.
-            blockedReason: trip != null ? 'Finish your current delivery first' : null,
+          itemBuilder: (context, index) => Reveal(
+            key: ValueKey('reveal-${list[index].id}'),
+            index: index,
+            child: OfferCard(
+              key: ValueKey(list[index].id),
+              delivery: list[index],
+              // One trip at a time keeps pickups on schedule.
+              blockedReason: trip != null ? 'Finish your current delivery first' : null,
+            ),
           ),
         ),
       ),
@@ -177,7 +184,7 @@ class _Header extends StatelessWidget {
               driver.firstName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8, height: 1.1),
+              style: KLType.display(34, theme.colorScheme.onSurface),
             ),
           ]),
         ),
@@ -266,13 +273,13 @@ class _DutyCardState extends ConsumerState<_DutyCard> {
               ? const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF2F7D46), DriverColors.moss900],
+                  colors: [DriverColors.online, DriverColors.onlineDeep],
                 )
               : null,
           color: online ? null : theme.colorScheme.surface,
           border: online ? null : Border.all(color: theme.colorScheme.outlineVariant),
           boxShadow: online
-              ? [BoxShadow(color: DriverColors.moss900.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 10))]
+              ? [BoxShadow(color: DriverColors.onlineDeep.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 10))]
               : null,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

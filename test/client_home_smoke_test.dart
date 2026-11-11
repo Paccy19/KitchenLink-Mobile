@@ -88,19 +88,20 @@ void main() {
 
         for (final text in [
           'Categories',
-          'Top Deals Near You',
-          'All Kitchens',
-          "Tomorrow's Specials",
-          'Popular Dishes Near You',
+          'Top kitchens near you',
+          'All kitchens',
+          "Tomorrow's specials",
+          'Popular picks near you',
           'Isombe with plantain',
-          'Add to basket',
           'Pre-order now',
           '20% off brochettes',
           "Pre-order tomorrow's dishes",
         ]) {
           expect(find.textContaining(text, findRichText: true), findsWidgets, reason: text);
         }
-        // Section links are a "›" whose label is the tooltip.
+        // A dish is one tap from the basket.
+        expect(find.byTooltip('Add Isombe with plantain to basket'), findsOneWidget);
+        // Section links are "See all ›" whose full label is the tooltip.
         expect(find.byTooltip('See all 14'), findsOneWidget);
         // The bottom bar, with the raised basket button.
         expect(find.bySemanticsLabel('Basket, 0 dishes'), findsOneWidget);

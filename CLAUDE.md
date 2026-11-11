@@ -12,7 +12,7 @@ One Flutter app, **KitchenLink**, for every kind of user. Its single entry point
 - `KitchenLinkRoot` remembers the last role (`ofk_app_role` in secure storage), so a kitchen or delivery worker reopening the app goes straight to their screens.
 - Switching role rebuilds that role's screens from scratch (`KeyedSubtree` per role).
 - A signed-in kitchen (More → "Back to the marketplace") or delivery worker (Account → "Visit the marketplace") can browse the marketplace without signing out: `RoleSwitcher.visitMarketplace()`. That's a visit, not a switch. The saved role isn't changed, the marketplace shows `ReturnToRoleButton` ("Back to deliveries" / "Back to my kitchen"), and reopening the app goes back to the role. The delivery screens close during the visit, so their GPS stops. Mid-trip, the driver is asked to confirm first.
-- Customer sign-in, cart and orders aren't built in the app yet. Choosing Customer keeps you on the marketplace with a notice.
+- Customer sign-in, basket, checkout, orders, chats and support are in `lib/client/` (Provider + http, like the website's customer pages).
 
 | Role | Built by | Stack | Code lives in |
 | --- | --- | --- | --- |
@@ -22,6 +22,21 @@ One Flutter app, **KitchenLink**, for every kind of user. Its single entry point
 | Delivery worker (driver) | `KitchenLinkDeliveryApp` in `lib/driver/app/driver_app.dart` | Riverpod 3 + go_router + Dio + geolocator | `lib/driver/`, plus the shared `lib/core/` |
 
 **Two stacks for now.** The marketplace and admin halves (Provider/http) share no code with the kitchen and delivery halves (Riverpod/Dio). The plan is to move everything to Riverpod step by step. Until then, keep each change inside the half that owns it, and don't bring Provider into a Riverpod half or the reverse. The kitchen and delivery halves share `lib/core/`, so a change there affects both. Each role still has its own `MaterialApp` and theme.
+
+## Design system (`lib/design/`)
+
+One look for every role, so the four halves read as one app:
+- `tokens.dart`: `KLColors.light` / `.dark` (warm ivory and espresso by day, roasted brown and caramel at night), the type scale (`KLType`: Plus Jakarta Sans for everything people read, DM Serif Display only for large display titles), spacing, radii and shadows.
+- `theme.dart`: `klTheme(colors)` is the Material theme every role builds from: `AppTheme` (kitchen, delivery worker), `buildAdminTheme` / `buildTheme` (admin, root) and `buildClientTheme` (marketplace). It sets iOS-style page transitions and back chevron, filled borderless fields, 14 px buttons, 20 px cards and 28 px sheets.
+- Role accents (`KLRole`, a theme extension): espresso for customers and kitchens, olive for delivery workers, warm graphite with caramel for admins. They colour only wayfinding (the selected tab, the role's hero card, the route line). Buttons stay espresso in every role.
+- `motion.dart`, shared by all roles, and every piece respects the phone's reduce-motion setting:
+  - springs
+  - `PressScale`: press on touch-down, plus a hover lift and hand cursor for mouse users
+  - `Reveal`: a staggered fade-and-rise when a section first appears, with no timers
+  - `Bump`: a spring pop when a value changes, used on basket counts and saved hearts
+  - `SoftSwitcher`: a cross-fade between two states
+- The marketplace's `K` palette (`lib/client/client_theme.dart`) and the admin's `Palette` keep their names, but their values are these tokens. Add new colours to the tokens, not to a screen. `K.strong` / `K.onStrong` are the selected-state fill (espresso by day, caramel at night).
+- Design review screenshots: `flutter test tool/shots/market_shots_test.dart --update-goldens` (also `roles_` and `admin_shots_test.dart`) renders real screens at iPhone size in light and dark into `tool/shots/out/` (git-ignored). `SHOTS_IMAGES=<folder of .jpg>` serves photos to the marketplace shots.
 
 ## Commands
 

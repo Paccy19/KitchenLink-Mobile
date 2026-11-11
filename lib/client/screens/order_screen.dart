@@ -146,7 +146,7 @@ class _OrderScreenState extends State<OrderScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text((done ? 'Order complete' : cancelled ? 'Order cancelled' : 'Order status').toUpperCase(), style: kText(11, weight: FontWeight.w700, color: K.brown500, spacing: 0.6)),
               const SizedBox(height: 4),
-              Text(cancelled ? 'Cancelled' : current?.label ?? order.status.replaceAll('_', ' '), style: kText(22, weight: w900)),
+              Text(cancelled ? 'Cancelled' : current?.label ?? order.status.replaceAll('_', ' '), style: kDisplay(28)),
               if (current != null && !cancelled) Text(current.description, style: kText(12.5, color: K.stone600)),
               const SizedBox(height: 10),
               Wrap(spacing: 6, runSpacing: 6, children: [

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../design/theme.dart';
+import '../design/tokens.dart';
+
 /// The admin panel's dark slate brand (#111827 → #1f2937) with the
 /// marketplace's brown accent (#542813).
 class AppColors {
@@ -11,13 +14,13 @@ class AppColors {
   static const red600 = Color(0xFFDC2626);
 
   /// Sidebar active item, sign-in button: `bg-gradient-to-r from-[#111827] via-[#1f2937] to-[#0b1220]`.
-  static const brandGradient = LinearGradient(colors: [Color(0xFF1C1917), Color(0xFF292524)]);
+  static const brandGradient = LinearGradient(colors: [Color(0xFF2B1609), Color(0xFF3A1E0F)]);
 
   /// Logo tiles: the same colours, top-left to bottom-right.
   static const brandDiagonal = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFC2410C), Color(0xFF9A3412)],
+    colors: [Color(0xFF3A302A), Color(0xFF221C18)],
   );
 
   /// The admin `Button` primary: `from-[#2b1206] via-[#481f0d] to-[#200d05]`.
@@ -28,16 +31,16 @@ class AppColors {
   // actions, and a dark side menu.
 
   /// Primary buttons and the active filter chip ("Export report").
-  static const ink = Color(0xFF1C1917);
+  static const ink = Color(0xFF3A302A);
 
   /// Brand tile, urgent actions ("Send surge bonus"), active tab on a phone.
-  static const orange = Color(0xFFC2410C);
+  static const orange = Color(0xFF9A5B2E);
 
   /// The dark side menu and its active item.
-  static const sidebar = Color(0xFF1C1B19);
-  static const sidebarActive = Color(0xFF2E2C29);
-  static const sidebarText = Color(0xFFE7E5E4);
-  static const sidebarMuted = Color(0xFF8F8A84);
+  static const sidebar = Color(0xFF221C18);
+  static const sidebarActive = Color(0xFF362D27);
+  static const sidebarText = Color(0xFFF3E9DE);
+  static const sidebarMuted = Color(0xFF9E8B7D);
 
   /// Tailwind `shadow-sm`.
   static const shadowSm = [BoxShadow(color: Color(0x0D000000), blurRadius: 2, offset: Offset(0, 1))];
@@ -107,71 +110,42 @@ class Palette extends ThemeExtension<Palette> {
   /// `text-[#1f2937]` links ("View all", "Mark all read").
   final Color accent;
 
+  // Every palette is the shared design tokens (lib/design/tokens.dart).
   static const light = Palette(
-    page: Color(0xFFF5F6F8),
+    page: Color(0xFFF8F4EE),
     card: Colors.white,
-    header: Colors.white,
-    stone50: Color(0xFFFAFAF9),
-    stone100: Color(0xFFF5F5F4),
-    stone200: Color(0xFFE7E5E4),
-    border: Color(0xFFE7E5E4),
-    divider: Color(0xFFF5F5F4),
-    text: Color(0xFF111827),
-    textSecondary: Color(0xFF57534E),
-    muted: Color(0xFF78716C),
-    faint: Color(0xFFA8A29E),
-    accent: Color(0xFF1F2937),
+    header: Color(0xFFF8F4EE),
+    stone50: Color(0xFFFBF8F4),
+    stone100: Color(0xFFEFE7DD),
+    stone200: Color(0xFFE7DDD1),
+    border: Color(0xFFE7DDD1),
+    divider: Color(0xFFEFE7DD),
+    text: Color(0xFF24170F),
+    textSecondary: Color(0xFF6B5A4E),
+    muted: Color(0xFF85746A),
+    faint: Color(0xFF9A897C),
+    accent: Color(0xFF542813),
   );
 
   static const dark = Palette(
-    page: Color(0xFF0F1218),
-    card: Color(0xFF1A1F29),
-    header: Color(0xFF151A22),
-    stone50: Color(0xFF0F1218),
-    stone100: Color(0xFF151A22),
-    stone200: Color(0xFF2A313D),
-    border: Color(0xFF333B49),
-    divider: Color(0xFF333B49),
-    text: Color(0xFFF5F7FA),
-    textSecondary: Color(0xFFC3CAD6),
-    muted: Color(0xFF8A93A3),
-    faint: Color(0xFF8A93A3),
-    accent: Color(0xFFB4C1D6),
+    page: Color(0xFF130E0B),
+    card: Color(0xFF1E1713),
+    header: Color(0xFF130E0B),
+    stone50: Color(0xFF181210),
+    stone100: Color(0xFF2E241E),
+    stone200: Color(0xFF3A2E26),
+    border: Color(0xFF3A2E26),
+    divider: Color(0xFF2E241E),
+    text: Color(0xFFF6EEE5),
+    textSecondary: Color(0xFFC9B7A7),
+    muted: Color(0xFF9E8B7D),
+    faint: Color(0xFF8E7C6F),
+    accent: Color(0xFFDDAE7E),
   );
 
-  /// The admin console: warm stone page, flat white cards, soft borders.
-  static const adminLight = Palette(
-    page: Color(0xFFF6F5F2),
-    card: Colors.white,
-    header: Color(0xFFF6F5F2),
-    stone50: Color(0xFFF6F5F2),
-    stone100: Color(0xFFEFEDE9),
-    stone200: Color(0xFFE7E5E1),
-    border: Color(0xFFE7E5E1),
-    divider: Color(0xFFEFEDE9),
-    text: Color(0xFF1C1917),
-    textSecondary: Color(0xFF57534E),
-    muted: Color(0xFF78716C),
-    faint: Color(0xFFA8A29E),
-    accent: Color(0xFFC2410C),
-  );
-
-  /// The admin console in dark mode: warm charcoal instead of slate.
-  static const adminDark = Palette(
-    page: Color(0xFF141312),
-    card: Color(0xFF1E1D1B),
-    header: Color(0xFF141312),
-    stone50: Color(0xFF191817),
-    stone100: Color(0xFF262421),
-    stone200: Color(0xFF34322E),
-    border: Color(0xFF34322E),
-    divider: Color(0xFF2B2926),
-    text: Color(0xFFF5F5F4),
-    textSecondary: Color(0xFFD6D3D1),
-    muted: Color(0xFFA8A29E),
-    faint: Color(0xFF8A847E),
-    accent: Color(0xFFFB923C),
-  );
+  /// The admin console uses the same palettes as everyone else.
+  static const adminLight = light;
+  static const adminDark = dark;
 
   static Palette of(BuildContext context) => Theme.of(context).extension<Palette>() ?? light;
 
@@ -238,193 +212,19 @@ const _statusTones = {
 
 Tone statusTone(String? status) => _statusTones[status] ?? Tone.slate;
 
-/// The admin console's theme: the shared one with the operations palette,
-/// near-black primary buttons and orange accents.
+/// The admin console's theme: the shared design system, plus the admin's
+/// [Palette] extension and its dark side menu.
 ThemeData buildAdminTheme(Brightness brightness) {
-  final dark = brightness == Brightness.dark;
-  final p = dark ? Palette.adminDark : Palette.adminLight;
-  final base = buildTheme(brightness);
-  final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: p.border));
-  const buttonText = TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 13, fontWeight: FontWeight.w700);
-  final buttonShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
-  final primary = dark ? const Color(0xFFF5F5F4) : AppColors.ink;
+  final p = brightness == Brightness.dark ? Palette.adminDark : Palette.adminLight;
+  final base = klTheme(KLColors.of(brightness), role: brightness == Brightness.dark ? KLRole.adminDark : KLRole.adminLight, extensions: [p]);
   return base.copyWith(
-    extensions: [p],
-    scaffoldBackgroundColor: p.page,
-    canvasColor: p.card,
-    colorScheme: base.colorScheme.copyWith(
-      primary: primary,
-      onPrimary: dark ? AppColors.ink : Colors.white,
-      secondary: AppColors.orange,
-      surface: p.card,
-      onSurface: p.text,
-      onSurfaceVariant: p.muted,
-      surfaceContainerHighest: p.stone100,
-      outline: p.border,
-    ),
-    textTheme: base.textTheme.apply(bodyColor: p.text, displayColor: p.text),
-    iconTheme: IconThemeData(color: p.textSecondary),
-    appBarTheme: base.appBarTheme.copyWith(
-      backgroundColor: p.header,
-      foregroundColor: p.text,
-      shape: Border(bottom: BorderSide(color: p.border)),
-      titleTextStyle: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 17, fontWeight: FontWeight.w800, color: p.text),
-    ),
-    cardTheme: base.cardTheme.copyWith(
-      color: p.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: p.border)),
-    ),
-    inputDecorationTheme: base.inputDecorationTheme.copyWith(
-      fillColor: p.card,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: border,
-      enabledBorder: border,
-      disabledBorder: border.copyWith(borderSide: BorderSide(color: p.border.withValues(alpha: 0.6))),
-      focusedBorder: border.copyWith(borderSide: BorderSide(color: primary, width: 1.5)),
-      labelStyle: TextStyle(fontSize: 13, color: p.muted),
-      hintStyle: TextStyle(fontSize: 14, color: p.faint),
-      helperStyle: TextStyle(fontSize: 11, color: p.faint),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: primary,
-        foregroundColor: dark ? AppColors.ink : Colors.white,
-        shape: buttonShape,
-        textStyle: buttonText,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        minimumSize: const Size(0, 40),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        backgroundColor: p.card,
-        foregroundColor: p.text,
-        side: BorderSide(color: p.border),
-        shape: buttonShape,
-        textStyle: buttonText,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        minimumSize: const Size(0, 40),
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: p.accent, textStyle: buttonText, shape: buttonShape),
-    ),
-    dividerTheme: DividerThemeData(color: p.divider, space: 1, thickness: 1),
     drawerTheme: const DrawerThemeData(backgroundColor: AppColors.sidebar, surfaceTintColor: Colors.transparent, width: 288),
-    bottomSheetTheme: BottomSheetThemeData(backgroundColor: p.card, surfaceTintColor: Colors.transparent),
-    dialogTheme: DialogThemeData(backgroundColor: p.card, surfaceTintColor: Colors.transparent),
-    popupMenuTheme: PopupMenuThemeData(color: p.card, surfaceTintColor: Colors.transparent),
-    chipTheme: base.chipTheme.copyWith(
-      backgroundColor: p.card,
-      selectedColor: primary,
-      side: BorderSide(color: p.border),
-      shape: const StadiumBorder(),
-    ),
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: p.card,
-      surfaceTintColor: Colors.transparent,
-      indicatorColor: AppColors.orange.withValues(alpha: dark ? 0.22 : 0.10),
-      height: 68,
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
-          color: states.contains(WidgetState.selected) ? (dark ? const Color(0xFFFB923C) : AppColors.orange) : p.muted,
-        ),
-      ),
-      iconTheme: WidgetStateProperty.resolveWith(
-        (states) => IconThemeData(size: 24, color: states.contains(WidgetState.selected) ? (dark ? const Color(0xFFFB923C) : AppColors.orange) : p.muted),
-      ),
-    ),
   );
 }
 
+/// The shared light/dark theme with the [Palette] extension (also the
+/// marketplace's sign-in sheets and the root screens).
 ThemeData buildTheme(Brightness brightness) {
-  final dark = brightness == Brightness.dark;
-  final p = dark ? Palette.dark : Palette.light;
-  final scheme = ColorScheme.fromSeed(
-    seedColor: AppColors.slate,
-    brightness: brightness,
-    primary: dark ? Colors.white : AppColors.slate,
-    onPrimary: dark ? AppColors.slateDeep : Colors.white,
-    surface: p.card,
-    onSurface: p.text,
-    onSurfaceVariant: p.muted,
-    surfaceContainerHighest: p.stone100,
-    outline: p.border,
-  );
-  final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: brightness, fontFamily: 'PlusJakartaSans');
-  // Inputs: `px-3 py-2 text-sm rounded-xl border-stone-200`, brown focus.
-  final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: p.border));
-  const buttonText = TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 12, fontWeight: FontWeight.w700);
-  final buttonShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
-  return base.copyWith(
-    extensions: [p],
-    scaffoldBackgroundColor: p.page,
-    textTheme: base.textTheme.apply(bodyColor: p.text, displayColor: p.text),
-    appBarTheme: AppBarTheme(
-      backgroundColor: p.header,
-      foregroundColor: p.text,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      shape: Border(bottom: BorderSide(color: p.border.withValues(alpha: 0.8))),
-      titleTextStyle: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 16, fontWeight: FontWeight.w800, color: p.text),
-    ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      color: p.card,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: p.border.withValues(alpha: 0.8)),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      isDense: true,
-      filled: true,
-      fillColor: p.card,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      border: border,
-      enabledBorder: border,
-      disabledBorder: border.copyWith(borderSide: BorderSide(color: p.border.withValues(alpha: 0.6))),
-      focusedBorder: border.copyWith(borderSide: BorderSide(color: dark ? Colors.white70 : AppColors.brown, width: 1.5)),
-      labelStyle: TextStyle(fontSize: 13, color: p.muted),
-      hintStyle: TextStyle(fontSize: 14, color: p.faint),
-      helperStyle: TextStyle(fontSize: 11, color: p.faint),
-    ),
-    // `Button` primary (solid stand-in for the brown gradient), secondary, ghost.
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: dark ? Colors.white : const Color(0xFF481F0D),
-        foregroundColor: dark ? AppColors.slateDeep : Colors.white,
-        shape: buttonShape,
-        textStyle: buttonText,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        minimumSize: const Size(0, 36),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        backgroundColor: p.card,
-        foregroundColor: p.textSecondary,
-        side: BorderSide(color: p.border),
-        shape: buttonShape,
-        textStyle: buttonText,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        minimumSize: const Size(0, 36),
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: p.accent, textStyle: buttonText, shape: buttonShape),
-    ),
-    dividerTheme: DividerThemeData(color: p.divider, space: 1, thickness: 1),
-    drawerTheme: DrawerThemeData(backgroundColor: p.header, surfaceTintColor: Colors.transparent, width: 288),
-    bottomSheetTheme: BottomSheetThemeData(backgroundColor: p.card, surfaceTintColor: Colors.transparent),
-    dialogTheme: DialogThemeData(backgroundColor: p.card, surfaceTintColor: Colors.transparent),
-    popupMenuTheme: PopupMenuThemeData(color: p.card, surfaceTintColor: Colors.transparent),
-    snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
-  );
+  final p = brightness == Brightness.dark ? Palette.dark : Palette.light;
+  return klTheme(KLColors.of(brightness), extensions: [p]);
 }
