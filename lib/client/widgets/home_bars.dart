@@ -23,9 +23,9 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
+    padding: const EdgeInsets.only(bottom: 12),
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
@@ -42,16 +42,22 @@ class SectionHeader extends StatelessWidget {
             ],
           ),
         ),
+        // A plain "›" like an app list header; the label is its tooltip.
         if (linkLabel != null && onLink != null) ...[
           const SizedBox(width: 12),
-          InkWell(
-            onTap: onLink,
-            borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                '$linkLabel  →',
-                style: kText(12, weight: w900, color: K.brown700),
+          Tooltip(
+            message: linkLabel!,
+            child: Semantics(
+              button: true,
+              label: linkLabel,
+              excludeSemantics: true,
+              child: InkResponse(
+                onTap: onLink,
+                radius: 20,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.chevron_right_rounded, size: 24, color: K.stone700),
+                ),
               ),
             ),
           ),
@@ -456,15 +462,7 @@ class _CategoryBarState extends State<CategoryBar> {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Explore by Category', style: kText(wide ? 20 : 18, weight: w900, spacing: -0.3)),
-                  Text('Curated cuisines crafted by local culinary experts', style: kText(12, color: K.stone500)),
-                ],
-              ),
-            ),
+            Expanded(child: SectionHeader(title: 'Categories', linkLabel: 'All categories', onLink: () => onSelect(null))),
             if (wide) ...[
               _arrow(Icons.chevron_left, 'Scroll categories left', () => _scrollBy(-240)),
               const SizedBox(width: 6),
@@ -472,7 +470,6 @@ class _CategoryBarState extends State<CategoryBar> {
             ],
           ],
         ),
-        const SizedBox(height: 14),
         SingleChildScrollView(
           controller: _scroller,
           scrollDirection: Axis.horizontal,
@@ -481,17 +478,12 @@ class _CategoryBarState extends State<CategoryBar> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (loading && categories.isEmpty)
-                for (var i = 0; i < 6; i++) ...[if (i > 0) const SizedBox(width: 12), const SkeletonBox(width: 80, height: 92, radius: 16)]
+                for (var i = 0; i < 6; i++) ...[if (i > 0) const SizedBox(width: 10), const SkeletonBox(width: 84, height: 92, radius: 18)]
               else ...[
-                _tile(
-                  label: 'All',
-                  active: true,
-                  icon: const Icon(Icons.grid_view_rounded, size: 20, color: Colors.white),
-                  onTap: () => onSelect(null),
-                ),
-                for (final category in categories) ...[
-                  const SizedBox(width: 12),
-                  _tile(label: category.name, active: false, icon: _iconFor(category), onTap: () => onSelect(category)),
+                _tile(label: 'All', color: K.fillBrown850, icon: const Icon(Icons.grid_view_rounded, size: 26, color: Colors.white), onTap: () => onSelect(null)),
+                for (final (i, category) in categories.indexed) ...[
+                  const SizedBox(width: 10),
+                  _tile(label: category.name, color: categoryTileColors[i % categoryTileColors.length], icon: _iconFor(category), onTap: () => onSelect(category)),
                 ],
               ],
             ],
@@ -502,64 +494,63 @@ class _CategoryBarState extends State<CategoryBar> {
   }
 
   Widget _iconFor(Category category) {
-    final fallback = Icon(_categoryIcon(category), size: 20, color: K.brown700);
+    final fallback = Icon(_categoryIcon(category), size: 26, color: Colors.white);
     final url = _isImageUrl(category.iconUrl) ? media(category.iconUrl) : null;
     if (url == null) return fallback;
-    return Image.network(url, width: 24, height: 24, fit: BoxFit.contain, errorBuilder: (_, _, _) => fallback);
+    return Image.network(url, width: 30, height: 30, fit: BoxFit.contain, errorBuilder: (_, _, _) => fallback);
   }
 
-  Widget _tile({required String label, required bool active, required Widget icon, required VoidCallback onTap}) {
-    final radius = BorderRadius.circular(16);
-    return Container(
-      constraints: const BoxConstraints(minWidth: 80),
-      decoration: BoxDecoration(
-        gradient: active
-            ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [K.brown900, K.brown800, Color(0xFF200D05)])
-            : null,
-        color: active ? null : K.surface,
-        borderRadius: radius,
-        border: active ? null : Border.all(color: K.stone200.withValues(alpha: 0.8)),
-        boxShadow: active ? const [BoxShadow(color: Color(0x4D2B1206), blurRadius: 15, offset: Offset(0, 10), spreadRadius: -3)] : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: active ? Colors.white.withValues(alpha: 0.15) : K.stone50,
-                    borderRadius: radius,
-                    border: Border.all(color: active ? Colors.white.withValues(alpha: 0.2) : K.stone100),
-                    boxShadow: K.shadowSm,
-                  ),
-                  child: icon,
+  /// A solid coloured square with a white icon and its name (the reference's
+  /// category tiles), in the KitchenLink warm colours.
+  Widget _tile({required String label, required Color color, required Widget icon, required VoidCallback onTap}) {
+    final radius = BorderRadius.circular(18);
+    return Material(
+      color: color,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 84,
+          height: 92,
+          child: Stack(
+            children: [
+              // A soft light circle in the corner, for depth.
+              Positioned(right: -18, top: -18, child: Container(width: 56, height: 56, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.12)))),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                child: Column(
+                  children: [
+                    SizedBox(height: 34, child: Center(child: icon)),
+                    const Spacer(),
+                    Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: kText(11, weight: FontWeight.w700, color: Colors.white, height: 1.15),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: kText(11, weight: FontWeight.w700, color: active ? Colors.white : K.stone700, height: 1.2),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
+
+/// Warm tile colours for the category row (the reference's coloured tiles,
+/// in KitchenLink's browns, caramels and olive). White text reads on each.
+const categoryTileColors = [
+  Color(0xFF6D391D),
+  Color(0xFFA0542A),
+  Color(0xFF5E6B32),
+  Color(0xFF8A5332),
+  Color(0xFF9A3B3B),
+  Color(0xFF7A5C1E),
+];
 
 /// The website's VendorTypeFilter: "All types" and one chip per kitchen type.
 class KitchenTypeFilter extends StatelessWidget {

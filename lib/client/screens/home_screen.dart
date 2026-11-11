@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../ui/vendor_types.dart';
@@ -11,8 +10,7 @@ import '../customer_api.dart';
 import '../location.dart';
 import '../models.dart';
 import '../widgets/cards.dart';
-import '../widgets/chrome.dart';
-import '../widgets/header.dart';
+import '../widgets/home_style.dart';
 import '../widgets/home_bars.dart';
 import '../customer_session.dart';
 import '../market_models.dart';
@@ -22,6 +20,7 @@ import '../widgets/customer_auth_sheet.dart';
 import '../widgets/notifications_sheet.dart';
 import 'kitchen_screen.dart';
 import 'kitchens_screen.dart';
+import 'order_screen.dart';
 
 import '../../root/role_switcher.dart';
 
@@ -74,6 +73,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _search = TextEditingController();
+  final _scroll = ScrollController();
   final _feed = _Load<HomeFeed>();
   final _categories = _Load<List<Category>>();
   final _allVendors = _Load<VendorPage>();
@@ -111,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _location.removeListener(_onLocation);
     _debounce?.cancel();
     _search.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -195,24 +196,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (tab == 'dishes' && data.dishes.isEmpty && data.vendors.isNotEmpty) tab = 'kitchens';
     if (tab == 'kitchens' && data.vendors.isEmpty && data.dishes.isNotEmpty) tab = 'dishes';
     setState(() => _tab = tab);
-  }
-
-  /// The header's and footer's shortcuts (the website's Navbar and Footer links).
-  void _link(String label) {
-    switch (label) {
-      case "Tomorrow's Specials" || "Tomorrow's Specials (Pre-Order)":
-        MarketNav.specials(context);
-      case 'Nearby Map':
-        MarketNav.map(context);
-      case 'Saved dishes':
-        MarketNav.wishlist(context);
-      case 'Order Tracking & History':
-        MarketNav.orders(context);
-      case 'Saved Addresses & Preferences':
-        MarketNav.profile(context);
-      default:
-        MarketNav.kitchens(context, vendorTypes: _vendorTypes);
-    }
   }
 
   /// A dish opens its details here, with a link to its kitchen (the website's DishCard).
@@ -322,45 +305,57 @@ class _HomeScreenState extends State<HomeScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final pad = pagePadding(width);
     final visiting = RoleSwitcher.maybeOf(context)?.returnTo != null;
+    final signedIn = customerSession.isSignedIn;
     return Scaffold(
+      backgroundColor: K.page,
+      // The list scrolls on under the raised basket button.
+      extendBody: true,
       floatingActionButton: visiting ? const ReturnToRoleButton() : null,
+      bottomNavigationBar: MarketBottomBar(
+        cartCount: context.watch<Cart>().itemCount,
+        onHome: _toTop,
+        onKitchens: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
+        onCart: () => MarketNav.cart(context),
+        onSaved: () => MarketNav.wishlist(context),
+        onAccount: _signIn,
+        accountLabel: signedIn ? customerSession.firstName : 'Sign In',
+      ),
       body: Column(
         children: [
-          MarketHeader(
-            cartCount: context.watch<Cart>().itemCount,
-            onCart: () => MarketNav.cart(context),
-            unreadNotifications: customerSession.isSignedIn ? context.watch<Notifications>().unread : null,
-            onNotifications: () => showNotificationsSheet(context),
-            onSignIn: _signIn,
-            signedInName: customerSession.isSignedIn ? customerSession.firstName : null,
+          HomeTopBar(
+            location: _location,
+            onLocation: () => showLocationPicker(context, _location, onGpsUnavailable: _gpsUnavailable),
             onTheme: _darkMode,
-            onLink: _link,
+            onMap: () => MarketNav.map(context),
+            unreadNotifications: signedIn ? context.watch<Notifications>().unread : null,
+            onNotifications: () => showNotificationsSheet(context),
           ),
           Expanded(
             child: RefreshIndicator(
               color: K.brown700,
               onRefresh: _refresh,
               child: ListView(
+                controller: _scroll,
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
+                padding: EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom),
                 children: [
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1280),
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(pad, 20, pad, 64),
+                        padding: EdgeInsets.fromLTRB(pad, 6, pad, 40),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _searchAndLocation(width >= smWidth),
+                            MarketSearchBar(controller: _search, onChanged: _onQuery, recent: _recent),
+                            const SizedBox(height: 12),
                             if (_location.isUsingFallback && !_location.primerOpen && _query.isEmpty) _fallbackNotice(),
-                            if (_query.isNotEmpty) _searchResults() else _feedBody(),
+                            if (_query.isNotEmpty) _searchResults() else _feedBody(width),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  MarketFooter(onLink: _link),
                 ],
               ),
             ),
@@ -370,105 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ---- Search + location row ---------------------------------------------
-
-  /// `flex flex-col sm:flex-row gap-3 sm:items-center`: the search bar, then
-  /// the location pill with the refresh button and "Big Event" under the pill
-  /// (beside the search bar from 640 px).
-  Widget _searchAndLocation(bool wide) {
-    final searchBar = MarketSearchBar(controller: _search, onChanged: _onQuery, recent: _recent);
-    final pillAndEvent = IntrinsicWidth(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LocationPill(location: _location, onGpsUnavailable: _gpsUnavailable),
-          const SizedBox(height: 8),
-          _bigEventButton(),
-        ],
-      ),
-    );
-    final location = Row(
-      mainAxisSize: wide ? MainAxisSize.min : MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        if (wide) pillAndEvent else Flexible(child: pillAndEvent),
-        const SizedBox(width: 8),
-        _refreshButton(),
-      ],
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: wide
-          ? Row(
-              children: [
-                Expanded(child: searchBar),
-                const SizedBox(width: 12),
-                location,
-              ],
-            )
-          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [searchBar, const SizedBox(height: 12), location]),
-    );
-  }
-
-  /// Big events → every kitchen that takes event orders.
-  Widget _bigEventButton() => Container(
-    decoration: const BoxDecoration(shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(99)), boxShadow: K.shadowSm),
-    child: Material(
-      color: K.fillBrown700,
-      shape: const StadiumBorder(),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: () => MarketNav.bigEvent(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('🎉', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  'Big Event',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: kText(14, weight: w900, color: Colors.white, spacing: -0.3),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-
-  Widget _refreshButton() {
-    final refreshing = _feed.loading;
-    return Semantics(
-      button: true,
-      label: 'Refresh homepage feed',
-      child: Container(
-        decoration: const BoxDecoration(shape: BoxShape.circle, boxShadow: K.shadowSm),
-        child: Material(
-          color: K.surface,
-          shape: CircleBorder(side: BorderSide(color: K.stone200)),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: refreshing ? null : _refresh,
-            child: SizedBox(
-              width: 36,
-              height: 36,
-              child: refreshing
-                  ? Padding(
-                      padding: EdgeInsets.all(10),
-                      child: CircularProgressIndicator(strokeWidth: 2, color: K.stone500),
-                    )
-                  : Icon(Icons.refresh, size: 16, color: K.stone500),
-            ),
-          ),
-        ),
-      ),
-    );
+  void _toTop() {
+    if (_scroll.hasClients) _scroll.animateTo(0, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
   }
 
   Widget _fallbackNotice() => Padding(
@@ -493,7 +391,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---- Feed ----------------------------------------------------------------
 
-  Widget _feedBody() {
+  /// The swipeable banner: Tomorrow's Specials, Big Event, the next offer day
+  /// and the map (the reference's "Happy Weekend · 25% OFF" banner).
+  List<PromoSlide> _promos(List<SpecialEntry> specials, List<OfferDay> offers) => [
+        if (specials.isNotEmpty)
+          PromoSlide(
+            tag: "Tomorrow's Specials",
+            title: "Pre-order tomorrow's dishes",
+            text: '${specials.length} kitchen${specials.length == 1 ? '' : 's'} cooking something special',
+            action: 'See specials',
+            emoji: '🍲',
+            onTap: () => MarketNav.specials(context),
+          ),
+        PromoSlide(
+          tag: 'Big Event',
+          title: 'Feeding 50+ guests?',
+          text: 'Weddings, parties and meetings, cooked by local kitchens',
+          action: 'Plan an event',
+          emoji: '🎉',
+          onTap: () => MarketNav.bigEvent(context),
+        ),
+        if (offers.isNotEmpty)
+          PromoSlide(
+            tag: 'Offer day',
+            title: offers.first.title,
+            text: offers.first.vendor.name,
+            action: 'See offer',
+            emoji: '🎁',
+            onTap: () => MarketNav.kitchen(context, offers.first.vendor.id),
+          ),
+        PromoSlide(
+          tag: 'Nearby Map',
+          title: 'Kitchens around you',
+          text: 'See every open kitchen on the map',
+          action: 'Open map',
+          emoji: '🗺️',
+          onTap: () => MarketNav.map(context),
+        ),
+      ];
+
+  Widget _feedBody(double width) {
     final feed = _feed.data;
     if (_feed.pending || (_feed.loading && feed == null && _feed.error == null)) return _feedSkeleton();
     if (_feed.error != null && feed == null) {
@@ -510,27 +447,56 @@ class _HomeScreenState extends State<HomeScreen> {
     final featured = feed?.featuredVendors ?? const <Vendor>[];
     final dishes = feed?.popularDishes ?? const <Dish>[];
     final typeLabel = _vendorTypes.isNotEmpty;
+    final orders = context.watch<Orders>();
+    final lastOrder = context.watch<CustomerSession>().isSignedIn ? orders.orders.firstOrNull : null;
+    const gap = 28.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        PromoCarousel(slides: _promos(specials, offers)),
+        const SizedBox(height: 22),
+
         CategoryBar(
           categories: categories,
           loading: _categories.loading,
           media: _api.media,
           onSelect: (category) => MarketNav.kitchens(context, categoryId: category?.id, categoryName: category?.name, vendorTypes: _vendorTypes),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 14),
         KitchenTypeFilter(value: _vendorTypes, onChanged: _setTypes),
-        const SizedBox(height: 36),
+
+        // The latest order, with "Order again".
+        if (lastOrder != null) ...[
+          const SizedBox(height: gap),
+          SectionHeader(title: 'Previous Order', linkLabel: 'Order history', onLink: () => MarketNav.orders(context)),
+          PreviousOrderCard(
+            order: lastOrder,
+            media: _api.media,
+            onOpen: () => MarketNav.order(context, lastOrder.id),
+            onReorder: () => reorderDishes(context, lastOrder),
+          ),
+        ],
+
+        // Popular dishes: two to a row, added straight to the basket.
+        const SizedBox(height: gap),
+        SectionHeader(title: 'Popular Dishes Near You', linkLabel: 'Browse menus', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
+        if (dishes.isEmpty && _feed.loading)
+          _columns(width, [for (var i = 0; i < 4; i++) const SkeletonBox(height: 250, radius: 18)])
+        else if (dishes.isEmpty)
+          EmptyCard(
+            icon: Icons.restaurant_menu,
+            title: 'No dishes to show yet',
+            message: 'Pick another neighbourhood or kitchen type to see what people are ordering.',
+            actionLabel: 'Browse kitchens',
+            onAction: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
+          )
+        else
+          _columns(width, [for (final d in dishes) DishGridCard(dish: d, media: _api.media, onTap: () => _openDish(d))]),
 
         // Featured / nearby kitchens.
-        SectionHeader(
-          title: 'Top Deals Near You',
-          subtitle: feed?.updatedAt != null ? 'Updated ${DateFormat('HH:mm').format(feed!.updatedAt!)}' : 'Kitchens around you right now',
-          linkLabel: 'See all kitchens',
-          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
-        ),
+        const SizedBox(height: gap),
+        SectionHeader(title: 'Top Deals Near You', linkLabel: 'See all kitchens', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
         if (_feed.error != null)
           ErrorCard(onRetry: _loadFeed, retrying: _feed.loading)
         else if (featured.isEmpty && !_feed.loading)
@@ -548,14 +514,21 @@ class _HomeScreenState extends State<HomeScreen> {
             for (final v in featured) VendorCard(vendor: v, tile: true, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
             if (_feed.loading && featured.isEmpty) ...const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()],
           ]),
-        const SizedBox(height: 36),
+
+        // Tomorrow's specials and offer days.
+        if (specials.isNotEmpty || offers.isNotEmpty) ...[
+          const SizedBox(height: gap),
+          SectionHeader(title: "Tomorrow's Specials", linkLabel: 'See all specials', onLink: () => MarketNav.specials(context)),
+          _hScroll([
+            for (final s in specials) SpecialCard(entry: s, media: _api.media, onTap: () => MarketNav.kitchen(context, s.vendor.id), onPreorder: () => preorderSpecial(context, s)),
+            for (final o in offers) OfferDayCard(offer: o, media: _api.media, onTap: () => MarketNav.kitchen(context, o.vendor.id)),
+          ]),
+        ],
 
         // All kitchens.
+        const SizedBox(height: gap),
         SectionHeader(
           title: 'All Kitchens',
-          subtitle: (_allVendors.data?.locationUsed ?? false)
-              ? 'Every kitchen on the platform — nearest to you first'
-              : 'Every kitchen on the platform — use your location to see nearby ones first',
           linkLabel: (_allVendors.data?.total ?? 0) > 0 ? 'See all ${_allVendors.data!.total}' : 'See all',
           onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
         ),
@@ -567,34 +540,30 @@ class _HomeScreenState extends State<HomeScreen> {
           _grid([
             for (final v in _allVendors.data!.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
           ]),
+      ],
+    );
+  }
 
-        // Tomorrow's specials and offer days.
-        if (specials.isNotEmpty || offers.isNotEmpty) ...[
-          const SizedBox(height: 36),
-          SectionHeader(
-            title: "Tomorrow's Specials",
-            subtitle: 'Pre-order specials and upcoming kitchen offers',
-            linkLabel: 'See all',
-            onLink: () => MarketNav.specials(context),
+  /// Two cards to a row on a phone (three from 640 px, four from 1024 px),
+  /// each row as tall as its tallest card.
+  Widget _columns(double width, List<Widget> cards) {
+    final perRow = width >= 1024 ? 4 : (width >= 640 ? 3 : 2);
+    return Column(
+      children: [
+        for (var start = 0; start < cards.length; start += perRow) ...[
+          if (start > 0) const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = start; i < start + perRow; i++) ...[
+                  if (i > start) const SizedBox(width: 12),
+                  Expanded(child: i < cards.length ? cards[i] : const SizedBox()),
+                ],
+              ],
+            ),
           ),
-          _hScroll([
-            for (final s in specials) SpecialCard(entry: s, media: _api.media, onTap: () => MarketNav.kitchen(context, s.vendor.id), onPreorder: () => preorderSpecial(context, s)),
-            for (final o in offers) OfferDayCard(offer: o, media: _api.media, onTap: () => MarketNav.kitchen(context, o.vendor.id)),
-          ]),
         ],
-        const SizedBox(height: 36),
-
-        // Popular dishes.
-        SectionHeader(
-          title: 'Popular Dishes Near You',
-          subtitle: 'What people around you are ordering today',
-          linkLabel: 'Browse menus',
-          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
-        ),
-        _hScroll([
-          for (final d in dishes) DishCard(dish: d, media: _api.media, onTap: () => _openDish(d)),
-          if (_feed.loading && dishes.isEmpty) ...const [DishCardSkeleton(), DishCardSkeleton(), DishCardSkeleton()],
-        ]),
       ],
     );
   }

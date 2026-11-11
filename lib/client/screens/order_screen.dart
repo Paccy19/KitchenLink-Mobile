@@ -909,12 +909,9 @@ class _DirectionsState extends State<_Directions> {
   }
 }
 
-/// Order History & Receipts (the website's `/orders`): every order with its
-/// status, refund, live tracking, contact, details and "Reorder Dishes".
-class OrdersScreen extends StatelessWidget {
-  const OrdersScreen({super.key});
-
-  Future<void> _reorder(BuildContext context, CustomerOrder order) async {
+/// "Reorder Dishes" / "Order again": puts a past order's dishes back in the
+/// basket and opens checkout.
+Future<void> reorderDishes(BuildContext context, CustomerOrder order) async {
     final kitchen = KitchenRef(id: order.vendorId, name: order.vendorName, typeCode: order.vendorTypeCode, neighborhood: order.vendorLocation);
     for (final item in order.items) {
       final dish = MenuDish(id: item.dishId, name: item.name, description: '', price: item.price, image: item.image, category: '', isAvailable: true, isPreorder: false, preorderCutoff: '', popular: false, prepTime: '');
@@ -924,7 +921,12 @@ class OrdersScreen extends StatelessWidget {
       }
     }
     if (context.mounted) await MarketNav.checkout(context);
-  }
+}
+
+/// Order History & Receipts (the website's `/orders`): every order with its
+/// status, refund, live tracking, contact, details and "Reorder Dishes".
+class OrdersScreen extends StatelessWidget {
+  const OrdersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -953,7 +955,7 @@ class OrdersScreen extends StatelessWidget {
                     onAction: () => Navigator.of(context).popUntil((r) => r.isFirst),
                   )
                 else
-                  for (final order in orders.orders) _OrderCard(order: order, onReorder: () => _reorder(context, order)),
+                  for (final order in orders.orders) _OrderCard(order: order, onReorder: () => reorderDishes(context, order)),
               ]),
             ),
     );

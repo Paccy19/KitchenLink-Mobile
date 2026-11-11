@@ -87,17 +87,25 @@ void main() {
         await settle(tester);
 
         for (final text in [
-          'Explore by Category',
+          'Categories',
           'Top Deals Near You',
           'All Kitchens',
-          'See all 14',
           "Tomorrow's Specials",
           'Popular Dishes Near You',
           'Isombe with plantain',
+          'Add to basket',
           'Pre-order now',
           '20% off brochettes',
+          "Pre-order tomorrow's dishes",
         ]) {
           expect(find.textContaining(text, findRichText: true), findsWidgets, reason: text);
+        }
+        // Section links are a "›" whose label is the tooltip.
+        expect(find.byTooltip('See all 14'), findsOneWidget);
+        // The bottom bar, with the raised basket button.
+        expect(find.bySemanticsLabel('Basket, 0 dishes'), findsOneWidget);
+        for (final label in ['Home', 'Kitchens', 'Saved', 'Sign In']) {
+          expect(find.text(label), findsWidgets, reason: label);
         }
 
         // Location picker.
@@ -117,9 +125,9 @@ void main() {
         await settle(tester);
         expect(find.text('Pizza Margherita'), findsOneWidget);
 
-        // Footer.
-        await tester.scrollUntilVisible(find.text('FOR FOOD LOVERS'), 400, scrollable: find.byType(Scrollable).last);
-        expect(find.text('Supported Payments'.toUpperCase()), findsOneWidget);
+        // No website footer in the app.
+        expect(find.text('FOR FOOD LOVERS'), findsNothing);
+        expect(find.textContaining('All rights reserved'), findsNothing);
       }, () => mock);
     });
   }
@@ -151,7 +159,7 @@ void main() {
       await http.runWithClient(() async {
         await openHome(tester);
         expect(K.dark, isFalse);
-        final lightText = textColor(tester, 'Explore by Category');
+        final lightText = textColor(tester, 'Categories');
 
         await tester.tap(find.byIcon(Icons.dark_mode_outlined));
         await settle(tester);
@@ -160,14 +168,14 @@ void main() {
         expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
         expect(pageColor(tester).computeLuminance(), lessThan(0.05), reason: 'chocolate page background');
         // Text inside const widgets is rebuilt too: light on dark.
-        expect(textColor(tester, 'Explore by Category'), isNot(lightText));
-        expect(textColor(tester, 'Explore by Category')!.computeLuminance(), greaterThan(0.8));
+        expect(textColor(tester, 'Categories'), isNot(lightText));
+        expect(textColor(tester, 'Categories')!.computeLuminance(), greaterThan(0.8));
         expect(await const FlutterSecureStorage().read(key: MarketTheme.storageKey), 'dark');
 
         await tester.tap(find.byIcon(Icons.light_mode_outlined));
         await settle(tester);
         expect(K.dark, isFalse);
-        expect(textColor(tester, 'Explore by Category'), lightText);
+        expect(textColor(tester, 'Categories'), lightText);
         expect(await const FlutterSecureStorage().read(key: MarketTheme.storageKey), 'light');
       }, () => mock);
     });
