@@ -262,6 +262,15 @@ Future<void> settle(WidgetTester tester, [int frames = 15]) async {
   }
 }
 
+/// Taps the first dish's round "+" (its tooltip is "Add" and the dish name).
+Future<void> tapAdd(WidgetTester tester) async {
+  final finder = find.byTooltip(RegExp(r'^Add ')).first;
+  await tester.ensureVisible(finder);
+  await settle(tester, 3);
+  await tester.tap(finder);
+  await settle(tester);
+}
+
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text).last;
   await tester.ensureVisible(finder);
@@ -379,22 +388,22 @@ void main() {
         expect(find.text('Isombe'), findsOneWidget);
 
         // Save the dish, then add it twice.
-        await tester.tap(find.byIcon(Icons.favorite_border).first);
+        await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
         await settle(tester);
         expect(backend.wishlist, {'d1'});
-        await tapText(tester, 'Add');
-        await tapText(tester, 'Add');
+        await tapAdd(tester);
+        await tapAdd(tester);
         expect(backend.cart, {
           'd1': 2,
         }, reason: 'the account basket follows the screen');
-        expect(find.text('View Cart · 2'), findsOneWidget);
+        expect(find.text('View basket · 2'), findsOneWidget);
 
         // The basket: totals with the distance-priced delivery fee.
-        await tapText(tester, 'View Cart · 2');
+        await tapText(tester, 'View basket · 2');
         expect(find.text('Your basket'), findsOneWidget);
         expect(find.text('Delivery fee (2.5 km)'), findsOneWidget);
         expect(find.text('6,200 RWF'), findsOneWidget);
-        await tapText(tester, 'Proceed to Checkout');
+        await tapText(tester, 'Go to checkout');
 
         // Checkout: no address yet, so placing the order asks for one.
         expect(find.text('Checkout & Confirmation'), findsOneWidget);
@@ -482,7 +491,7 @@ void main() {
           ),
         );
         await settle(tester);
-        await tapText(tester, 'Add');
+        await tapAdd(tester);
         expect(
           backend.calls.where((c) => c.startsWith('POST /cart')),
           isEmpty,
@@ -551,7 +560,7 @@ void main() {
         await settle(tester);
         final cart = tester.element(find.byType(KitchenScreen)).read<Cart>();
 
-        await tapText(tester, 'Add');
+        await tapAdd(tester);
         await settle(tester);
         expect(await cart.waitForSync(), isFalse);
         expect(
@@ -560,7 +569,7 @@ void main() {
           reason: 'the failed add is replaced by the server basket',
         );
 
-        await tapText(tester, 'Add');
+        await tapAdd(tester);
         await settle(tester);
         expect(await cart.waitForSync(), isTrue);
         expect(cart.itemCount, 1);

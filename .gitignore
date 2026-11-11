@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Design review screenshots (tool/shots)
+tool/shots/out/
+tool/shots/before/
+tool/shots/images/

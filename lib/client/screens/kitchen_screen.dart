@@ -1,4 +1,9 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../design/motion.dart';
 import 'package:provider/provider.dart';
 
 import '../../api/api_client.dart';
@@ -122,8 +127,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
             expandedHeight: 230,
             backgroundColor: K.brown900,
             foregroundColor: Colors.white,
+            leading: Navigator.canPop(context) ? Center(child: _glass(Icons.arrow_back_ios_new_rounded, 'Back', () => Navigator.of(context).maybePop())) : null,
             actions: [
-              IconButton(tooltip: 'View cart', onPressed: () => MarketNav.cart(context), icon: Badge(isLabelVisible: cart.itemCount > 0, label: Text('${cart.itemCount}'), child: const Icon(Icons.shopping_bag_outlined))),
+              _glass(Icons.shopping_bag_outlined, 'View cart', () => MarketNav.cart(context), count: cart.itemCount),
+              const SizedBox(width: 12),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(fit: StackFit.expand, children: [
@@ -140,16 +147,14 @@ class _KitchenScreenState extends State<KitchenScreen> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Wrap(spacing: 6, runSpacing: 6, children: [
                       VendorTypeBadge(vendor.typeCode),
-                      vendor.isOpen
-                          ? const Pill('Open now', background: K.forest600, foreground: Colors.white)
-                          : const Pill('Closed now · schedule for later', background: K.fillStone700, foreground: Colors.white),
-                      if (vendor.deliveryAvailable) Pill('Delivery available', icon: Icons.pedal_bike, background: K.surface, foreground: K.forest700),
+                      if (!vendor.isOpen) const Pill('Closed now · schedule for later', background: K.fillStone700, foreground: Colors.white),
+                      if (vendor.deliveryAvailable) const Pill('Delivery', icon: Icons.delivery_dining_rounded, background: Color(0xE6FFFFFF), foreground: K.forest600),
                     ]),
                     const SizedBox(height: 10),
                     Row(children: [
                       VendorAvatar(vendor: vendor, media: media, size: 52),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(vendor.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(24, weight: w900, color: Colors.white))),
+                      Expanded(child: Text(vendor.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: kDisplay(28, color: Colors.white))),
                     ]),
                   ]),
                 ),
@@ -192,7 +197,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       for (final line in store.ordering.lines)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: K.stone50, borderRadius: BorderRadius.circular(99), border: Border.all(color: K.stone200)),
+                          decoration: BoxDecoration(color: K.stone100, borderRadius: BorderRadius.circular(99)),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Icon(Icons.event_available, size: 12, color: K.stone600),
                             const SizedBox(width: 4),
@@ -227,12 +232,15 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         label: Text(categories[i]),
                         selected: active,
                         showCheckmark: false,
-                        onSelected: (_) => setState(() => _category = categories[i]),
-                        labelStyle: kText(12.5, weight: FontWeight.w700, color: active ? Colors.white : K.stone700),
-                        selectedColor: K.brown800,
-                        backgroundColor: K.surface,
-                        side: BorderSide(color: active ? K.brown900 : K.stone200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        onSelected: (_) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _category = categories[i]);
+                        },
+                        labelStyle: kText(13, weight: FontWeight.w700, color: active ? K.onStrong : K.stone700),
+                        selectedColor: K.strong,
+                        backgroundColor: K.dark ? K.surface : K.stone100,
+                        side: BorderSide.none,
+                        shape: const StadiumBorder(),
                       );
                     },
                   ),
@@ -263,7 +271,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, mainAxisSpacing: 12, crossAxisSpacing: 12, mainAxisExtent: 300),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: columns, mainAxisSpacing: 12, crossAxisSpacing: 12, mainAxisExtent: 286),
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => _DishTile(dish: menu[i], kitchen: kitchen, media: media, saved: wishlist.contains(menu[i].id)),
                   childCount: menu.length,
@@ -276,6 +284,40 @@ class _KitchenScreenState extends State<KitchenScreen> {
     );
   }
 
+  /// A frosted round button over the kitchen's photo.
+  Widget _glass(IconData icon, String tooltip, VoidCallback onTap, {int count = 0}) => Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: count > 0 ? '$tooltip, $count dishes' : tooltip,
+          excludeSemantics: true,
+          child: ClipOval(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.28),
+                child: InkWell(
+                  onTap: onTap,
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Badge(
+                      isLabelVisible: count > 0,
+                      label: Text('$count'),
+                      backgroundColor: const Color(0xFFDDAE7E),
+                      textColor: K.brown950,
+                      offset: const Offset(-2, 2),
+                      alignment: Alignment.topRight,
+                      child: Center(child: Icon(icon, size: 19, color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
   Widget _fact(IconData icon, String text, {Color? iconColor}) => Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 16, color: iconColor ?? K.brown500),
         const SizedBox(width: 5),
@@ -287,14 +329,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [K.tone(const Color(0xFFF5F6E9)), K.tone(const Color(0xFFEEF0DC))]),
+        color: K.brown100,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: K.tone(const Color(0xFFD9DCC0))),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Pill("Tomorrow's Special", background: Color(0xFFC9CDA2), foreground: Color(0xFF2B3317), shadow: false),
-        const SizedBox(height: 8),
-        Text(special.text, style: kText(15, weight: w900, color: K.tone(const Color(0xFF2B3317)))),
+        const Pill("Tomorrow's special", icon: Icons.schedule_rounded, background: Color(0xFFDDAE7E), foreground: K.brown950),
+        const SizedBox(height: 10),
+        Text(special.text, style: kDisplay(21, color: K.brown850)),
         const SizedBox(height: 6),
         Text('Order before ${formatScheduledFor(special.cutoffAt)}  ·  Arrives ${formatScheduledFor(special.deliveryAt)}', style: kText(12, weight: FontWeight.w600, color: K.stone600)),
         const SizedBox(height: 12),
@@ -317,16 +358,16 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
   Widget _basketBar(int lines, num total, int count, String name) => Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.paddingOf(context).bottom),
-        decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200)), boxShadow: K.shadowMd),
+        decoration: BoxDecoration(color: K.surface, border: Border(top: BorderSide(color: K.stone200, width: 0.6))),
         child: Row(children: [
           Expanded(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(lines > 0 ? '$lines item${lines > 1 ? 's' : ''} from $name' : 'Hungry?', maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(11.5, weight: FontWeight.w600, color: K.stone500)),
-              Text(lines > 0 ? formatRwf(total) : 'Add dishes from the menu above', maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(14, weight: w900, color: lines > 0 ? K.brown750 : K.gray900)),
+              Text(lines > 0 ? formatRwf(total) : 'Add dishes from the menu above', maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(16, weight: w900, color: lines > 0 ? K.brown750 : K.gray900).copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
             ]),
           ),
           const SizedBox(width: 12),
-          GradientButton(label: count > 0 ? 'View Cart · $count' : 'View Cart', icon: Icons.shopping_bag_outlined, expand: false, onTap: count == 0 ? null : () => MarketNav.cart(context)),
+          GradientButton(label: count > 0 ? 'View basket · $count' : 'View basket', icon: Icons.shopping_bag_outlined, expand: false, onTap: count == 0 ? null : () => MarketNav.cart(context)),
         ]),
       );
 }
@@ -340,47 +381,65 @@ class _DishTile extends StatelessWidget {
   final bool saved;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: K.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: BorderSide(color: K.stone200)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => showDishSheet(context, dish, kitchen),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Stack(clipBehavior: Clip.none, children: [
-                NetImage(url: media(dish.image), aspect: 1.25, radius: BorderRadius.circular(16)),
-                Positioned(top: 6, right: 6, child: SaveButton(dish: dish, kitchen: kitchen, saved: saved)),
-                Positioned(
-                  right: 6,
-                  bottom: -10,
-                  child: GradientButton(
-                    label: dish.isAvailable ? 'Add' : 'Sold out',
-                    icon: Icons.add,
-                    expand: false,
-                    height: 34,
-                    fontSize: 12,
-                    radius: 99,
-                    padding: 12,
-                    onTap: dish.isAvailable ? () => addDishToCart(context, dish, kitchen) : null,
+  Widget build(BuildContext context) => PressScale(
+        pressedScale: 0.98,
+        child: Material(
+          color: K.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: BorderSide(color: K.stone200.withValues(alpha: 0.6))),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => showDishSheet(context, dish, kitchen),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Stack(children: [
+                  NetImage(url: media(dish.image), aspect: 1.15, radius: BorderRadius.circular(16)),
+                  Positioned(top: 6, right: 6, child: SaveButton(dish: dish, kitchen: kitchen, saved: saved)),
+                  Positioned(
+                    left: 8,
+                    top: 8,
+                    child: Wrap(spacing: 4, children: [
+                      if (!dish.isAvailable) Pill('SOLD OUT', background: K.fillStone800.withValues(alpha: 0.9), foreground: Colors.white, size: 9.5),
+                      if (dish.popular) const Pill('POPULAR', background: Color(0xE62B1609), foreground: Color(0xFFFBF3EA), size: 9.5),
+                      if (dish.isPreorder) const Pill('PRE-ORDER', background: Color(0xFFDDAE7E), foreground: K.brown950, size: 9.5),
+                    ]),
+                  ),
+                ]),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 10, 2, 0),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(dish.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(14.5, weight: w900, height: 1.25, spacing: -0.2)),
+                      if (dish.description.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(dish.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(11.5, color: K.stone500, height: 1.35)),
+                      ],
+                      const Spacer(),
+                      Row(children: [
+                        Expanded(child: Text(formatRwf(dish.price), maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(14.5, weight: w900, color: K.brown750).copyWith(fontFeatures: const [FontFeature.tabularFigures()]))),
+                        Tooltip(
+                          message: dish.isAvailable ? 'Add ${dish.name}' : 'Sold out',
+                          child: Material(
+                            color: dish.isAvailable ? K.fillBrown700 : K.stone200,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: dish.isAvailable
+                                  ? () {
+                                      HapticFeedback.lightImpact();
+                                      addDishToCart(context, dish, kitchen);
+                                    }
+                                  : null,
+                              child: SizedBox(width: 34, height: 34, child: Icon(Icons.add_rounded, size: 19, color: dish.isAvailable ? Colors.white : K.stone400)),
+                            ),
+                          ),
+                        ),
+                      ]),
+                    ]),
                   ),
                 ),
               ]),
-              const SizedBox(height: 16),
-              Wrap(spacing: 4, runSpacing: 4, children: [
-                dish.isAvailable
-                    ? Pill('AVAILABLE', background: K.forest100, foreground: K.forest700, size: 9.5, shadow: false)
-                    : Pill('SOLD OUT', background: K.stone100, foreground: K.stone500, size: 9.5, shadow: false),
-                if (dish.popular) Pill('POPULAR', background: K.brown100, foreground: K.brown850, size: 9.5, shadow: false),
-                if (dish.isPreorder) Pill('PRE-ORDER', background: K.brown50, foreground: K.brown700, size: 9.5, shadow: false),
-              ]),
-              const SizedBox(height: 6),
-              Text(dish.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(14, weight: w900, height: 1.25)),
-              if (dish.description.isNotEmpty) Text(dish.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: kText(11, color: K.stone500, height: 1.4)),
-              const Spacer(),
-              Text(formatRwf(dish.price), style: kText(14, weight: w900, color: K.brown750)),
-            ]),
+            ),
           ),
         ),
       );
@@ -396,9 +455,8 @@ class SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: Colors.white.withValues(alpha: 0.95),
+        color: K.photoChip,
         shape: const CircleBorder(),
-        elevation: 2,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: () {
@@ -407,7 +465,7 @@ class SaveButton extends StatelessWidget {
           },
           child: Padding(
             padding: const EdgeInsets.all(7),
-            child: Icon(saved ? Icons.favorite : Icons.favorite_border, size: 17, color: K.rose600, semanticLabel: saved ? 'Remove from wishlist' : 'Save to wishlist'),
+            child: Icon(saved ? Icons.favorite_rounded : Icons.favorite_border_rounded, size: 17, color: saved ? K.rose600 : K.stone700, semanticLabel: saved ? 'Remove from wishlist' : 'Save to wishlist'),
           ),
         ),
       );
@@ -465,7 +523,7 @@ class _DishSheetState extends State<_DishSheet> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (dish.category.isNotEmpty) Text(dish.category.toUpperCase(), style: kText(11, weight: FontWeight.w700, color: K.brown500, spacing: 0.6)),
-            Text(dish.name, style: kText(22, weight: w900)),
+            Text(dish.name, style: kDisplay(28)),
             const SizedBox(height: 6),
             Row(children: [
               Text(formatRwf(dish.price), style: kText(18, weight: w900, color: K.brown750)),

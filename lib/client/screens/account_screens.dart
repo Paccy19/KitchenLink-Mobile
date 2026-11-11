@@ -211,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ]),
             const SizedBox(height: 10),
-            Text(session.name, style: kText(20, weight: w900)),
+            Text(session.name, style: kDisplay(26)),
             Text([session.phone, session.email].where((s) => s.isNotEmpty).join(' · '), style: kText(12, color: K.stone500)),
             const SizedBox(height: 6),
             StatusPill('Verified Customer Account', background: K.tone(const Color(0xFFD1FAE5)), foreground: K.tone(const Color(0xFF065F46))),

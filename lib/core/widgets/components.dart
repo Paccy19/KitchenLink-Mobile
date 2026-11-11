@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/motion.dart';
 import '../network/api_exception.dart';
 import '../theme/app_theme.dart';
 import '../utils/media_url.dart';
@@ -25,15 +26,16 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final radius = BorderRadius.circular(AppTheme.radius);
-    return Material(
+    final card = Material(
       color: color ?? scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: radius,
-        side: BorderSide(color: borderColor ?? scheme.outlineVariant),
+        side: BorderSide(color: borderColor ?? scheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
     );
+    return onTap == null ? card : PressScale(pressedScale: 0.98, child: card);
   }
 }
 
@@ -151,7 +153,7 @@ class StatCard extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Text(value, style: theme.textTheme.headlineSmall),
+          child: Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()], letterSpacing: -0.6)),
         ),
         if (caption != null) ...[
           const SizedBox(height: 2),

@@ -6,31 +6,31 @@ import 'package:url_launcher/url_launcher.dart';
 import '../api/api_client.dart';
 import '../config.dart';
 import '../state/admin_session.dart';
+import '../design/tokens.dart';
 import '../ui/validation.dart';
 import '../root/role_switcher.dart';
 
-// The website's admin sign-in colours (Tailwind stone / gray / red).
-const _page = Color(0xFFF6F5F2);
-const _gray900 = Color(0xFF1C1917);
-const _slate = Color(0xFF1C1917);
-const _stone100 = Color(0xFFF5F5F4);
-const _stone200 = Color(0xFFE7E5E1);
-const _stone400 = Color(0xFFA8A29E);
-const _stone500 = Color(0xFF78716C);
-const _stone600 = Color(0xFF57534E);
-const _red50 = Color(0xFFFEF2F2);
-const _red200 = Color(0xFFFECACA);
-const _red700 = Color(0xFFB91C1C);
-const _gradient = LinearGradient(colors: [Color(0xFF1C1917), Color(0xFF292524)]);
+// The sign-in colours: the shared design tokens for the current mode, read
+// once per build (see [_LoginScreenState.build]).
+KLColors _c = KLColors.light;
+Color get _page => _c.canvas;
+Color get _gray900 => _c.ink;
+Color get _slate => _c.isDark ? const Color(0xFFDDAE7E) : const Color(0xFF2B1609);
+Color get _stone100 => _c.fill;
+Color get _stone200 => _c.line;
+Color get _stone400 => _c.inkTertiary;
+Color get _stone500 => _c.inkTertiary;
+Color get _stone600 => _c.inkSecondary;
+Color get _red50 => _c.dangerSoft;
+Color get _red200 => _c.danger.withValues(alpha: 0.3);
+Color get _red700 => _c.danger;
+LinearGradient get _gradient => LinearGradient(colors: [_slate, _slate]);
 const _diagonal = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFFC2410C), Color(0xFF9A3412)],
+  colors: [Color(0xFF542813), Color(0xFF2B1609)],
 );
-const _shadowMd = [
-  BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 4), spreadRadius: -1),
-  BoxShadow(color: Color(0x1A000000), blurRadius: 4, offset: Offset(0, 2), spreadRadius: -2),
-];
+const _shadowMd = [BoxShadow(color: Color(0x142B1206), blurRadius: 24, offset: Offset(0, 8))];
 
 /// Admin sign-in, laid out like the website's /admin-login page: email +
 /// password, then the SMS code when two-step sign-in is on.
@@ -101,13 +101,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _c = KLColors.of(Theme.of(context).brightness);
     final session = context.watch<AdminSession>();
     final shownError = error.isNotEmpty ? error : session.error;
     final wide = MediaQuery.of(context).size.width >= 640;
 
     return Theme(
       // The page keeps the website's light look.
-      data: Theme.of(context).copyWith(brightness: Brightness.light, textSelectionTheme: const TextSelectionThemeData(cursorColor: _slate)),
+      data: Theme.of(context).copyWith(brightness: Brightness.light, textSelectionTheme: TextSelectionThemeData(cursorColor: _slate)),
       child: Scaffold(
         backgroundColor: _page,
         body: SafeArea(
@@ -127,13 +128,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Admin Sign In',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, height: 1.33, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: _gray900),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Secure access to the KitchenLink admin panel.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14, height: 1.43, color: _stone500),
@@ -153,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: InkWell(
                       onTap: () => launchUrl(Uri.parse(kMarketplaceUrl), mode: LaunchMode.externalApplication),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(Icons.storefront_outlined, size: 14, color: _stone500),
                         SizedBox(width: 6),
                         Text('Back to marketplace', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _stone500)),
@@ -207,14 +208,14 @@ class _LoginScreenState extends State<LoginScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(color: _stone100, borderRadius: BorderRadius.circular(12)),
-          child: const Icon(Icons.smartphone, size: 20, color: _slate),
+          child: Icon(Icons.smartphone, size: 20, color: _slate),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text.rich(
-            TextSpan(style: const TextStyle(fontSize: 14, height: 1.43, color: _stone600), children: [
+            TextSpan(style: TextStyle(fontSize: 14, height: 1.43, color: _stone600), children: [
               const TextSpan(text: 'We sent a 6-digit code to '),
-              TextSpan(text: challenge!.sentTo, style: const TextStyle(fontWeight: FontWeight.w700, color: _gray900)),
+              TextSpan(text: challenge!.sentTo, style: TextStyle(fontWeight: FontWeight.w700, color: _gray900)),
               const TextSpan(text: '. Enter it to finish signing in.'),
             ]),
           ),
@@ -235,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (challenge!.devOtp.isNotEmpty)
         Padding(
           padding: const EdgeInsets.only(top: 6),
-          child: Text('Development code: ${challenge!.devOtp}', style: const TextStyle(fontSize: 11, color: _stone400)),
+          child: Text('Development code: ${challenge!.devOtp}', style: TextStyle(fontSize: 11, color: _stone400)),
         ),
       if (shownError.isNotEmpty) ...[const SizedBox(height: 16), _Error(shownError)],
       const SizedBox(height: 16),
@@ -247,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
             challenge = null;
             error = '';
           }),
-          child: const Text('Use a different account', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _stone500)),
+          child: Text('Use a different account', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _stone500)),
         ),
       ),
     ]);
@@ -262,7 +263,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _stone500)),
+        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _stone500)),
       );
 }
 
@@ -299,7 +300,7 @@ class _Input extends StatelessWidget {
   Widget build(BuildContext context) {
     OutlineInputBorder border(Color color, [double width = 1]) =>
         OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: color, width: width));
-    final codeStyle = center ? const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 7.2, color: _gray900) : null;
+    final codeStyle = center ? TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 7.2, color: _gray900) : null;
     return TextField(
       controller: controller,
       obscureText: obscure,
@@ -311,7 +312,7 @@ class _Input extends StatelessWidget {
       inputFormatters: inputFormatters,
       onSubmitted: onSubmitted,
       textAlign: center ? TextAlign.center : TextAlign.start,
-      style: codeStyle ?? const TextStyle(fontSize: 14, color: _gray900),
+      style: codeStyle ?? TextStyle(fontSize: 14, color: _gray900),
       decoration: InputDecoration(
         isDense: true,
         filled: true,
@@ -338,7 +339,7 @@ class _Error extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(color: _red50, border: Border.all(color: _red200), borderRadius: BorderRadius.circular(12)),
-        child: Text(text, style: const TextStyle(fontSize: 12, height: 1.33, color: _red700)),
+        child: Text(text, style: TextStyle(fontSize: 12, height: 1.33, color: _red700)),
       );
 }
 

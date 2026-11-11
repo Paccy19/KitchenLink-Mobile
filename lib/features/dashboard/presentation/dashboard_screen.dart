@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../design/tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -99,7 +101,7 @@ class _Header extends StatelessWidget {
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(_greeting, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge),
+          Text(vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: KLType.display(26, theme.colorScheme.onSurface)),
           const SizedBox(height: 4),
           Wrap(spacing: 6, children: [
             StatusChip(label: vendor.verificationStatus.label, tone: tone, icon: icon, dense: true),
@@ -202,7 +204,7 @@ class _StatsSection extends ConsumerWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          mainAxisExtent: 140 * MediaQuery.textScalerOf(context).scale(14).clamp(14, 28) / 14,
+          mainAxisExtent: 136 * MediaQuery.textScalerOf(context).scale(14).clamp(14, 28) / 14,
         ),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),

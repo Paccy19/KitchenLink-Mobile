@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../design/tokens.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -66,7 +68,7 @@ class PageHeader extends StatelessWidget {
     // `sm:text-2xl` / `sm:text-sm` from 640px.
     final sm = isSm(context);
     final heading = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text(title, style: TextStyle(fontSize: sm ? 30 : 26, height: 1.2, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: p.text)),
+      Text(title, style: KLType.display(sm ? 34 : 30, p.text)),
       if (description != null) ...[
         const SizedBox(height: 4),
         Text(description!, style: TextStyle(fontSize: sm ? 15 : 13.5, height: 1.4, color: p.muted)),

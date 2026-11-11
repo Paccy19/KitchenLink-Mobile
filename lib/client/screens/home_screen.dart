@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 
@@ -91,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _tab = 'dishes';
   bool _primerShown = false;
   String _locationKey = '';
+  bool _scrolled = false;
 
   void _changed() {
     if (mounted) setState(() {});
@@ -104,6 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _recent = context.read<RecentSearches>();
     _location.addListener(_onLocation);
     if (_location.restored) _onLocation();
+    _scroll.addListener(() {
+      final scrolled = _scroll.hasClients && _scroll.offset > 4;
+      if (scrolled != _scrolled) setState(() => _scrolled = scrolled);
+    });
   }
 
   @override
@@ -230,47 +237,75 @@ class _HomeScreenState extends State<HomeScreen> {
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(session.name, style: kText(18, weight: w900, color: K.gray900)),
-              if (session.phone.isNotEmpty) Text(session.phone, style: kText(12, color: K.stone500)),
-              const SizedBox(height: 12),
-              // The website's account menu.
-              for (final (icon, label, open) in [
-                (Icons.person_outline, 'My profile', MarketNav.profile),
-                (Icons.receipt_long_outlined, 'Order history', MarketNav.orders),
-                (Icons.delivery_dining_outlined, 'Track order', MarketNav.track),
-                (Icons.chat_bubble_outline, 'Messages', MarketNav.messages),
-                (Icons.favorite_border, 'Saved dishes', MarketNav.wishlist),
-                (Icons.support_agent, 'Help & Support', (BuildContext c) => MarketNav.support(c)),
-              ])
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(icon, color: K.brown700),
-                  title: Text(label, style: kText(14, weight: FontWeight.w700)),
-                  trailing: Icon(Icons.chevron_right, color: K.stone400),
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    open(context);
-                  },
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: K.brown100, shape: BoxShape.circle),
+                    child: Text(session.firstName.isEmpty ? '?' : session.firstName[0].toUpperCase(), style: kDisplay(26, color: K.brown700)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(session.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: kDisplay(26)),
+                        if (session.phone.isNotEmpty) Text(session.phone, style: kText(13, color: K.stone500)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // The website's account menu, as one grouped list.
+              Container(
+                decoration: BoxDecoration(color: K.dark ? K.page : K.stone100.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16)),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (final (i, (icon, label, open)) in [
+                      (Icons.person_outline_rounded, 'My profile', MarketNav.profile),
+                      (Icons.receipt_long_outlined, 'Order history', MarketNav.orders),
+                      (Icons.delivery_dining_outlined, 'Track order', MarketNav.track),
+                      (Icons.chat_bubble_outline_rounded, 'Messages', MarketNav.messages),
+                      (Icons.favorite_border_rounded, 'Saved dishes', MarketNav.wishlist),
+                      (Icons.support_agent_rounded, 'Help & Support', (BuildContext c) => MarketNav.support(c)),
+                    ].indexed) ...[
+                      if (i > 0) Divider(height: 0.6, thickness: 0.6, indent: 52, color: K.stone200),
+                      ListTile(
+                        dense: true,
+                        minTileHeight: 50,
+                        leading: Icon(icon, color: K.brown600, size: 22),
+                        title: Text(label, style: kText(15, weight: FontWeight.w600)),
+                        trailing: Icon(Icons.chevron_right_rounded, color: K.stone400),
+                        onTap: () {
+                          Navigator.of(sheetContext).pop();
+                          open(context);
+                        },
+                      ),
+                    ],
+                  ],
                 ),
+              ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  Navigator.of(sheetContext).pop();
-                  await session.logout();
-                },
-                icon: const Icon(Icons.logout, size: 16),
-                label: const Text('Sign out'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: K.brown700,
-                  side: BorderSide(color: K.brown200),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              Container(
+                decoration: BoxDecoration(color: K.dark ? K.page : K.stone100.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16)),
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  minTileHeight: 50,
+                  leading: Icon(Icons.logout_rounded, color: K.rose600, size: 22),
+                  title: Text('Sign out', style: kText(15, weight: FontWeight.w700, color: K.rose600)),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await session.logout();
+                  },
                 ),
               ),
             ],
@@ -306,49 +341,66 @@ class _HomeScreenState extends State<HomeScreen> {
     final pad = pagePadding(width);
     final visiting = RoleSwitcher.maybeOf(context)?.returnTo != null;
     final signedIn = customerSession.isSignedIn;
-    return Scaffold(
-      backgroundColor: K.page,
-      // The list scrolls on under the raised basket button.
-      extendBody: true,
-      floatingActionButton: visiting ? const ReturnToRoleButton() : null,
-      bottomNavigationBar: MarketBottomBar(
-        cartCount: context.watch<Cart>().itemCount,
-        onHome: _toTop,
-        onKitchens: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
-        onCart: () => MarketNav.cart(context),
-        onSaved: () => MarketNav.wishlist(context),
-        onAccount: _signIn,
-        accountLabel: signedIn ? customerSession.firstName : 'Sign In',
-      ),
-      body: Column(
-        children: [
-          HomeTopBar(
-            location: _location,
-            onLocation: () => showLocationPicker(context, _location, onGpsUnavailable: _gpsUnavailable),
-            onTheme: _darkMode,
-            onMap: () => MarketNav.map(context),
-            unreadNotifications: signedIn ? context.watch<Notifications>().unread : null,
-            onNotifications: () => showNotificationsSheet(context),
-          ),
-          Expanded(
-            child: RefreshIndicator(
+    final top = MediaQuery.paddingOf(context).top;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: K.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: K.page,
+        // The list scrolls on under the frosted bars.
+        extendBody: true,
+        floatingActionButton: visiting ? const ReturnToRoleButton() : null,
+        bottomNavigationBar: MarketBottomBar(
+          cartCount: context.watch<Cart>().itemCount,
+          onHome: _toTop,
+          onKitchens: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
+          onCart: () => MarketNav.cart(context),
+          onSaved: () => MarketNav.wishlist(context),
+          onAccount: _signIn,
+          accountLabel: signedIn ? customerSession.firstName : 'Sign In',
+        ),
+        body: Stack(
+          children: [
+            RefreshIndicator(
               color: K.brown700,
+              backgroundColor: K.surface,
+              edgeOffset: top + homeTopBarHeight,
               onRefresh: _refresh,
               child: ListView(
                 controller: _scroll,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom),
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                padding: EdgeInsets.only(top: top + homeTopBarHeight, bottom: 110 + MediaQuery.paddingOf(context).bottom),
                 children: [
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1280),
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(pad, 6, pad, 40),
+                        padding: EdgeInsets.fromLTRB(pad, 8, pad, 24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            MarketSearchBar(controller: _search, onChanged: _onQuery, recent: _recent),
-                            const SizedBox(height: 12),
+                            if (_query.isEmpty) ...[
+                              HomeGreeting(firstName: signedIn ? customerSession.firstName : null),
+                              const SizedBox(height: 18),
+                            ],
+                            Row(
+                              children: [
+                                Expanded(child: MarketSearchBar(controller: _search, onChanged: _onQuery, recent: _recent)),
+                                const SizedBox(width: 10),
+                                Tooltip(
+                                  message: 'Nearby Map',
+                                  child: Material(
+                                    color: K.strong,
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      onTap: () => MarketNav.map(context),
+                                      child: SizedBox(width: 50, height: 50, child: Icon(Icons.map_outlined, size: 22, color: K.onStrong)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
                             if (_location.isUsingFallback && !_location.primerOpen && _query.isEmpty) _fallbackNotice(),
                             if (_query.isNotEmpty) _searchResults() else _feedBody(width),
                           ],
@@ -359,14 +411,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: HomeTopBar(
+                location: _location,
+                scrolled: _scrolled,
+                onLocation: () => showLocationPicker(context, _location, onGpsUnavailable: _gpsUnavailable),
+                onTheme: _darkMode,
+                unreadNotifications: signedIn ? context.watch<Notifications>().unread : null,
+                onNotifications: () => showNotificationsSheet(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _toTop() {
-    if (_scroll.hasClients) _scroll.animateTo(0, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
+    if (_scroll.hasClients) _scroll.animateTo(0, duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
   }
 
   Widget _fallbackNotice() => Padding(
@@ -393,42 +458,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// The swipeable banner: Tomorrow's Specials, Big Event, the next offer day
   /// and the map (the reference's "Happy Weekend · 25% OFF" banner).
-  List<PromoSlide> _promos(List<SpecialEntry> specials, List<OfferDay> offers) => [
-        if (specials.isNotEmpty)
-          PromoSlide(
-            tag: "Tomorrow's Specials",
-            title: "Pre-order tomorrow's dishes",
-            text: '${specials.length} kitchen${specials.length == 1 ? '' : 's'} cooking something special',
-            action: 'See specials',
-            emoji: '🍲',
-            onTap: () => MarketNav.specials(context),
-          ),
+  List<PromoSlide> _promos(List<SpecialEntry> specials, List<OfferDay> offers) {
+    String? photo(Vendor v) => _api.media(v.bannerUrl.isNotEmpty ? v.bannerUrl : v.avatarUrl);
+    return [
+      if (specials.isNotEmpty)
         PromoSlide(
-          tag: 'Big Event',
-          title: 'Feeding 50+ guests?',
-          text: 'Weddings, parties and meetings, cooked by local kitchens',
-          action: 'Plan an event',
-          emoji: '🎉',
-          onTap: () => MarketNav.bigEvent(context),
+          tag: "Tomorrow's Specials",
+          title: "Pre-order tomorrow's dishes",
+          text: '${specials.length} kitchen${specials.length == 1 ? '' : 's'} cooking something special',
+          action: 'See specials',
+          icon: Icons.soup_kitchen_outlined,
+          imageUrl: photo(specials.first.vendor),
+          onTap: () => MarketNav.specials(context),
         ),
-        if (offers.isNotEmpty)
-          PromoSlide(
-            tag: 'Offer day',
-            title: offers.first.title,
-            text: offers.first.vendor.name,
-            action: 'See offer',
-            emoji: '🎁',
-            onTap: () => MarketNav.kitchen(context, offers.first.vendor.id),
-          ),
-        PromoSlide(
-          tag: 'Nearby Map',
-          title: 'Kitchens around you',
-          text: 'See every open kitchen on the map',
-          action: 'Open map',
-          emoji: '🗺️',
-          onTap: () => MarketNav.map(context),
-        ),
-      ];
+      PromoSlide(
+        tag: 'Big Event',
+        title: 'Feeding 50+ guests?',
+        text: 'Weddings, parties and meetings, cooked by local kitchens',
+        action: 'Plan an event',
+        icon: Icons.celebration_outlined,
+        onTap: () => MarketNav.bigEvent(context),
+      ),
+      PromoSlide(
+        tag: 'Nearby Map',
+        title: 'Kitchens around you',
+        text: 'See every open kitchen on the map',
+        action: 'Open map',
+        icon: Icons.map_outlined,
+        onTap: () => MarketNav.map(context),
+      ),
+    ];
+  }
 
   Widget _feedBody(double width) {
     final feed = _feed.data;
@@ -449,13 +509,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final typeLabel = _vendorTypes.isNotEmpty;
     final orders = context.watch<Orders>();
     final lastOrder = context.watch<CustomerSession>().isSignedIn ? orders.orders.firstOrNull : null;
-    const gap = 28.0;
+    const gap = 34.0;
 
+    final pad = pagePadding(width);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PromoCarousel(slides: _promos(specials, offers)),
-        const SizedBox(height: 22),
+        const SizedBox(height: gap),
 
         CategoryBar(
           categories: categories,
@@ -463,13 +524,13 @@ class _HomeScreenState extends State<HomeScreen> {
           media: _api.media,
           onSelect: (category) => MarketNav.kitchens(context, categoryId: category?.id, categoryName: category?.name, vendorTypes: _vendorTypes),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         KitchenTypeFilter(value: _vendorTypes, onChanged: _setTypes),
 
         // The latest order, with "Order again".
         if (lastOrder != null) ...[
           const SizedBox(height: gap),
-          SectionHeader(title: 'Previous Order', linkLabel: 'Order history', onLink: () => MarketNav.orders(context)),
+          SectionHeader(title: 'Your last order', linkLabel: 'Order history', onLink: () => MarketNav.orders(context)),
           PreviousOrderCard(
             order: lastOrder,
             media: _api.media,
@@ -478,11 +539,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
 
-        // Popular dishes: two to a row, added straight to the basket.
+        // Popular dishes, added straight to the basket.
         const SizedBox(height: gap),
-        SectionHeader(title: 'Popular Dishes Near You', linkLabel: 'Browse menus', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
+        SectionHeader(title: 'Popular picks near you', linkLabel: 'Browse menus', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
         if (dishes.isEmpty && _feed.loading)
-          _columns(width, [for (var i = 0; i < 4; i++) const SkeletonBox(height: 250, radius: 18)])
+          _hScroll(const [DishCardSkeleton(), DishCardSkeleton(), DishCardSkeleton()], pad)
         else if (dishes.isEmpty)
           EmptyCard(
             icon: Icons.restaurant_menu,
@@ -491,12 +552,20 @@ class _HomeScreenState extends State<HomeScreen> {
             actionLabel: 'Browse kitchens',
             onAction: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
           )
+        else if (width >= smWidth)
+          _columns(width, [for (final d in dishes) DishGridCard(dish: d, media: _api.media, onTap: () => _openDish(d))])
         else
-          _columns(width, [for (final d in dishes) DishGridCard(dish: d, media: _api.media, onTap: () => _openDish(d))]),
+          _hScroll([for (final d in dishes) DishGridCard(dish: d, width: 158, media: _api.media, onTap: () => _openDish(d))], pad),
+
+        // The next offer day, as a banner.
+        if (offers.isNotEmpty) ...[
+          const SizedBox(height: gap),
+          OfferBanner(offer: offers.first, media: _api.media, onTap: () => MarketNav.kitchen(context, offers.first.vendor.id)),
+        ],
 
         // Featured / nearby kitchens.
         const SizedBox(height: gap),
-        SectionHeader(title: 'Top Deals Near You', linkLabel: 'See all kitchens', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
+        SectionHeader(title: 'Top kitchens near you', linkLabel: 'See all kitchens', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
         if (_feed.error != null)
           ErrorCard(onRetry: _loadFeed, retrying: _feed.loading)
         else if (featured.isEmpty && !_feed.loading)
@@ -513,33 +582,33 @@ class _HomeScreenState extends State<HomeScreen> {
           _hScroll([
             for (final v in featured) VendorCard(vendor: v, tile: true, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
             if (_feed.loading && featured.isEmpty) ...const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()],
-          ]),
+          ], pad),
 
-        // Tomorrow's specials and offer days.
-        if (specials.isNotEmpty || offers.isNotEmpty) ...[
+        // Tomorrow's specials and the other offer days.
+        if (specials.isNotEmpty || offers.length > 1) ...[
           const SizedBox(height: gap),
-          SectionHeader(title: "Tomorrow's Specials", linkLabel: 'See all specials', onLink: () => MarketNav.specials(context)),
+          SectionHeader(title: "Tomorrow's specials", subtitle: 'Order today, delivered tomorrow', linkLabel: 'See all specials', onLink: () => MarketNav.specials(context)),
           _hScroll([
             for (final s in specials) SpecialCard(entry: s, media: _api.media, onTap: () => MarketNav.kitchen(context, s.vendor.id), onPreorder: () => preorderSpecial(context, s)),
-            for (final o in offers) OfferDayCard(offer: o, media: _api.media, onTap: () => MarketNav.kitchen(context, o.vendor.id)),
-          ]),
+            for (final o in offers.skip(1)) OfferDayCard(offer: o, media: _api.media, onTap: () => MarketNav.kitchen(context, o.vendor.id)),
+          ], pad),
         ],
 
         // All kitchens.
         const SizedBox(height: gap),
         SectionHeader(
-          title: 'All Kitchens',
+          title: 'All kitchens',
           linkLabel: (_allVendors.data?.total ?? 0) > 0 ? 'See all ${_allVendors.data!.total}' : 'See all',
           onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
         ),
         if (_allVendors.pending)
-          _hScroll(const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()])
+          _hScroll(const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()], pad)
         else if (_allVendors.error != null)
           ErrorCard(onRetry: () => _allVendors.run(() => _api.allVendors(_location, _vendorTypes), _changed), retrying: _allVendors.loading)
         else
           _grid([
             for (final v in _allVendors.data!.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
-          ]),
+          ], gap: 16),
       ],
     );
   }
@@ -568,17 +637,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// `flex gap-4 overflow-x-auto pb-3`: a sideways row of cards (unclipped, so
-  /// cards slide out to the screen edges like the website's `-mx-4 px-4`).
-  Widget _hScroll(List<Widget> children) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    clipBehavior: Clip.none,
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(width: 16), children[i]],
-      ],
+  /// A sideways row of cards that runs to the screen edges (the page
+  /// padding is undone, then put back inside the row).
+  Widget _hScroll(List<Widget> children, [double bleed = 0]) => OverflowBox(
+    alignment: Alignment.centerLeft,
+    minWidth: MediaQuery.sizeOf(context).width,
+    maxWidth: MediaQuery.sizeOf(context).width,
+    fit: OverflowBoxFit.deferToChild,
+    child: Transform.translate(
+      offset: Offset(-bleed, 0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(bleed, 0, bleed, 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(width: 14), children[i]],
+          ],
+        ),
+      ),
     ),
   );
 
@@ -714,13 +793,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
         const SizedBox(height: 20),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(color: K.dark ? K.surface : K.stone100, borderRadius: BorderRadius.circular(13)),
           child: Row(
             children: [
-              _tabButton('Dishes', data.dishes.length, dishesTab, () => setState(() => _tab = 'dishes')),
-              const SizedBox(width: 8),
-              _tabButton('Kitchens', data.vendors.length, !dishesTab, () => setState(() => _tab = 'kitchens')),
+              Expanded(child: _tabButton('Dishes', data.dishes.length, dishesTab, () => setState(() => _tab = 'dishes'))),
+              Expanded(child: _tabButton('Kitchens', data.vendors.length, !dishesTab, () => setState(() => _tab = 'kitchens'))),
             ],
           ),
         ),
@@ -751,45 +830,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _tabButton(String label, int count, bool active, VoidCallback onTap) {
-    final radius = BorderRadius.circular(16);
-    return Container(
+  Widget _tabButton(String label, int count, bool active, VoidCallback onTap) => Semantics(
+    button: true,
+    selected: active,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        gradient: active ? K.buttonGradient : null,
-        color: active ? null : K.surface,
-        borderRadius: radius,
-        border: active ? null : Border.all(color: K.stone200),
-        boxShadow: active ? K.brownShadow : null,
+        color: active ? K.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: active && !K.dark ? K.shadowSm : null,
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: kText(14, weight: FontWeight.w700, color: active ? Colors.white : K.stone600),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: active ? Colors.white.withValues(alpha: 0.2) : K.stone100, borderRadius: BorderRadius.circular(99)),
-                  child: Text(
-                    '$count',
-                    style: kText(12, weight: w900, color: active ? Colors.white : K.stone500),
-                  ),
-                ),
-              ],
-            ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(14, weight: FontWeight.w700, color: active ? K.gray900 : K.stone500))),
+              const SizedBox(width: 6),
+              Text('$count', style: kText(13, weight: w900, color: active ? K.brown600 : K.stone400)),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

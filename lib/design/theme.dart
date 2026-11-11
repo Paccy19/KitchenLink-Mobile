@@ -1,0 +1,270 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+import 'tokens.dart';
+
+/// The one Material theme every role starts from, built from [KLColors].
+/// Material widgets drawn with the defaults (bars, fields, buttons, sheets,
+/// dialogs, tabs, switches) all get the same shapes, type and colours.
+ThemeData klTheme(KLColors c, {List<ThemeExtension<dynamic>> extensions = const []}) {
+  final scheme = ColorScheme(
+    brightness: c.brightness,
+    primary: c.primary,
+    onPrimary: c.onPrimary,
+    primaryContainer: c.accentSoft,
+    onPrimaryContainer: c.ink,
+    secondary: c.accent,
+    onSecondary: c.onPrimary,
+    secondaryContainer: c.grouped,
+    onSecondaryContainer: c.ink,
+    tertiary: c.success,
+    onTertiary: c.surface,
+    error: c.danger,
+    onError: c.isDark ? c.canvas : Colors.white,
+    errorContainer: c.dangerSoft,
+    onErrorContainer: c.danger,
+    surface: c.surface,
+    onSurface: c.ink,
+    onSurfaceVariant: c.inkSecondary,
+    outline: c.inkTertiary,
+    outlineVariant: c.line,
+    surfaceContainerLowest: c.surface,
+    surfaceContainerLow: c.canvas,
+    surfaceContainer: c.grouped,
+    surfaceContainerHigh: c.fill,
+    surfaceContainerHighest: c.fill,
+    inverseSurface: c.isDark ? c.ink : c.espresso,
+    onInverseSurface: c.isDark ? c.canvas : c.onEspresso,
+    inversePrimary: c.isDark ? const Color(0xFF542813) : const Color(0xFFDDAE7E),
+    shadow: Colors.black,
+    scrim: Colors.black,
+    surfaceTint: Colors.transparent,
+  );
+
+  final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: c.brightness, fontFamily: KLFont.sans, scaffoldBackgroundColor: c.canvas);
+  final text = base.textTheme.apply(bodyColor: c.ink, displayColor: c.ink);
+  OutlineInputBorder field([Color? color, double width = 1.5]) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KLRadius.md),
+        borderSide: color == null ? BorderSide.none : BorderSide(color: color, width: width),
+      );
+  final buttonShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(KLRadius.md));
+  const buttonText = TextStyle(fontFamily: KLFont.sans, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.1);
+
+  return base.copyWith(
+    extensions: extensions,
+    canvasColor: c.surface,
+    // A thin chevron for "back", like iOS, in every role.
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (context) => const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+      closeButtonIconBuilder: (context) => const Icon(Icons.close_rounded, size: 22),
+    ),
+    splashFactory: InkSparkle.constantTurbulenceSeedSplashFactory,
+    // iOS-style pages on every phone: slide in from the right, swipe back.
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+    }),
+    textTheme: text.copyWith(
+      displaySmall: text.displaySmall?.copyWith(fontFamily: KLFont.display, letterSpacing: -0.6),
+      headlineMedium: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.6),
+      headlineSmall: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+      titleLarge: text.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.4),
+      titleMedium: text.titleMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      titleSmall: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      bodyLarge: text.bodyLarge?.copyWith(height: 1.45),
+      bodyMedium: text.bodyMedium?.copyWith(height: 1.45, color: c.ink),
+      bodySmall: text.bodySmall?.copyWith(color: c.inkSecondary),
+      labelLarge: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+    ),
+    iconTheme: IconThemeData(color: c.inkSecondary, size: 22),
+    appBarTheme: AppBarTheme(
+      backgroundColor: c.canvas,
+      foregroundColor: c.ink,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+      centerTitle: true,
+      titleTextStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: c.ink),
+    ),
+    cardTheme: CardThemeData(
+      color: c.surface,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KLRadius.lg), side: BorderSide(color: c.line.withValues(alpha: c.isDark ? 1 : 0.7))),
+    ),
+    dividerTheme: DividerThemeData(color: c.line, space: 1, thickness: 0.6),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: c.primary,
+        foregroundColor: c.onPrimary,
+        disabledBackgroundColor: c.fill,
+        disabledForegroundColor: c.inkTertiary,
+        minimumSize: const Size(0, 50),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: buttonShape,
+        textStyle: buttonText,
+        elevation: 0,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: c.surface,
+        foregroundColor: c.primary,
+        minimumSize: const Size(0, 50),
+        shape: buttonShape,
+        textStyle: buttonText,
+        elevation: 0,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: c.ink,
+        backgroundColor: Colors.transparent,
+        minimumSize: const Size(0, 50),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        side: BorderSide(color: c.line, width: 1.2),
+        shape: buttonShape,
+        textStyle: buttonText,
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: c.primary, textStyle: buttonText.copyWith(fontSize: 14), shape: buttonShape),
+    ),
+    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(foregroundColor: c.ink, minimumSize: const Size(44, 44))),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: c.espresso,
+      foregroundColor: c.onEspresso,
+      elevation: 2,
+      highlightElevation: 4,
+      shape: const StadiumBorder(),
+      extendedTextStyle: buttonText.copyWith(fontSize: 14),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: c.fill,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      border: field(),
+      enabledBorder: field(),
+      disabledBorder: field(),
+      focusedBorder: field(c.primary),
+      errorBorder: field(c.danger, 1),
+      focusedErrorBorder: field(c.danger),
+      labelStyle: TextStyle(color: c.inkSecondary, fontWeight: FontWeight.w500),
+      floatingLabelStyle: TextStyle(color: c.primary, fontWeight: FontWeight.w600),
+      hintStyle: TextStyle(color: c.inkTertiary, fontWeight: FontWeight.w500),
+      helperStyle: TextStyle(color: c.inkTertiary, fontSize: 12),
+      prefixIconColor: c.inkTertiary,
+      suffixIconColor: c.inkTertiary,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: c.surface,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: c.accentSoft,
+      shadowColor: Colors.transparent,
+      elevation: 0,
+      height: 64,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontFamily: KLFont.sans,
+          fontSize: 11,
+          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
+          color: states.contains(WidgetState.selected) ? c.primary : c.inkTertiary,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(size: 24, color: states.contains(WidgetState.selected) ? c.primary : c.inkTertiary),
+      ),
+    ),
+    tabBarTheme: TabBarThemeData(
+      labelColor: c.ink,
+      unselectedLabelColor: c.inkTertiary,
+      indicatorColor: c.primary,
+      dividerColor: c.line,
+      labelStyle: const TextStyle(fontFamily: KLFont.sans, fontSize: 14, fontWeight: FontWeight.w800),
+      unselectedLabelStyle: const TextStyle(fontFamily: KLFont.sans, fontSize: 14, fontWeight: FontWeight.w600),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: c.surface,
+      selectedColor: c.primary,
+      disabledColor: c.fill,
+      side: BorderSide(color: c.line),
+      shape: const StadiumBorder(),
+      labelStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 13, fontWeight: FontWeight.w600, color: c.ink),
+      secondaryLabelStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 13, fontWeight: FontWeight.w700, color: c.onPrimary),
+      checkmarkColor: c.onPrimary,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        backgroundColor: c.fill,
+        selectedBackgroundColor: c.surface,
+        selectedForegroundColor: c.ink,
+        foregroundColor: c.inkSecondary,
+        side: BorderSide(color: c.fill, width: 2),
+        textStyle: const TextStyle(fontFamily: KLFont.sans, fontSize: 13, fontWeight: FontWeight.w700),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: c.isDark ? c.fill : c.espresso,
+      contentTextStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 14, fontWeight: FontWeight.w600, color: c.isDark ? c.ink : c.onEspresso),
+      actionTextColor: c.isDark ? c.primary : const Color(0xFFE8C39E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KLRadius.md)),
+      elevation: 0,
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: c.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titleTextStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: c.ink),
+      contentTextStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 14, height: 1.45, color: c.inkSecondary),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: c.surface,
+      modalBackgroundColor: c.surface,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      dragHandleColor: c.line,
+      dragHandleSize: const Size(36, 5),
+      modalBarrierColor: Colors.black.withValues(alpha: 0.36),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(KLRadius.xl))),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: c.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KLRadius.md)),
+    ),
+    menuTheme: MenuThemeData(style: MenuStyle(backgroundColor: WidgetStatePropertyAll(c.surface), surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent))),
+    drawerTheme: DrawerThemeData(backgroundColor: c.surface, surfaceTintColor: Colors.transparent),
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      iconColor: c.inkSecondary,
+      textColor: c.ink,
+      titleTextStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.15, color: c.ink),
+      subtitleTextStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 13, color: c.inkSecondary),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: const WidgetStatePropertyAll(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.success : c.line),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.primary : Colors.transparent),
+      checkColor: WidgetStatePropertyAll(c.onPrimary),
+      side: BorderSide(color: c.inkTertiary, width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+    ),
+    radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.primary : c.inkTertiary)),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: c.primary, linearTrackColor: c.fill, circularTrackColor: Colors.transparent),
+    textSelectionTheme: TextSelectionThemeData(cursorColor: c.primary, selectionColor: c.accent.withValues(alpha: 0.3), selectionHandleColor: c.primary),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(color: c.isDark ? c.fill : c.espresso, borderRadius: BorderRadius.circular(8)),
+      textStyle: TextStyle(fontFamily: KLFont.sans, fontSize: 12, color: c.isDark ? c.ink : c.onEspresso),
+    ),
+    badgeTheme: BadgeThemeData(backgroundColor: c.danger, textColor: Colors.white),
+    cupertinoOverrideTheme: CupertinoThemeData(primaryColor: c.primary, brightness: c.brightness),
+  );
+}

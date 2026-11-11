@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../design/motion.dart';
 import '../../ui/vendor_types.dart';
 import '../client_theme.dart';
 import '../location.dart';
@@ -12,7 +14,8 @@ import 'cards.dart';
 /// The website's SEARCH_SUGGESTIONS.
 const searchSuggestions = ['Isombe', 'Pizza', 'Burger', 'Chicken', 'Brochettes', 'Juice'];
 
-/// A section title with an optional "See all →" link.
+/// A section title with an optional "See all ›" link (its full label is
+/// the tooltip and what a screen reader says).
 class SectionHeader extends StatelessWidget {
   const SectionHeader({super.key, required this.title, this.subtitle, this.linkLabel, this.onLink});
 
@@ -23,26 +26,22 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.only(bottom: 14),
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: kText(MediaQuery.sizeOf(context).width >= 640 ? 20 : 18, weight: w900, spacing: -0.3)),
+              Semantics(header: true, child: Text(title, style: kText(MediaQuery.sizeOf(context).width >= 640 ? 22 : 20, weight: w900, spacing: -0.5, height: 1.15))),
               if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle!,
-                  style: kText(12, weight: FontWeight.w400, color: K.stone500),
-                ),
+                const SizedBox(height: 3),
+                Text(subtitle!, style: kText(13, color: K.stone500)),
               ],
             ],
           ),
         ),
-        // A plain "›" like an app list header; the label is its tooltip.
         if (linkLabel != null && onLink != null) ...[
           const SizedBox(width: 12),
           Tooltip(
@@ -51,12 +50,18 @@ class SectionHeader extends StatelessWidget {
               button: true,
               label: linkLabel,
               excludeSemantics: true,
-              child: InkResponse(
+              child: InkWell(
                 onTap: onLink,
-                radius: 20,
+                borderRadius: BorderRadius.circular(99),
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.chevron_right_rounded, size: 24, color: K.stone700),
+                  padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('See all', style: kText(13.5, weight: FontWeight.w700, color: K.brown600)),
+                      Icon(Icons.chevron_right_rounded, size: 20, color: K.brown600),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -158,10 +163,7 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: K.stone200),
-    );
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none);
     return LayoutBuilder(
       builder: (context, constraints) {
         return TapRegion(
@@ -183,50 +185,39 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
                   ),
                 ),
               ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: K.shadowSm),
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: _focus,
-                  onChanged: widget.onChanged,
-                  onSubmitted: _submit,
-                  textInputAction: TextInputAction.search,
-                  style: kText(16, weight: FontWeight.w400),
-                  decoration: InputDecoration(
-                    hintText: 'What are you craving? (Isombe, Pizza, Burger…)',
-                    hintStyle: kText(16, weight: FontWeight.w400, color: K.stone400),
-                    filled: true,
-                    fillColor: K.surface,
-                    isDense: false,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.only(left: 16, right: 10),
-                      child: Icon(Icons.search, size: 20, color: K.gray400),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(minWidth: 46),
-                    suffixIcon: widget.controller.text.isEmpty
-                        ? null
-                        : Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Material(
-                              color: K.stone100,
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () {
-                                  widget.controller.clear();
-                                  widget.onChanged('');
-                                  _focus.requestFocus();
-                                },
-                                child: SizedBox(width: 32, height: 32, child: Icon(Icons.close, size: 16, color: K.stone500)),
-                              ),
-                            ),
-                          ),
-                    suffixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 32),
-                    border: border,
-                    enabledBorder: border,
-                    focusedBorder: border.copyWith(borderSide: BorderSide(color: K.brown700, width: 1.5)),
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focus,
+                onChanged: widget.onChanged,
+                onSubmitted: _submit,
+                textInputAction: TextInputAction.search,
+                style: kText(16, weight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: 'Search dishes or kitchens',
+                  hintStyle: kText(16, weight: FontWeight.w500, color: K.stone400),
+                  filled: true,
+                  fillColor: K.dark ? K.surface : K.stone100,
+                  isDense: false,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 14, right: 8),
+                    child: Icon(Icons.search_rounded, size: 22, color: K.stone500),
                   ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 44),
+                  suffixIcon: widget.controller.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            widget.controller.clear();
+                            widget.onChanged('');
+                            _focus.requestFocus();
+                          },
+                          icon: Icon(Icons.cancel_rounded, size: 19, color: K.stone400),
+                        ),
+                  border: border,
+                  enabledBorder: border,
+                  focusedBorder: border.copyWith(borderSide: BorderSide(color: K.brown700, width: 1.5)),
                 ),
               ),
             ),
@@ -242,12 +233,12 @@ class _MarketSearchBarState extends State<MarketSearchBar> {
     return Material(
       color: K.surface,
       elevation: 0,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: K.stone100),
-          boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 25, offset: Offset(0, 20), spreadRadius: -5)],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: K.stone200.withValues(alpha: 0.6)),
+          boxShadow: K.shadowMd,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -362,16 +353,16 @@ class SuggestionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: K.brown50,
-    shape: StadiumBorder(side: BorderSide(color: K.brown200)),
+    color: K.brown100,
+    shape: const StadiumBorder(),
     child: InkWell(
       customBorder: const StadiumBorder(),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Text(
           label,
-          style: kText(12, weight: FontWeight.w700, color: K.brown850),
+          style: kText(13, weight: FontWeight.w700, color: K.brown850),
         ),
       ),
     ),
@@ -392,6 +383,25 @@ const _categoryIcons = <String, IconData>{
   'dinner': Icons.kebab_dining_outlined,
   'drinks': Icons.local_drink_outlined,
   'desserts': Icons.cake_outlined,
+  'dessert': Icons.cake_outlined,
+  'grill': Icons.outdoor_grill_outlined,
+  'bbq': Icons.outdoor_grill_outlined,
+  'pizza': Icons.local_pizza_outlined,
+  'burger': Icons.lunch_dining_outlined,
+  'burgers': Icons.lunch_dining_outlined,
+  'chicken': Icons.set_meal_outlined,
+  'seafood': Icons.set_meal_outlined,
+  'fish': Icons.set_meal_outlined,
+  'snacks': Icons.cookie_outlined,
+  'vegetarian': Icons.eco_outlined,
+  'vegan': Icons.eco_outlined,
+  'coffee': Icons.coffee_outlined,
+  'juice': Icons.local_drink_outlined,
+  'pastries': Icons.bakery_dining_outlined,
+  'rice': Icons.rice_bowl_outlined,
+  'asian': Icons.ramen_dining_outlined,
+  'indian': Icons.soup_kitchen_outlined,
+  'traditional': Icons.soup_kitchen_outlined,
 };
 
 IconData _categoryIcon(Category category) {
@@ -478,12 +488,12 @@ class _CategoryBarState extends State<CategoryBar> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (loading && categories.isEmpty)
-                for (var i = 0; i < 6; i++) ...[if (i > 0) const SizedBox(width: 10), const SkeletonBox(width: 84, height: 92, radius: 18)]
+                for (var i = 0; i < 6; i++) ...[if (i > 0) const SizedBox(width: 10), const SkeletonBox(width: 64, height: 64, radius: 32)]
               else ...[
-                _tile(label: 'All', color: K.fillBrown850, icon: const Icon(Icons.grid_view_rounded, size: 26, color: Colors.white), onTap: () => onSelect(null)),
-                for (final (i, category) in categories.indexed) ...[
-                  const SizedBox(width: 10),
-                  _tile(label: category.name, color: categoryTileColors[i % categoryTileColors.length], icon: _iconFor(category), onTap: () => onSelect(category)),
+                _tile(label: 'All', strong: true, icon: (c) => Icon(Icons.grid_view_rounded, size: 24, color: c), onTap: () => onSelect(null)),
+                for (final category in categories) ...[
+                  const SizedBox(width: 6),
+                  _tile(label: category.name, icon: (c) => _iconFor(category, c), onTap: () => onSelect(category)),
                 ],
               ],
             ],
@@ -493,64 +503,51 @@ class _CategoryBarState extends State<CategoryBar> {
     );
   }
 
-  Widget _iconFor(Category category) {
-    final fallback = Icon(_categoryIcon(category), size: 26, color: Colors.white);
+  Widget _iconFor(Category category, Color color) {
+    final fallback = Icon(_categoryIcon(category), size: 26, color: color);
     final url = _isImageUrl(category.iconUrl) ? media(category.iconUrl) : null;
     if (url == null) return fallback;
     return Image.network(url, width: 30, height: 30, fit: BoxFit.contain, errorBuilder: (_, _, _) => fallback);
   }
 
-  /// A solid coloured square with a white icon and its name (the reference's
-  /// category tiles), in the KitchenLink warm colours.
-  Widget _tile({required String label, required Color color, required Widget icon, required VoidCallback onTap}) {
-    final radius = BorderRadius.circular(18);
-    return Material(
-      color: color,
-      borderRadius: radius,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 84,
-          height: 92,
-          child: Stack(
-            children: [
-              // A soft light circle in the corner, for depth.
-              Positioned(right: -18, top: -18, child: Container(width: 56, height: 56, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.12)))),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-                child: Column(
-                  children: [
-                    SizedBox(height: 34, child: Center(child: icon)),
-                    const Spacer(),
-                    Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: kText(11, weight: FontWeight.w700, color: Colors.white, height: 1.15),
-                    ),
-                  ],
+  /// A round icon well with the name under it ("All" is the espresso one).
+  Widget _tile({required String label, required Widget Function(Color) icon, required VoidCallback onTap, bool strong = false}) {
+    final fg = strong ? K.onStrong : K.brown700;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: PressScale(
+        pressedScale: 0.94,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: SizedBox(
+            width: 72,
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: strong ? K.strong : K.surface,
+                    border: strong ? null : Border.all(color: K.stone200.withValues(alpha: 0.8)),
+                    boxShadow: strong || K.dark ? null : K.shadowSm,
+                  ),
+                  child: icon(fg),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: kText(12, weight: FontWeight.w700, color: K.stone700)),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
-/// Warm tile colours for the category row (the reference's coloured tiles,
-/// in KitchenLink's browns, caramels and olive). White text reads on each.
-const categoryTileColors = [
-  Color(0xFF6D391D),
-  Color(0xFFA0542A),
-  Color(0xFF5E6B32),
-  Color(0xFF8A5332),
-  Color(0xFF9A3B3B),
-  Color(0xFF7A5C1E),
-];
 
 /// The website's VendorTypeFilter: "All types" and one chip per kitchen type.
 class KitchenTypeFilter extends StatelessWidget {
@@ -580,34 +577,36 @@ class KitchenTypeFilter extends StatelessWidget {
   }
 
   Widget _chip(String label, IconData? icon, bool active, VoidCallback onTap) {
-    final radius = BorderRadius.circular(16);
-    final fg = active ? Colors.white : K.stone700;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: active ? K.buttonGradient : null,
-        color: active ? null : K.surface,
-        borderRadius: radius,
-        border: Border.all(color: active ? Colors.transparent : K.stone200),
-        boxShadow: active ? K.shadowMd : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: icon == null ? 14 : 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 6)],
-                Text(
-                  label,
-                  style: kText(12, weight: FontWeight.w700, color: fg),
-                ),
-                if (active && icon != null) ...[const SizedBox(width: 6), Icon(Icons.close, size: 12, color: fg)],
-              ],
+    final fg = active ? K.onStrong : K.stone700;
+    return Semantics(
+      button: true,
+      selected: active,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: active ? K.strong : (K.dark ? K.surface : K.stone100),
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(99),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: icon == null ? 16 : 14, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[Icon(icon, size: 15, color: fg), const SizedBox(width: 6)],
+                  Text(label, style: kText(13, weight: FontWeight.w700, color: fg)),
+                  if (active && icon != null) ...[const SizedBox(width: 6), Icon(Icons.close_rounded, size: 13, color: fg)],
+                ],
+              ),
             ),
           ),
         ),
