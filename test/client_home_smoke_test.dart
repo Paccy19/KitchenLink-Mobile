@@ -8,10 +8,6 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
 import 'package:kitchenlink_mobile/api/api_client.dart';
-import 'package:kitchenlink_mobile/client/customer_api.dart';
-import 'package:kitchenlink_mobile/client/customer_session.dart';
-import 'package:kitchenlink_mobile/client/location.dart';
-import 'package:kitchenlink_mobile/client/widgets/home_bars.dart';
 import 'package:kitchenlink_mobile/client/market_app.dart';
 
 Map<String, Object?> vendor(String id, String name) => {
@@ -79,12 +75,7 @@ void main() {
 
       await http.runWithClient(() async {
         await tester.pumpWidget(MultiProvider(
-          providers: [
-            Provider(create: (_) => CustomerApi(ApiClient(baseUrl: 'http://localhost:4000/api/v1'))),
-            ChangeNotifierProvider(create: (_) => CustomerSession(ApiClient(baseUrl: 'http://localhost:4000/api/v1'))),
-            ChangeNotifierProvider(create: (_) => ClientLocation()..restore()),
-            ChangeNotifierProvider(create: (_) => RecentSearches()..restore()),
-          ],
+          providers: marketProviders(ApiClient(baseUrl: 'http://localhost:4000/api/v1')),
           child: const KitchenLinkMarketApp(),
         ));
         await settle(tester);

@@ -38,7 +38,14 @@ class ServerAddressStore {
     }
   }
 
-  Future<void> write(String url) => _storage.write(key: _key, value: url);
+  Future<void> write(String url) async {
+    try {
+      await _storage.write(key: _key, value: url);
+    } catch (_) {
+      // Not remembered on this phone: the address is still used until the app
+      // closes. Throwing here would leave the address sheet stuck "Testing…".
+    }
+  }
 
   Future<void> clear() async {
     try {

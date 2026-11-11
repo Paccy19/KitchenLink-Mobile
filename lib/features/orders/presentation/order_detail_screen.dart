@@ -87,7 +87,7 @@ class _OrderBodyState extends ConsumerState<_OrderBody> {
                   if (order.readyAvailableAt != null && order.status == OrderStatus.preparing) ...[
                     const SizedBox(height: 12),
                     NoteBox(
-                      message: 'This ${order.orderTypeLabel.toLowerCase()} can be marked ready from '
+                      message: 'This ${order.orderTypeLabel.isEmpty ? 'order' : order.orderTypeLabel.toLowerCase()} can be marked ready from '
                           '${formatDateTime(order.readyAvailableAt)}.',
                       tone: Tone.info,
                       icon: Icons.schedule_rounded,

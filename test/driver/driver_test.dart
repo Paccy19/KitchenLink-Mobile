@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -10,6 +11,7 @@ import 'package:kitchenlink_mobile/core/providers.dart';
 import 'package:kitchenlink_mobile/core/storage/token_store.dart';
 import 'package:kitchenlink_mobile/driver/app/driver_app.dart';
 import 'package:kitchenlink_mobile/driver/app/driver_router.dart';
+import 'package:kitchenlink_mobile/driver/application/deliveries.dart';
 import 'package:kitchenlink_mobile/driver/application/location.dart';
 import 'package:kitchenlink_mobile/driver/application/session.dart';
 import 'package:kitchenlink_mobile/driver/models/delivery.dart';
@@ -32,6 +34,47 @@ class _Adapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+/// GPS whose permission check answers only when the test says so.
+class _SlowGps implements LocationService {
+  final List<Completer<LocationAccess>> pending = [];
+  int readings = 0;
+
+  @override
+  Future<LocationAccess> ensureAccess({bool request = true}) {
+    final check = Completer<LocationAccess>();
+    pending.add(check);
+    return check.future;
+  }
+
+  @override
+  Future<GeoFix?> current() async {
+    readings++;
+    return GeoFix(latitude: -1.9441, longitude: 30.0619, at: DateTime(2026, 11, 9));
+  }
+
+  @override
+  Stream<GeoFix> watch() => const Stream.empty();
+
+  @override
+  Future<void> openSettings(LocationAccess access) async {}
+}
+
+class _Mode extends Notifier<TrackingMode> {
+  @override
+  TrackingMode build() => TrackingMode.off;
+
+  void set(TrackingMode mode) => state = mode;
+}
+
+/// A client whose reads fail with something other than an ApiException.
+class _BrokenClient extends ApiClient {
+  _BrokenClient() : super(config: const AppConfig(apiBaseUrl: 'http://test/api/v1'));
+
+  @override
+  Future<Object?> get(String path, {Map<String, dynamic>? query, bool auth = true}) async =>
+      throw StateError('unexpected');
 }
 
 ResponseBody _json(int status, Object body) =>
@@ -188,6 +231,43 @@ void main() {
     test('at least every 15 s while standing still', () {
       expect(shouldSendLiveFix(fix: at(15), lastSent: at(0)), isTrue);
     });
+
+    test('a quick off → on (notification shade) starts GPS once, and going off stops it', () async {
+      final gps = _SlowGps();
+      final dio = Dio(BaseOptions(baseUrl: 'http://test/api/v1'))..httpClientAdapter = _Adapter((_) => _json(200, {}));
+      final mode = NotifierProvider<_Mode, TrackingMode>(_Mode.new);
+      final container = ProviderContainer(overrides: [
+        ...driverOverrides.skip(1),
+        tokenStoreProvider.overrideWithValue(MemoryTokenStore()),
+        apiClientProvider.overrideWith((ref) => ApiClient(config: const AppConfig(apiBaseUrl: 'http://test/api/v1'), dio: dio)),
+        locationServiceProvider.overrideWithValue(gps),
+        trackingModeProvider.overrideWith((ref) => ref.watch(mode)),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(locationTrackerProvider, (_, _) {});
+
+      // Waiting for offers, then inactive and back before the permission
+      // check of the first start has answered.
+      container.read(mode.notifier).set(TrackingMode.waiting);
+      await Future<void>.delayed(Duration.zero);
+      container.read(mode.notifier).set(TrackingMode.off);
+      await Future<void>.delayed(Duration.zero);
+      container.read(mode.notifier).set(TrackingMode.waiting);
+      await Future<void>.delayed(Duration.zero);
+      expect(gps.pending, hasLength(2));
+
+      for (final check in gps.pending) {
+        check.complete(LocationAccess.granted);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      // Only the newest start reads the position (before the fix: twice, and
+      // the first timer was never cancelled).
+      expect(gps.readings, 1);
+
+      container.read(mode.notifier).set(TrackingMode.off);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(gps.readings, 1);
+    });
   });
 
   group('routing', () {
@@ -243,6 +323,20 @@ void main() {
       expect(state.status, DriverSessionStatus.blocked);
       expect(state.blockMessage, contains('suspended'));
       expect(await s.store.read(), isNull);
+    });
+
+    test('an unexpected failure while restoring shows "Try again", not an endless splash', () async {
+      final store = MemoryTokenStore('tok');
+      final container = ProviderContainer(overrides: [
+        ...driverOverrides.skip(1),
+        tokenStoreProvider.overrideWithValue(store),
+        apiClientProvider.overrideWith((ref) => _BrokenClient()),
+      ]);
+      addTearDown(container.dispose);
+      container.read(driverSessionProvider);
+      await _settle(container);
+      expect(container.read(driverSessionProvider).status, DriverSessionStatus.unreachable);
+      expect(await store.read(), 'tok');
     });
 
     test('the app keeps its own token key, apart from the kitchen app', () {

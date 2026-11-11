@@ -12,6 +12,7 @@ import '../../core/widgets/feedback.dart';
 import '../../core/widgets/forms.dart';
 import '../../core/widgets/pickers.dart';
 import '../../core/widgets/server_address.dart';
+import '../../root/role_switcher.dart';
 import '../application/deliveries.dart';
 import '../application/location.dart';
 import '../application/session.dart';
@@ -30,9 +31,30 @@ class AccountScreen extends ConsumerWidget {
     await runAction(context, () => ref.read(driverActionsProvider).uploadPhoto(photo), success: 'Profile photo updated.');
   }
 
+  /// The delivery screens close while the worker looks around, so their GPS
+  /// stops; mid-trip that freezes the customer's map, so ask first. Online
+  /// without a trip, offers simply pause until they come back (the server
+  /// only offers work to drivers whose position is recent).
+  Future<void> _visitMarketplace(BuildContext context, WidgetRef ref, RoleSwitcher switcher) async {
+    final onTrip = ref.read(activeTripProvider).value != null;
+    if (onTrip &&
+        !await confirm(
+          context,
+          title: 'Leave your trip screen?',
+          message: 'While you browse the marketplace your live location is not shared, so the customer\'s map stops moving. '
+              'Tap "Back to deliveries" to carry on.',
+          confirmLabel: 'Visit marketplace',
+        )) {
+      return;
+    }
+    switcher.visitMarketplace();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Null outside the one app (tests).
+    final switcher = RoleSwitcher.maybeOf(context);
     final driver = ref.watch(driverProvider);
     final stats = ref.watch(driverStatsProvider).value;
     final tracking = ref.watch(locationTrackerProvider);
@@ -148,6 +170,17 @@ class AccountScreen extends ConsumerWidget {
             _Row(icon: Icons.support_agent_rounded, title: 'Help & support', subtitle: 'Ask the KitchenLink team', onTap: () => context.push('/support')),
             const _Row(icon: Icons.dns_rounded, title: 'Server address', trailing: ServerAddressButton()),
           ]),
+          if (switcher != null) ...[
+            const GroupLabel('KitchenLink'),
+            _Group(children: [
+              _Row(
+                icon: Icons.storefront_rounded,
+                title: 'Visit the marketplace',
+                subtitle: 'Browse kitchens and food. You stay signed in.',
+                onTap: () => _visitMarketplace(context, ref, switcher),
+              ),
+            ]),
+          ],
           const GroupLabel('Sign out'),
           _Group(children: [
             _Row(

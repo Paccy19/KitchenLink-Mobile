@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../api/api_client.dart';
 import '../config.dart';
+import '../core/config/app_config.dart';
 import 'format.dart';
 
 const _kitchenColor = Color(0xFF8A5332);
@@ -15,7 +16,7 @@ LatLng? _point(dynamic lat, dynamic lng) {
   return LatLng(lat.toDouble(), lng.toDouble());
 }
 
-TileLayer _tiles() => TileLayer(urlTemplate: cartoTileUrl, userAgentPackageName: 'com.kitchenlink.kitchenlink_mobile', retinaMode: true);
+TileLayer _tiles() => TileLayer(urlTemplate: AppConfig.cartoTileUrl, userAgentPackageName: 'com.kitchenlink.kitchenlink_mobile', retinaMode: true);
 
 /// CARTO attribution, required by the basemap's terms.
 Widget _attribution() => const Positioned(

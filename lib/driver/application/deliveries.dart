@@ -296,6 +296,7 @@ class LocationTracker extends Notifier<TrackingState> {
   StreamSubscription<GeoFix>? _stream;
   GeoFix? _lastSent;
   GeoFix? _previous;
+  int _generation = 0;
 
   LocationService get _gps => ref.read(locationServiceProvider);
   DriverRepository get _repo => ref.read(driverRepositoryProvider);
@@ -330,17 +331,23 @@ class LocationTracker extends Notifier<TrackingState> {
   }
 
   Future<void> _apply(TrackingMode mode) async {
-    _stop();
+    // The mode can change while the permission check below is pending (the
+    // app goes inactive → resumed when the notification shade is pulled
+    // down). Only the newest call may start GPS; an older one that started a
+    // timer or stream after a newer one would leave it running untracked,
+    // sending positions forever, even after going offline.
+    _stop(); // also invalidates every older call still waiting
+    final generation = _generation;
     if (mode == TrackingMode.off) return;
     final access = await _gps.ensureAccess(request: false);
-    if (!ref.mounted) return;
+    if (!ref.mounted || generation != _generation) return;
     state = TrackingState(access: access, message: _messageFor(access));
     if (access != LocationAccess.granted || ref.read(trackingModeProvider) != mode) return;
 
     if (mode == TrackingMode.waiting) {
       Future<void> tick() async {
         final fix = await _gps.current();
-        if (fix != null && ref.mounted) await _send(fix);
+        if (fix != null && ref.mounted && generation == _generation) await _send(fix);
       }
 
       unawaited(tick());
@@ -392,6 +399,7 @@ class LocationTracker extends Notifier<TrackingState> {
   }
 
   void _stop() {
+    _generation++;
     _timer?.cancel();
     _timer = null;
     unawaited(_stream?.cancel());

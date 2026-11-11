@@ -14,7 +14,13 @@ import '../widgets/chrome.dart';
 import '../widgets/header.dart';
 import '../widgets/home_bars.dart';
 import '../customer_session.dart';
+import '../market_models.dart';
+import '../market_nav.dart';
+import '../market_state.dart';
 import '../widgets/customer_auth_sheet.dart';
+import '../widgets/notifications_sheet.dart';
+import 'kitchen_screen.dart';
+import 'kitchens_screen.dart';
 
 import '../../root/role_switcher.dart';
 
@@ -177,7 +183,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final query = _query;
     await _results.run(() => _api.search(query, _location, _vendorTypes), _changed);
     final data = _results.data;
-    if (data == null || !mounted) return;
+    // A newer search (or clearing the box) replaced this one: its results
+    // must not pick the tab.
+    if (data == null || !mounted || query != _query) return;
     // Searching for a kitchen by name opens the Kitchens tab; otherwise the
     // tab that actually has results.
     final term = query.toLowerCase();
@@ -188,11 +196,35 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _tab = tab);
   }
 
-  /// Pages the mobile app doesn't have yet (kitchens list, kitchen page, basket…).
-  void _soon(String page) {
+  /// The header's and footer's shortcuts (the website's Navbar and Footer links).
+  void _link(String label) {
+    switch (label) {
+      case "Tomorrow's Specials" || "Tomorrow's Specials (Pre-Order)":
+        MarketNav.specials(context);
+      case 'Nearby Map':
+        MarketNav.map(context);
+      case 'Saved dishes':
+        MarketNav.wishlist(context);
+      case 'Order Tracking & History':
+        MarketNav.orders(context);
+      case 'Saved Addresses & Preferences':
+        MarketNav.profile(context);
+      default:
+        MarketNav.kitchens(context, vendorTypes: _vendorTypes);
+    }
+  }
+
+  /// A dish opens its details here, with a link to its kitchen (the website's DishCard).
+  void _openDish(Dish dish) {
+    if (dish.vendorId.isEmpty) return;
+    showDishSheet(context, MenuDish.fromDish(dish), KitchenRef(id: dish.vendorId, name: dish.vendorName.isEmpty ? 'Kitchen' : dish.vendorName), showKitchenLink: true);
+  }
+
+  /// Dark mode is the one website setting the marketplace screens don't have.
+  void _darkMode() {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text("$page isn't in the mobile app yet.")));
+      ..showSnackBar(const SnackBar(content: Text("Dark mode isn't in the mobile marketplace yet.")));
   }
 
   Future<void> _signIn() async {
@@ -225,7 +257,28 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(session.name, style: kText(18, weight: w900, color: K.gray900)),
               if (session.phone.isNotEmpty) Text(session.phone, style: kText(12, color: K.stone500)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              // The website's account menu.
+              for (final (icon, label, open) in [
+                (Icons.person_outline, 'My profile', MarketNav.profile),
+                (Icons.receipt_long_outlined, 'Order history', MarketNav.orders),
+                (Icons.delivery_dining_outlined, 'Track order', MarketNav.track),
+                (Icons.chat_bubble_outline, 'Messages', MarketNav.messages),
+                (Icons.favorite_border, 'Saved dishes', MarketNav.wishlist),
+                (Icons.support_agent, 'Help & Support', (BuildContext c) => MarketNav.support(c)),
+              ])
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(icon, color: K.brown700),
+                  title: Text(label, style: kText(14, weight: FontWeight.w700)),
+                  trailing: const Icon(Icons.chevron_right, color: K.stone400),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    open(context);
+                  },
+                ),
+              const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () async {
                   Navigator.of(sheetContext).pop();
@@ -271,16 +324,20 @@ class _HomeScreenState extends State<HomeScreen> {
     context.watch<ClientLocation>();
     final width = MediaQuery.sizeOf(context).width;
     final pad = pagePadding(width);
+    final visiting = RoleSwitcher.maybeOf(context)?.returnTo != null;
     return Scaffold(
+      floatingActionButton: visiting ? const ReturnToRoleButton() : null,
       body: Column(
         children: [
           MarketHeader(
-            cartCount: 0,
-            onCart: () => _soon('The basket'),
+            cartCount: context.watch<Cart>().itemCount,
+            onCart: () => MarketNav.cart(context),
+            unreadNotifications: customerSession.isSignedIn ? context.watch<Notifications>().unread : null,
+            onNotifications: () => showNotificationsSheet(context),
             onSignIn: _signIn,
             signedInName: customerSession.isSignedIn ? customerSession.firstName : null,
-            onTheme: () => _soon('Dark mode'),
-            onLink: _soon,
+            onTheme: _darkMode,
+            onLink: _link,
           ),
           Expanded(
             child: RefreshIndicator(
@@ -306,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  MarketFooter(onLink: _soon),
+                  MarketFooter(onLink: _link),
                 ],
               ),
             ),
@@ -365,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const StadiumBorder(),
       child: InkWell(
         customBorder: const StadiumBorder(),
-        onTap: () => _soon('Big Event'),
+        onTap: () => MarketNav.bigEvent(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Row(
@@ -464,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
           categories: categories,
           loading: _categories.loading,
           media: _api.media,
-          onSelect: (category) => _soon(category == null ? 'The kitchens list' : 'Kitchens for ${category.name}'),
+          onSelect: (category) => MarketNav.kitchens(context, categoryId: category?.id, categoryName: category?.name, vendorTypes: _vendorTypes),
         ),
         const SizedBox(height: 24),
         KitchenTypeFilter(value: _vendorTypes, onChanged: _setTypes),
@@ -475,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'Top Deals Near You',
           subtitle: feed?.updatedAt != null ? 'Updated ${DateFormat('HH:mm').format(feed!.updatedAt!)}' : 'Kitchens around you right now',
           linkLabel: 'See all kitchens',
-          onLink: () => _soon('The kitchens list'),
+          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
         ),
         if (_feed.error != null)
           ErrorCard(onRetry: _loadFeed, retrying: _feed.loading)
@@ -487,11 +544,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? 'Try another kitchen type, or clear the filter to see every kitchen.'
                 : 'Widen your search radius or switch neighbourhood to discover more kitchens.',
             actionLabel: 'Browse nearby kitchens',
-            onAction: () => _soon('The kitchens list'),
+            onAction: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
           )
         else
           _hScroll([
-            for (final v in featured) VendorCard(vendor: v, tile: true, media: _api.media, showDistance: _location.isGps, onTap: () => _soon(v.name)),
+            for (final v in featured) VendorCard(vendor: v, tile: true, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
             if (_feed.loading && featured.isEmpty) ...const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()],
           ]),
         const SizedBox(height: 36),
@@ -503,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? 'Every kitchen on the platform — nearest to you first'
               : 'Every kitchen on the platform — use your location to see nearby ones first',
           linkLabel: (_allVendors.data?.total ?? 0) > 0 ? 'See all ${_allVendors.data!.total}' : 'See all',
-          onLink: () => _soon('The kitchens list'),
+          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
         ),
         if (_allVendors.pending)
           _hScroll(const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()])
@@ -511,7 +568,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ErrorCard(onRetry: () => _allVendors.run(() => _api.allVendors(_location, _vendorTypes), _changed), retrying: _allVendors.loading)
         else
           _grid([
-            for (final v in _allVendors.data!.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => _soon(v.name)),
+            for (final v in _allVendors.data!.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
           ]),
 
         // Tomorrow's specials and offer days.
@@ -521,11 +578,11 @@ class _HomeScreenState extends State<HomeScreen> {
             title: "Tomorrow's Specials",
             subtitle: 'Pre-order specials and upcoming kitchen offers',
             linkLabel: 'See all',
-            onLink: () => _soon("Tomorrow's Specials"),
+            onLink: () => MarketNav.specials(context),
           ),
           _hScroll([
-            for (final s in specials) SpecialCard(entry: s, media: _api.media, onTap: () => _soon(s.vendor.name), onPreorder: () => _soon('Pre-ordering')),
-            for (final o in offers) OfferDayCard(offer: o, media: _api.media, onTap: () => _soon(o.vendor.name)),
+            for (final s in specials) SpecialCard(entry: s, media: _api.media, onTap: () => MarketNav.kitchen(context, s.vendor.id), onPreorder: () => preorderSpecial(context, s)),
+            for (final o in offers) OfferDayCard(offer: o, media: _api.media, onTap: () => MarketNav.kitchen(context, o.vendor.id)),
           ]),
         ],
         const SizedBox(height: 36),
@@ -535,10 +592,10 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'Popular Dishes Near You',
           subtitle: 'What people around you are ordering today',
           linkLabel: 'Browse menus',
-          onLink: () => _soon('The kitchens list'),
+          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
         ),
         _hScroll([
-          for (final d in dishes) DishCard(dish: d, media: _api.media, onTap: () => _soon('Dish details')),
+          for (final d in dishes) DishCard(dish: d, media: _api.media, onTap: () => _openDish(d)),
           if (_feed.loading && dishes.isEmpty) ...const [DishCardSkeleton(), DishCardSkeleton(), DishCardSkeleton()],
         ]),
       ],
@@ -711,7 +768,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   actionLabel: 'Show kitchens',
                   onAction: () => setState(() => _tab = 'kitchens'),
                 )
-              : _grid([for (final d in data.dishes) DishRow(dish: d, media: _api.media, onTap: () => _soon('Dish details'))], gap: 12)
+              : _grid([for (final d in data.dishes) DishRow(dish: d, media: _api.media, onTap: () => _openDish(d))], gap: 12)
         else
           data.vendors.isEmpty
               ? EmptyCard(
@@ -722,7 +779,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onAction: () => setState(() => _tab = 'dishes'),
                 )
               : _grid([
-                  for (final v in data.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => _soon(v.name)),
+                  for (final v in data.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
                 ], gap: 20),
       ],
     );

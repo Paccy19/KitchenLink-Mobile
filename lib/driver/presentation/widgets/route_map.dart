@@ -2,15 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../models/navigation.dart';
-
-/// Optional CARTO basemap key (the website's `VITE_CARTO_API_KEY`).
-const String _cartoKey = String.fromEnvironment('CARTO_API_KEY');
-
-/// CARTO Voyager raster tiles: the basemap the website draws with MapLibre.
-const String _tiles = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-    '${_cartoKey == '' ? '' : '?api_key=$_cartoKey'}';
 
 /// Kigali centre, where the map starts with nothing to show.
 const _kigali = LatLng(-1.9441, 30.0619);
@@ -96,7 +90,7 @@ class _RouteMapState extends State<RouteMap> {
               },
             ),
             children: [
-              TileLayer(urlTemplate: _tiles, userAgentPackageName: 'com.kitchenlink.kitchenlink_mobile', retinaMode: true),
+              TileLayer(urlTemplate: AppConfig.cartoTileUrl, userAgentPackageName: 'com.kitchenlink.kitchenlink_mobile', retinaMode: true),
               if (_route.length >= 2)
                 PolylineLayer(polylines: [
                   Polyline(points: _route, strokeWidth: 7, color: Colors.white.withValues(alpha: 0.9)),

@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../api/admin_api.dart';
 import '../api/api_client.dart';
-import '../config.dart';
+import '../core/config/app_config.dart';
 
 /// The SMS step of sign-in: the password was right and a code is now needed.
 class TwoFactorChallenge {
@@ -19,13 +19,14 @@ class TwoFactorChallenge {
 /// Holds the signed-in admin (email + password session) and what they may do,
 /// like the website's AdminContext.
 class AdminSession extends ChangeNotifier {
-  AdminSession() : client = ApiClient(baseUrl: kDefaultApiBaseUrl) {
+  // The address saved on a sign-in screen (applied at launch in main.dart),
+  // else the build default: the same one every role uses.
+  AdminSession() : client = ApiClient(baseUrl: AppConfig.current.apiBaseUrl) {
     api = AdminApi(client);
     client.onUnauthorized = _onUnauthorized;
   }
 
   static const _tokenKey = 'ofk_admin_token';
-  static const _baseUrlKey = 'ofk_api_base_url';
   static const _storage = FlutterSecureStorage();
 
   final ApiClient client;
@@ -56,11 +57,9 @@ class AdminSession extends ChangeNotifier {
   /// What the signed-in admin may do (decided by their role on the server).
   bool can(String permission) => isOwner || permissions.contains(permission);
 
-  /// Restores the saved server address and token when the app starts.
+  /// Restores the saved token when the app starts.
   Future<void> restore() async {
     try {
-      final savedUrl = await _storage.read(key: _baseUrlKey);
-      if (savedUrl != null && savedUrl.isNotEmpty) client.baseUrl = savedUrl;
       _token = await _storage.read(key: _tokenKey);
     } catch (_) {
       _token = null;
@@ -69,14 +68,6 @@ class AdminSession extends ChangeNotifier {
     restoring = false;
     notifyListeners();
     if (hasToken) await _loadProfile();
-  }
-
-  Future<void> setBaseUrl(String url) async {
-    client.baseUrl = url.trim();
-    try {
-      await _storage.write(key: _baseUrlKey, value: client.baseUrl);
-    } catch (_) {}
-    notifyListeners();
   }
 
   Future<void> _loadProfile() async {

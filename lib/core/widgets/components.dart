@@ -277,15 +277,21 @@ class SkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.separated(
+        // It never scrolls, and it is often placed inside a page that does
+        // (driver earnings, the offers board): sized to its rows, it works
+        // there too. Filling the height instead fails with "unbounded
+        // height" and a blank page.
+        shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: count,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, _) => AppCard(
-          child: SizedBox(
-            // The three bars and gaps below are 66 high; a smaller box overflowed by 2px.
-            height: height - 30,
-            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // At least [height]; a shorter row grows to fit its bars instead of
+          // overflowing (the earnings list asks for 64).
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: height - 32),
+            child: const Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               SkeletonBox(width: 140),
               SizedBox(height: 10),
               SkeletonBox(),

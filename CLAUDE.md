@@ -11,6 +11,7 @@ One Flutter app, **KitchenLink**, for every kind of user. Its single entry point
 - Every role's sign-in screen has an "Other ways to sign in" button (`OtherSignInButton`) back to the marketplace.
 - `KitchenLinkRoot` remembers the last role (`ofk_app_role` in secure storage), so a kitchen or delivery worker reopening the app goes straight to their screens.
 - Switching role rebuilds that role's screens from scratch (`KeyedSubtree` per role).
+- A signed-in kitchen (More → "Back to the marketplace") or delivery worker (Account → "Visit the marketplace") can browse the marketplace without signing out: `RoleSwitcher.visitMarketplace()`. That's a visit, not a switch. The saved role isn't changed, the marketplace shows `ReturnToRoleButton` ("Back to deliveries" / "Back to my kitchen"), and reopening the app goes back to the role. The delivery screens close during the visit, so their GPS stops. Mid-trip, the driver is asked to confirm first.
 - Customer sign-in, cart and orders aren't built in the app yet. Choosing Customer keeps you on the marketplace with a notice.
 
 | Role | Built by | Stack | Code lives in |
