@@ -38,7 +38,7 @@ class MarketHeader extends StatelessWidget {
     final gap = lg ? 12.0 : (sm ? 8.0 : 6.0);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
+        color: K.header,
         border: Border(bottom: BorderSide(color: K.stone200.withValues(alpha: 0.8))),
         boxShadow: K.shadowSm,
       ),
@@ -104,7 +104,7 @@ class MarketHeader extends StatelessWidget {
     );
   }
 
-  Widget _banner(double top) => Container(
+  Widget _banner(double top) => K.light(() => Container(
     width: double.infinity,
     padding: EdgeInsets.fromLTRB(16, 6 + top, 16, 6),
     decoration: BoxDecoration(
@@ -137,7 +137,7 @@ class MarketHeader extends StatelessWidget {
         ),
       ],
     ),
-  );
+  ));
 
   /// Logo tile; the name from 420 px, the tagline from 640 px, "MARKET" from 1024 px.
   Widget _logo(double width) {
@@ -155,7 +155,7 @@ class MarketHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [BoxShadow(color: Color(0x402B1206), blurRadius: 6, offset: Offset(0, 4), spreadRadius: -1)],
           ),
-          child: Icon(Icons.local_dining, size: sm ? 24 : 20, color: K.brown100),
+          child: Icon(Icons.local_dining, size: sm ? 24 : 20, color: K.light(() => K.brown100)),
         ),
         if (width >= 420) ...[
           SizedBox(width: sm ? 12 : 8),
@@ -284,7 +284,7 @@ class MarketHeader extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.person_outline, size: 14, color: K.brown300),
+              Icon(Icons.person_outline, size: 14, color: K.light(() => K.brown300)),
               const SizedBox(width: 6),
               Text(
                 signedInName ?? 'Sign In',

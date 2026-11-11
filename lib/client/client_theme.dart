@@ -16,6 +16,25 @@ class K {
 
   static Color _pick(Color light, Color darkColor) => dark ? darkColor : light;
 
+  /// Builds with the light palette: for parts that sit on a fill that is dark
+  /// in both modes (the footer, the brown code card, the top banner, icons on
+  /// brown buttons), whose pale text must stay pale.
+  static T light<T>(T Function() build) {
+    final was = dark;
+    dark = false;
+    try {
+      return build();
+    } finally {
+      dark = was;
+    }
+  }
+
+  /// `bg-white/95` header bar (`bg-header` at 95% on dark).
+  static Color get header => _pick(const Color(0xF2FFFFFF), const Color(0xF22B1A12));
+
+  /// `bg-white/95` chips on top of photos (rating), dark on dark.
+  static Color get photoChip => _pick(const Color(0xF2FFFFFF), const Color(0xE62B1A12));
+
   // The website's chocolate dark palette.
   static const _bgMain = Color(0xFF1E1210); // page background
   static const _bgCard = Color(0xFF35201A); // cards, sheets, inputs
@@ -157,7 +176,8 @@ const w900 = FontWeight.w800;
 
 ThemeData buildClientTheme({bool dark = false}) {
   final base = buildTheme(dark ? Brightness.dark : Brightness.light);
-  return base.copyWith(
+  final theme = dark ? _chocolate(base) : base;
+  return theme.copyWith(
     scaffoldBackgroundColor: K.page,
     colorScheme: base.colorScheme.copyWith(
       primary: dark ? K.brown700 : K.fillBrown700,
@@ -170,6 +190,65 @@ ThemeData buildClientTheme({bool dark = false}) {
     bottomSheetTheme: base.bottomSheetTheme.copyWith(backgroundColor: K.surface, modalBackgroundColor: K.surface),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: K.brown700),
     textSelectionTheme: TextSelectionThemeData(cursorColor: K.brown700),
+  );
+}
+
+/// The shared dark theme is the admin's slate one; the marketplace's dark
+/// mode is the website's chocolate one, so every Material default (bars,
+/// inputs, buttons, dividers, menus) is re-coloured from [K].
+ThemeData _chocolate(ThemeData base) {
+  final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: K.stone200));
+  final input = base.inputDecorationTheme;
+  return base.copyWith(
+    textTheme: base.textTheme.apply(bodyColor: K.gray900, displayColor: K.gray900),
+    iconTheme: base.iconTheme.copyWith(color: K.stone600),
+    appBarTheme: base.appBarTheme.copyWith(
+      backgroundColor: K.header,
+      foregroundColor: K.gray900,
+      shape: Border(bottom: BorderSide(color: K.stone200)),
+      titleTextStyle: base.appBarTheme.titleTextStyle?.copyWith(color: K.gray900),
+    ),
+    cardTheme: base.cardTheme.copyWith(
+      color: K.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: K.stone200)),
+    ),
+    inputDecorationTheme: input.copyWith(
+      fillColor: K.surface,
+      border: border,
+      enabledBorder: border,
+      disabledBorder: border,
+      focusedBorder: border.copyWith(borderSide: BorderSide(color: K.brown700, width: 1.5)),
+      labelStyle: input.labelStyle?.copyWith(color: K.stone500),
+      hintStyle: input.hintStyle?.copyWith(color: K.stone400),
+      helperStyle: input.helperStyle?.copyWith(color: K.stone400),
+    ),
+    // The website's dark primary button: white with dark text.
+    filledButtonTheme: FilledButtonThemeData(
+      style: base.filledButtonTheme.style?.copyWith(
+        backgroundColor: WidgetStatePropertyAll(K.gray900),
+        foregroundColor: const WidgetStatePropertyAll(K.brown950),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: base.outlinedButtonTheme.style?.copyWith(
+        backgroundColor: WidgetStatePropertyAll(K.surface),
+        foregroundColor: WidgetStatePropertyAll(K.stone600),
+        side: WidgetStatePropertyAll(BorderSide(color: K.stone200)),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: base.textButtonTheme.style?.copyWith(foregroundColor: WidgetStatePropertyAll(K.brown700)),
+    ),
+    dividerTheme: base.dividerTheme.copyWith(color: K.stone200),
+    drawerTheme: base.drawerTheme.copyWith(backgroundColor: K.header),
+    popupMenuTheme: base.popupMenuTheme.copyWith(color: K.surface),
+    listTileTheme: base.listTileTheme.copyWith(iconColor: K.stone600, textColor: K.gray900),
+    chipTheme: base.chipTheme.copyWith(backgroundColor: K.surface, side: BorderSide(color: K.stone200)),
+    snackBarTheme: base.snackBarTheme.copyWith(
+      backgroundColor: K.gray900,
+      contentTextStyle: kText(13, color: K.brown950),
+      actionTextColor: K.fillBrown700,
+    ),
   );
 }
 

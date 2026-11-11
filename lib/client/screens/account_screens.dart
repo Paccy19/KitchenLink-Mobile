@@ -282,14 +282,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 14),
         Panel(
-          child: Column(children: [
+          // Its own Material, so the rows' tap ripple shows on the card.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(children: [
             for (final (icon, label, onTap) in [
               (Icons.favorite_border, 'Saved dishes', () => MarketNav.wishlist(context)),
               (Icons.chat_bubble_outline, 'Messages', () => MarketNav.messages(context)),
               (Icons.support_agent, 'Help & Support', () => MarketNav.support(context)),
             ])
               ListTile(contentPadding: EdgeInsets.zero, leading: Icon(icon, color: K.brown700), title: Text(label, style: kText(13.5, weight: FontWeight.w700)), trailing: const Icon(Icons.chevron_right), onTap: onTap),
-          ]),
+            ]),
+          ),
         ),
       ]),
     );

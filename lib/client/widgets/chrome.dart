@@ -10,7 +10,9 @@ class MarketFooter extends StatelessWidget {
   final ValueChanged<String> onLink;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => K.light(() => _build(context));
+
+  Widget _build(BuildContext context) {
     final heading = kText(14, weight: w900, color: Colors.white, spacing: 0.6);
     final body = kText(12, weight: FontWeight.w400, color: K.stone400, height: 1.6);
     Widget link(String label) => Padding(

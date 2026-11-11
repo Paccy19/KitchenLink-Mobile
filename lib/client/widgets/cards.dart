@@ -188,7 +188,7 @@ class VendorCard extends StatelessWidget {
                 right: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(99), boxShadow: K.shadowMd),
+                  decoration: BoxDecoration(color: K.photoChip, borderRadius: BorderRadius.circular(99), boxShadow: K.shadowMd),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -919,8 +919,9 @@ class ErrorCard extends StatelessWidget {
         FilledButton.icon(
           onPressed: retrying ? null : onRetry,
           style: FilledButton.styleFrom(
+            // Dark on light; on dark the website's white button with dark text.
             backgroundColor: K.stone900,
-            foregroundColor: Colors.white,
+            foregroundColor: K.dark ? K.brown950 : Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             textStyle: kText(14, weight: FontWeight.w700),
           ),

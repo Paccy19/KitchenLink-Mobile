@@ -350,7 +350,7 @@ class _CodeCard extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => K.light(() => Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(gradient: K.logoGradient, borderRadius: BorderRadius.circular(22)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -362,7 +362,7 @@ class _CodeCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Sent to your phone and stored here in your account', style: kText(10.5, color: K.brown300)),
         ]),
-      );
+      ));
 }
 
 /// Big events: the deposit is paid, the balance is due a day before.

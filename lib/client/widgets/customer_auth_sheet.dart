@@ -404,7 +404,7 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (leading != null) ...[
-                      Icon(leading, size: 16, color: K.brown300),
+                      Icon(leading, size: 16, color: K.light(() => K.brown300)),
                       const SizedBox(width: 8),
                     ],
                     Flexible(
@@ -421,7 +421,7 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
                     ),
                     if (trailing != null) ...[
                       const SizedBox(width: 8),
-                      Icon(trailing, size: 16, color: K.brown300),
+                      Icon(trailing, size: 16, color: K.light(() => K.brown300)),
                     ],
                   ],
                 ),

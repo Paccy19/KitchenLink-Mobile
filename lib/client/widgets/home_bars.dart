@@ -758,7 +758,7 @@ Future<void> showLocationPicker(BuildContext context, ClientLocation location, {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: K.shadowSm,
                             ),
-                            child: Icon(Icons.near_me_outlined, size: 20, color: K.brown300),
+                            child: Icon(Icons.near_me_outlined, size: 20, color: K.light(() => K.brown300)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
