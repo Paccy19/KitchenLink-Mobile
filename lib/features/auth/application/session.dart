@@ -38,6 +38,11 @@ class SessionState {
 /// Owns the vendor's sign-in: token storage, restoring it at launch, and
 /// reacting to the server rejecting the session.
 class SessionController extends Notifier<SessionState> {
+  /// The vendor of the latest signed-in state. Not part of [state] (a signed-out session has
+  /// no vendor), only for the frames after sign-out in which the old screens are still
+  /// animating away and rebuild once more.
+  VendorAccount? lastVendor;
+
   late final AuthRepository _auth = ref.read(authRepositoryProvider);
 
   @override
@@ -61,6 +66,7 @@ class SessionController extends Notifier<SessionState> {
     ref.read(apiClientProvider).setToken(token);
     try {
       final vendor = await _auth.me();
+      lastVendor = vendor;
       state = SessionState(status: SessionStatus.authenticated, vendor: vendor);
     } on ApiException catch (error) {
       // 401 / blocked are handled by the client hooks; anything else (no
@@ -83,6 +89,7 @@ class SessionController extends Notifier<SessionState> {
       final result = await _auth.verifyOtp(phone, code);
       await ref.read(tokenStoreProvider).write(result.token);
       ref.read(apiClientProvider).setToken(result.token);
+      lastVendor = result.vendor;
       state = SessionState(status: SessionStatus.authenticated, vendor: result.vendor);
     } on ApiException catch (error) {
       if (error.isBlockedAccount) {
@@ -105,6 +112,7 @@ class SessionController extends Notifier<SessionState> {
   /// Uses an account returned by a write (profile, availability…).
   void applyVendor(VendorAccount vendor) {
     if (state.status == SessionStatus.authenticated) {
+      lastVendor = vendor;
       state = SessionState(status: SessionStatus.authenticated, vendor: vendor);
     }
   }
@@ -146,7 +154,7 @@ final sessionProvider = NotifierProvider<SessionController, SessionState>(Sessio
 
 /// The signed-in vendor. Only read it under the authenticated shell.
 final vendorProvider = Provider<VendorAccount>((ref) {
-  final vendor = ref.watch(sessionProvider).vendor;
+  final vendor = ref.watch(sessionProvider).vendor ?? ref.read(sessionProvider.notifier).lastVendor;
   if (vendor == null) throw StateError('No signed-in vendor.');
   return vendor;
 });

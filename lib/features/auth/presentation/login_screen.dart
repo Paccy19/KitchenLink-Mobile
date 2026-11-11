@@ -62,7 +62,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _sendCode() async {
     if (_busy) return;
-    if (!(_phoneForm.currentState?.validate() ?? false)) return;
+    // The phone form only exists on the phone step. "Resend code" runs on the code step,
+    // where it is not mounted: validating it there always failed, so Resend did nothing.
+    if (_step == _Step.phone && !(_phoneForm.currentState?.validate() ?? false)) return;
     setState(() {
       _busy = true;
       _error = null;
