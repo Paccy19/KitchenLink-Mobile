@@ -25,8 +25,8 @@ class KitchenLinkAdminApp extends StatelessWidget {
     return MaterialApp(
       title: 'KitchenLink Admin',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(Brightness.light),
-      darkTheme: buildTheme(Brightness.dark),
+      theme: buildAdminTheme(Brightness.light),
+      darkTheme: buildAdminTheme(Brightness.dark),
       themeMode: context.watch<ThemeController>().mode,
       home: const _Root(),
     );

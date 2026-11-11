@@ -212,7 +212,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
-                        gradient: const LinearGradient(colors: [Color(0xFF1F2937), Color(0xFF4B5563)]),
+                        gradient: const LinearGradient(colors: [Color(0xFFC2410C), Color(0xFFEA580C)]),
                       ),
                     ),
                   ),

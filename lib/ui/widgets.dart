@@ -21,17 +21,17 @@ class ToneBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = tone.foreground(context);
+    // A soft tinted pill, no outline ("Out for delivery", "Ready, no courier").
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: tone.background(context),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: tone.border(context)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 12, color: fg), const SizedBox(width: 4)],
         Flexible(
-          child: Text(text, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, height: 1.45, fontWeight: FontWeight.w700, color: fg)),
+          child: Text(text, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: fg)),
         ),
       ]),
     );
@@ -66,10 +66,10 @@ class PageHeader extends StatelessWidget {
     // `sm:text-2xl` / `sm:text-sm` from 640px.
     final sm = isSm(context);
     final heading = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text(title, style: TextStyle(fontSize: sm ? 24 : 20, height: sm ? 1.33 : 1.4, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: p.text)),
+      Text(title, style: TextStyle(fontSize: sm ? 30 : 26, height: 1.2, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: p.text)),
       if (description != null) ...[
-        const SizedBox(height: 2),
-        Text(description!, style: TextStyle(fontSize: sm ? 14 : 12, height: sm ? 1.43 : 1.33, color: p.muted)),
+        const SizedBox(height: 4),
+        Text(description!, style: TextStyle(fontSize: sm ? 15 : 13.5, height: 1.4, color: p.muted)),
       ],
     ]);
     if (action == null) return heading;
@@ -110,10 +110,10 @@ class SectionCard extends StatelessWidget {
     final sm = isSm(context);
     return _Surface(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        // The title sits in the card with no rule under it ("Needs your attention").
         if (title != null || action != null)
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: sm ? 20 : 16, vertical: 12),
-            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: p.divider))),
+          Padding(
+            padding: EdgeInsets.fromLTRB(sm ? 24 : 18, sm ? 22 : 18, sm ? 24 : 18, 0),
             child: title == null && description == null
                 // Only the action (filters): it sits on the right, or spans the card.
                 ? Align(alignment: Alignment.centerRight, child: actionFullWidth ? SizedBox(width: double.infinity, child: action) : action)
@@ -124,14 +124,17 @@ class SectionCard extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                        if (title != null) Text(title!, style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w800, color: p.text)),
-                        if (description != null) Text(description!, style: TextStyle(fontSize: 11, height: 1.45, color: p.muted)),
+                        if (title != null) Text(title!, style: TextStyle(fontSize: sm ? 19 : 17, height: 1.3, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: p.text)),
+                        if (description != null) ...[
+                          const SizedBox(height: 2),
+                          Text(description!, style: TextStyle(fontSize: 12.5, height: 1.4, color: p.muted)),
+                        ],
                       ]),
                       ?action,
                     ],
                   ),
           ),
-        Padding(padding: padding ?? EdgeInsets.all(sm ? 20 : 16), child: child),
+        Padding(padding: padding ?? EdgeInsets.all(sm ? 24 : 18), child: child),
       ]),
     );
   }
@@ -142,23 +145,21 @@ class _Surface extends StatelessWidget {
   const _Surface({required this.child});
 
   final Widget child;
-  static const radius = 16.0;
+  static const radius = 18.0;
 
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    // A Material (not a coloured box) so list tiles inside show their ink.
-    return DecoratedBox(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(radius), boxShadow: AppColors.shadowSm),
-      child: Material(
-        color: p.card,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-          side: BorderSide(color: p.border.withValues(alpha: 0.8)),
-        ),
-        child: child,
+    // Flat white with a soft border. A Material (not a coloured box) so list
+    // tiles inside show their ink.
+    return Material(
+      color: p.card,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+        side: BorderSide(color: p.border),
       ),
+      child: child,
     );
   }
 }
@@ -178,37 +179,35 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
+    final sm = isSm(context);
+    // "Orders today / 1,328 / +9% vs last Wednesday": a plain label, a big
+    // number and a coloured line under it.
     return _Surface(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(sm ? 22 : 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
-              child: Text(label.toUpperCase(),
-                  style: TextStyle(fontSize: 11, height: 1.45, fontWeight: FontWeight.w700, letterSpacing: 0.55, color: p.faint)),
+              // Some labels are raw statuses ("processing"): start them with a capital.
+              child: Text(label.isEmpty ? label : '${label[0].toUpperCase()}${label.substring(1)}',
+                  maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: sm ? 14 : 13, height: 1.35, fontWeight: FontWeight.w600, color: p.muted)),
             ),
-            if (icon != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: tone.background(context),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: tone.border(context)),
-                ),
-                child: Icon(icon, size: 16, color: tone.foreground(context)),
-              ),
-            ],
+            if (icon != null) ...[const SizedBox(width: 8), Icon(icon, size: 18, color: p.faint)],
           ]),
-          const SizedBox(height: 8),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: isSm(context) ? 24 : 20, height: isSm(context) ? 1.33 : 1.4, fontWeight: FontWeight.w800, color: p.text)),
+          SizedBox(height: sm ? 10 : 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                maxLines: 1,
+                style: TextStyle(fontSize: sm ? 32 : 26, height: 1.15, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: p.text)),
+          ),
           if (hint != null) ...[
-            const SizedBox(height: 2),
-            Text(hint!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, height: 1.45, color: p.muted)),
+            const SizedBox(height: 6),
+            Text(hint!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, height: 1.35, fontWeight: FontWeight.w600, color: p.muted)),
           ],
         ]),
       ),
@@ -262,15 +261,16 @@ class InfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
+    // "Owner / Claudine M.": a soft stone box, small label, bold value.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(color: p.stone50, borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (label.isNotEmpty) ...[
-          Text(label.toUpperCase(), style: TextStyle(fontSize: 10, height: 1.5, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: p.faint)),
+          Text(label, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w600, color: p.muted)),
           const SizedBox(height: 2),
         ],
-        child ?? Text(value, style: TextStyle(fontSize: 14, height: 1.43, fontWeight: FontWeight.w700, color: p.text)),
+        child ?? Text(value, style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w700, color: p.text)),
       ]),
     );
   }
@@ -828,8 +828,8 @@ class WebTable extends StatelessWidget {
                         Text(column.label.toUpperCase(),
                             maxLines: 1,
                             softWrap: false,
-                            style: TextStyle(fontSize: 11, height: 1.45, fontWeight: FontWeight.w800, letterSpacing: 0.55, color: p.faint)),
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            style: TextStyle(fontSize: 11.5, height: 1.45, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: p.muted)),
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                   ],
                 ),
@@ -848,10 +848,10 @@ class WebTable extends StatelessWidget {
                   TableRow(
                     decoration: BoxDecoration(
                       color: highlightRows.contains(i) ? Tone.red.background(context).withValues(alpha: 0.4) : null,
-                      border: i == 0 ? null : Border(top: BorderSide(color: p.stone50)),
+                      border: i == 0 ? null : Border(top: BorderSide(color: p.divider)),
                     ),
                     children: [
-                      for (var c = 0; c < columns.length; c++) cell(columns[c], rows[i][c], const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+                      for (var c = 0; c < columns.length; c++) cell(columns[c], rows[i][c], const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
                     ],
                   ),
                 ],
@@ -977,33 +977,30 @@ class WebButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Solid near-black ("Export report"); white on dark mode; red when it destroys.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fill = danger ? AppColors.red600 : (dark ? const Color(0xFFF5F5F4) : AppColors.ink);
+    final fg = danger || !dark ? Colors.white : AppColors.ink;
     return Opacity(
-      opacity: onPressed == null ? 0.6 : 1,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: danger ? AppColors.red600 : null,
-          gradient: danger ? null : AppColors.buttonGradient,
+      opacity: onPressed == null ? 0.55 : 1,
+      child: Material(
+        color: fill,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          boxShadow: AppColors.shadowSm,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: onPressed,
-            child: Padding(
-              padding: small
-                  ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
-                  : large
-                      ? const EdgeInsets.symmetric(horizontal: 20, vertical: 11)
-                      : const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (icon != null) ...[Icon(icon, size: small ? 14 : 16, color: Colors.white), SizedBox(width: small ? 4 : 6)],
-                Flexible(
-                  child: Text(label, style: TextStyle(fontSize: small ? 11 : large ? 14 : 12, fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
-              ]),
-            ),
+          onTap: onPressed,
+          child: Padding(
+            padding: small
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 7)
+                : large
+                    ? const EdgeInsets.symmetric(horizontal: 22, vertical: 13)
+                    : const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (icon != null) ...[Icon(icon, size: small ? 14 : 16, color: fg), SizedBox(width: small ? 5 : 7)],
+              Flexible(
+                child: Text(label, style: TextStyle(fontSize: small ? 12 : large ? 15 : 13.5, fontWeight: FontWeight.w700, color: fg)),
+              ),
+            ]),
           ),
         ),
       ),
@@ -1031,24 +1028,30 @@ class SmallButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    final color = primary ? Colors.white : danger ? AppColors.red600 : p.textSecondary;
-    return Material(
-      color: primary ? const Color(0xFF481F0D) : ghost ? Colors.transparent : p.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: primary || ghost ? BorderSide.none : BorderSide(color: p.border),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (icon != null) Icon(icon, size: label.isEmpty ? 14 : 16, color: color),
-            if (icon != null && label.isNotEmpty) const SizedBox(width: 6),
-            if (label.isNotEmpty)
-              Flexible(child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color))),
-          ]),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // White with a soft border ("Assign", "Open case", "View"); near-black when primary.
+    final primaryFill = dark ? const Color(0xFFF5F5F4) : AppColors.ink;
+    final color = primary ? (dark ? AppColors.ink : Colors.white) : danger ? AppColors.red600 : p.text;
+    return Opacity(
+      opacity: onPressed == null ? 0.55 : 1,
+      child: Material(
+        color: primary ? primaryFill : ghost ? Colors.transparent : p.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: primary || ghost ? BorderSide.none : BorderSide(color: danger ? AppColors.red600.withValues(alpha: 0.35) : p.border),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onPressed,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: label.isEmpty ? 8 : 12, vertical: 7),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (icon != null) Icon(icon, size: label.isEmpty ? 15 : 16, color: color),
+              if (icon != null && label.isNotEmpty) const SizedBox(width: 6),
+              if (label.isNotEmpty)
+                Flexible(child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: color))),
+            ]),
+          ),
         ),
       ),
     );
@@ -1074,7 +1077,7 @@ InputDecoration webInputDecoration(BuildContext context, {String? hint, Widget? 
     suffixIconConstraints: const BoxConstraints(minWidth: 36),
     enabledBorder: border(p.border),
     border: border(p.border),
-    focusedBorder: border(Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColors.brown, 1.5),
+    focusedBorder: border(Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColors.ink, 1.5),
   );
 }
 

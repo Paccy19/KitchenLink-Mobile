@@ -4,8 +4,13 @@ One app for every role (marketplace, vendor, delivery worker, admin):
 
 | Run | Entry point | What it is |
 | --- | --- | --- |
-| `flutter run` | `lib/main.dart` | The unified app. Choose **Vendor** at "Sign in" for the kitchen app, real sign-in + real backend |
-| `flutter run -t lib/main_vendor_preview.dart` | `lib/main_vendor_preview.dart` | **Vendor preview**: the same vendor app, no sign-in, sample data only |
+| `flutter run --dart-define-from-file=dart_defines.json` | `lib/main.dart` | The unified app. Choose **Vendor** at "Sign in" for the kitchen app, real sign-in + real backend |
+| `flutter run -t lib/main_vendor_preview.dart --dart-define-from-file=dart_defines.json` | `lib/main_vendor_preview.dart` | **Vendor preview**: the same vendor app, no sign-in, sample data only |
+
+Always pass `--dart-define-from-file=dart_defines.json` (the VS Code launch
+configurations already do). It carries `CARTO_API_KEY`: without it every map
+(customer, delivery worker, admin) shows CARTO's grey "API KEY REQUIRED" tiles.
+The same goes for `flutter build apk` / `flutter build web`.
 
 ## Vendor preview mode (development only)
 

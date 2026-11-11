@@ -181,14 +181,18 @@ class _Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    final fg = active ? Colors.white : p.textSecondary;
+    // The admin console's chips are solid near-black (white on dark); the
+    // marketplace keeps its brown gradient.
+    final admin = identical(p, Palette.adminLight) || identical(p, Palette.adminDark);
+    final adminDark = identical(p, Palette.adminDark);
+    final fg = active ? (adminDark ? AppColors.ink : Colors.white) : p.textSecondary;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: active ? AppColors.buttonGradient : null,
-        color: active ? null : p.card,
-        borderRadius: BorderRadius.circular(16),
+        gradient: active && !admin ? AppColors.buttonGradient : null,
+        color: active ? (admin ? (adminDark ? const Color(0xFFF5F5F4) : AppColors.ink) : null) : p.card,
+        borderRadius: BorderRadius.circular(admin ? 999 : 16),
         border: Border.all(color: active ? Colors.transparent : p.border),
-        boxShadow: active ? AppColors.shadowMd : null,
+        boxShadow: active && !admin ? AppColors.shadowMd : null,
       ),
       child: Material(
         type: MaterialType.transparency,

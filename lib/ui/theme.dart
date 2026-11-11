@@ -11,17 +11,33 @@ class AppColors {
   static const red600 = Color(0xFFDC2626);
 
   /// Sidebar active item, sign-in button: `bg-gradient-to-r from-[#111827] via-[#1f2937] to-[#0b1220]`.
-  static const brandGradient = LinearGradient(colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF0B1220)]);
+  static const brandGradient = LinearGradient(colors: [Color(0xFF1C1917), Color(0xFF292524)]);
 
   /// Logo tiles: the same colours, top-left to bottom-right.
   static const brandDiagonal = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF0B1220)],
+    colors: [Color(0xFFC2410C), Color(0xFF9A3412)],
   );
 
   /// The admin `Button` primary: `from-[#2b1206] via-[#481f0d] to-[#200d05]`.
   static const buttonGradient = LinearGradient(colors: [Color(0xFF2B1206), Color(0xFF481F0D), Color(0xFF200D05)]);
+
+  // ---- The admin console (operations look): warm off-white page, flat white
+  // cards, near-black primary buttons, burnt orange for the brand and urgent
+  // actions, and a dark side menu.
+
+  /// Primary buttons and the active filter chip ("Export report").
+  static const ink = Color(0xFF1C1917);
+
+  /// Brand tile, urgent actions ("Send surge bonus"), active tab on a phone.
+  static const orange = Color(0xFFC2410C);
+
+  /// The dark side menu and its active item.
+  static const sidebar = Color(0xFF1C1B19);
+  static const sidebarActive = Color(0xFF2E2C29);
+  static const sidebarText = Color(0xFFE7E5E4);
+  static const sidebarMuted = Color(0xFF8F8A84);
 
   /// Tailwind `shadow-sm`.
   static const shadowSm = [BoxShadow(color: Color(0x0D000000), blurRadius: 2, offset: Offset(0, 1))];
@@ -123,6 +139,40 @@ class Palette extends ThemeExtension<Palette> {
     accent: Color(0xFFB4C1D6),
   );
 
+  /// The admin console: warm stone page, flat white cards, soft borders.
+  static const adminLight = Palette(
+    page: Color(0xFFF6F5F2),
+    card: Colors.white,
+    header: Color(0xFFF6F5F2),
+    stone50: Color(0xFFF6F5F2),
+    stone100: Color(0xFFEFEDE9),
+    stone200: Color(0xFFE7E5E1),
+    border: Color(0xFFE7E5E1),
+    divider: Color(0xFFEFEDE9),
+    text: Color(0xFF1C1917),
+    textSecondary: Color(0xFF57534E),
+    muted: Color(0xFF78716C),
+    faint: Color(0xFFA8A29E),
+    accent: Color(0xFFC2410C),
+  );
+
+  /// The admin console in dark mode: warm charcoal instead of slate.
+  static const adminDark = Palette(
+    page: Color(0xFF141312),
+    card: Color(0xFF1E1D1B),
+    header: Color(0xFF141312),
+    stone50: Color(0xFF191817),
+    stone100: Color(0xFF262421),
+    stone200: Color(0xFF34322E),
+    border: Color(0xFF34322E),
+    divider: Color(0xFF2B2926),
+    text: Color(0xFFF5F5F4),
+    textSecondary: Color(0xFFD6D3D1),
+    muted: Color(0xFFA8A29E),
+    faint: Color(0xFF8A847E),
+    accent: Color(0xFFFB923C),
+  );
+
   static Palette of(BuildContext context) => Theme.of(context).extension<Palette>() ?? light;
 
   @override
@@ -187,6 +237,108 @@ const _statusTones = {
 };
 
 Tone statusTone(String? status) => _statusTones[status] ?? Tone.slate;
+
+/// The admin console's theme: the shared one with the operations palette,
+/// near-black primary buttons and orange accents.
+ThemeData buildAdminTheme(Brightness brightness) {
+  final dark = brightness == Brightness.dark;
+  final p = dark ? Palette.adminDark : Palette.adminLight;
+  final base = buildTheme(brightness);
+  final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: p.border));
+  const buttonText = TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 13, fontWeight: FontWeight.w700);
+  final buttonShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+  final primary = dark ? const Color(0xFFF5F5F4) : AppColors.ink;
+  return base.copyWith(
+    extensions: [p],
+    scaffoldBackgroundColor: p.page,
+    canvasColor: p.card,
+    colorScheme: base.colorScheme.copyWith(
+      primary: primary,
+      onPrimary: dark ? AppColors.ink : Colors.white,
+      secondary: AppColors.orange,
+      surface: p.card,
+      onSurface: p.text,
+      onSurfaceVariant: p.muted,
+      surfaceContainerHighest: p.stone100,
+      outline: p.border,
+    ),
+    textTheme: base.textTheme.apply(bodyColor: p.text, displayColor: p.text),
+    iconTheme: IconThemeData(color: p.textSecondary),
+    appBarTheme: base.appBarTheme.copyWith(
+      backgroundColor: p.header,
+      foregroundColor: p.text,
+      shape: Border(bottom: BorderSide(color: p.border)),
+      titleTextStyle: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 17, fontWeight: FontWeight.w800, color: p.text),
+    ),
+    cardTheme: base.cardTheme.copyWith(
+      color: p.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: p.border)),
+    ),
+    inputDecorationTheme: base.inputDecorationTheme.copyWith(
+      fillColor: p.card,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: border,
+      enabledBorder: border,
+      disabledBorder: border.copyWith(borderSide: BorderSide(color: p.border.withValues(alpha: 0.6))),
+      focusedBorder: border.copyWith(borderSide: BorderSide(color: primary, width: 1.5)),
+      labelStyle: TextStyle(fontSize: 13, color: p.muted),
+      hintStyle: TextStyle(fontSize: 14, color: p.faint),
+      helperStyle: TextStyle(fontSize: 11, color: p.faint),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primary,
+        foregroundColor: dark ? AppColors.ink : Colors.white,
+        shape: buttonShape,
+        textStyle: buttonText,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        minimumSize: const Size(0, 40),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: p.card,
+        foregroundColor: p.text,
+        side: BorderSide(color: p.border),
+        shape: buttonShape,
+        textStyle: buttonText,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        minimumSize: const Size(0, 40),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: p.accent, textStyle: buttonText, shape: buttonShape),
+    ),
+    dividerTheme: DividerThemeData(color: p.divider, space: 1, thickness: 1),
+    drawerTheme: const DrawerThemeData(backgroundColor: AppColors.sidebar, surfaceTintColor: Colors.transparent, width: 288),
+    bottomSheetTheme: BottomSheetThemeData(backgroundColor: p.card, surfaceTintColor: Colors.transparent),
+    dialogTheme: DialogThemeData(backgroundColor: p.card, surfaceTintColor: Colors.transparent),
+    popupMenuTheme: PopupMenuThemeData(color: p.card, surfaceTintColor: Colors.transparent),
+    chipTheme: base.chipTheme.copyWith(
+      backgroundColor: p.card,
+      selectedColor: primary,
+      side: BorderSide(color: p.border),
+      shape: const StadiumBorder(),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: p.card,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: AppColors.orange.withValues(alpha: dark ? 0.22 : 0.10),
+      height: 68,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 12,
+          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
+          color: states.contains(WidgetState.selected) ? (dark ? const Color(0xFFFB923C) : AppColors.orange) : p.muted,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(size: 24, color: states.contains(WidgetState.selected) ? (dark ? const Color(0xFFFB923C) : AppColors.orange) : p.muted),
+      ),
+    ),
+  );
+}
 
 ThemeData buildTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;

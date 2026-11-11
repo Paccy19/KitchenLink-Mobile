@@ -113,7 +113,9 @@ class _AdminShellState extends State<AdminShell> with WidgetsBindingObserver {
               child: Scaffold(
                 key: scaffoldKey,
                 backgroundColor: p.page,
-                appBar: _Header(onMenu: docked ? null : () => scaffoldKey.currentState?.openDrawer()),
+                appBar: _Header(title: current.page.label, docked: docked),
+                // On a phone: the main pages along the bottom, the rest under "More".
+                bottomNavigationBar: docked ? null : _BottomBar(sections: sections, current: current.page, onSelect: (page) => go(AdminRoute(page)), onMore: () => scaffoldKey.currentState?.openDrawer()),
                 drawer: docked
                     ? null
                     : _Drawer(
@@ -214,56 +216,105 @@ class HeaderButton extends StatelessWidget {
   }
 }
 
-/// `sticky top-0 bg-white/95 border-b px-4 py-3`.
-class _Header extends StatelessWidget implements PreferredSizeWidget {
-  const _Header({required this.onMenu});
+/// The phone's bottom bar: the day-to-day pages the admin may open, then
+/// "More" for the full menu.
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.sections, required this.current, required this.onSelect, required this.onMore});
 
-  final VoidCallback? onMenu;
+  final List<AdminSection> sections;
+  final AdminPage current;
+  final ValueChanged<AdminPage> onSelect;
+  final VoidCallback onMore;
+
+  static const _main = [
+    (Pages.overview, 'Overview', Icons.space_dashboard_outlined, Icons.space_dashboard),
+    (Pages.orders, 'Orders', Icons.receipt_long_outlined, Icons.receipt_long),
+    (Pages.deliveries, 'Deliveries', Icons.location_on_outlined, Icons.location_on),
+    (Pages.vendors, 'Vendors', Icons.storefront_outlined, Icons.storefront),
+  ];
 
   @override
-  Size get preferredSize => const Size.fromHeight(65);
+  Widget build(BuildContext context) {
+    final allowed = {for (final s in sections) for (final page in s.pages) page.id};
+    final items = [for (final item in _main) if (allowed.contains(item.$1.id)) item];
+    final index = items.indexWhere((item) => item.$1.id == current.id);
+    final p = Palette.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: p.border))),
+      child: NavigationBar(
+        selectedIndex: index < 0 ? items.length : index,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        onDestinationSelected: (i) => i < items.length ? onSelect(items[i].$1) : onMore(),
+        destinations: [
+          for (final (_, label, icon, selected) in items) NavigationDestination(icon: Icon(icon), selectedIcon: Icon(selected), label: label),
+          const NavigationDestination(icon: Icon(Icons.menu), selectedIcon: Icon(Icons.menu_open), label: 'More', tooltip: 'Open menu'),
+        ],
+      ),
+    );
+  }
+}
+
+/// The orange "K" brand tile (side menu, phone header).
+class BrandTile extends StatelessWidget {
+  const BrandTile({super.key, this.size = 40});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: AppColors.orange, borderRadius: BorderRadius.circular(size * 0.25)),
+        child: Text('K', style: TextStyle(fontSize: size * 0.48, fontWeight: FontWeight.w800, color: Colors.white)),
+      );
+}
+
+/// The top bar: the page's name (with the brand tile on a phone), then the
+/// theme switch, notifications and the account menu.
+class _Header extends StatelessWidget implements PreferredSizeWidget {
+  const _Header({required this.title, required this.docked});
+
+  final String title;
+  final bool docked;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     final theme = context.watch<ThemeController>();
     return Material(
-      color: p.header.withValues(alpha: 0.95),
+      color: p.page,
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: 65,
-          padding: EdgeInsets.symmetric(horizontal: isSm(context) ? 24 : 16),
+          height: 64,
+          padding: EdgeInsets.symmetric(horizontal: isSm(context) ? 32 : 16),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: p.border.withValues(alpha: 0.8))),
+            border: Border(bottom: BorderSide(color: p.border)),
           ),
           child: Row(
             children: [
-              // `lg:hidden` menu button.
-              if (onMenu != null) ...[
-                HeaderButton(
-                  onTap: onMenu!,
-                  tooltip: 'Open menu',
-                  child: Icon(Icons.menu, size: 20, color: p.textSecondary),
-                ),
-                const SizedBox(width: 12),
-              ],
+              if (!docked) ...[const BrandTile(size: 34), const SizedBox(width: 12)],
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Admin Panel',
+                      title,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: isSm(context) ? 18 : 16, fontWeight: FontWeight.w800, color: p.text),
+                      style: TextStyle(fontSize: docked ? 17 : 16, fontWeight: FontWeight.w800, letterSpacing: -0.2, color: p.text),
                     ),
-                    // `hidden sm:block`.
-                    if (isSm(context))
-                      Text(
-                        'Marketplace operations & control',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: p.faint),
-                      ),
+                    Text(
+                      'Kitchen-Link · Admin console',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: p.faint),
+                    ),
                   ],
                 ),
               ),
@@ -369,7 +420,7 @@ class _AccountMenu extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF111827), Color(0xFF0B1220)]),
+                color: AppColors.ink,
                 border: Border.all(color: const Color(0xFFD6D3D1), width: 2),
               ),
               alignment: Alignment.center,
@@ -415,90 +466,38 @@ class _DrawerState extends State<_Drawer> {
   Widget build(BuildContext context) {
     final session = context.watch<AdminSession>();
     final admin = session.admin ?? const {};
-    final p = Palette.of(context);
+    final name = (admin['name'] ?? 'Admin').toString();
+    final role = (admin['role_label'] ?? admin['role']?.toString().replaceAll('_', ' ') ?? '').toString();
+    final initials = name.split(' ').where((s) => s.isNotEmpty).map((s) => s[0]).take(2).join().toUpperCase();
+    // The dark side menu: brand, the sections, then who is signed in,
+    // "Visit marketplace" and "Sign out".
     final content = SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!widget.docked)
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  tooltip: 'Close menu',
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, size: 20, color: p.muted),
-                ),
-              ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 20),
+              padding: const EdgeInsets.fromLTRB(8, 0, 0, 24),
               child: Row(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(gradient: AppColors.brandDiagonal, borderRadius: BorderRadius.circular(16), boxShadow: AppColors.shadowMd),
-                    child: const Icon(Icons.verified_user_outlined, color: Colors.white, size: 24),
-                  ),
+                  const BrandTile(size: 40),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'KitchenLink',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: p.text),
-                      ),
-                      Text(
-                        'Admin Panel',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).brightness == Brightness.dark ? p.accent : const Color(0xFF374151),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: p.stone100,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: p.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SIGNED IN AS',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.55, color: p.muted),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    admin['name']?.toString() ?? 'Admin',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: p.text),
-                  ),
-                  Text(
-                    admin['email']?.toString() ?? '',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: p.muted),
-                  ),
-                  if (admin['role'] != null) ...[
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.slate, borderRadius: BorderRadius.circular(999)),
-                      child: Text(
-                        (admin['role_label'] ?? admin['role'].toString().replaceAll('_', ' ')).toString().toUpperCase(),
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: Colors.white),
-                      ),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Kitchen-Link', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                        Text('Admin console', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.sidebarMuted)),
+                      ],
                     ),
-                  ],
+                  ),
+                  if (!widget.docked)
+                    IconButton(
+                      tooltip: 'Close menu',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, size: 20, color: AppColors.sidebarMuted),
+                    ),
                 ],
               ),
             ),
@@ -507,36 +506,66 @@ class _DrawerState extends State<_Drawer> {
                 padding: EdgeInsets.zero,
                 children: [
                   for (final section in widget.sections) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                      child: Text(
-                        section.label.toUpperCase(),
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: p.faint),
+                    if (section.id != 'overview')
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                        child: Text(
+                          section.label.toUpperCase(),
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.9, color: AppColors.sidebarMuted),
+                        ),
                       ),
-                    ),
                     if (section.id == 'account')
                       _settingsGroup(section)
                     else
                       for (final page in section.pages)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.only(bottom: 2),
                           child: _NavItem(icon: page.icon, label: page.label, active: page.id == widget.current.id, onTap: () => widget.onSelect(page)),
                         ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                   ],
                 ],
               ),
             ),
             Container(
-              margin: const EdgeInsets.only(top: 16),
-              padding: const EdgeInsets.only(top: 16),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: p.divider)),
-              ),
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: 12),
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.sidebarActive))),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Who is signed in.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(color: AppColors.sidebarActive, shape: BoxShape.circle),
+                          child: Text(initials, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                              Text(
+                                role.isEmpty ? (admin['email'] ?? '').toString() : role,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11.5, color: AppColors.sidebarMuted),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   _NavItem(icon: Icons.open_in_new, iconSize: 16, label: 'Visit marketplace', active: false, onTap: openMarketplace),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   _NavItem(
                     icon: Icons.logout,
                     iconSize: 16,
@@ -556,22 +585,22 @@ class _DrawerState extends State<_Drawer> {
       ),
     );
     if (widget.docked) {
-      // `w-72 border-r border-stone-200/80 bg-white p-5`.
       return Container(
-        width: 288,
-        decoration: BoxDecoration(
-          color: p.header,
-          border: Border(right: BorderSide(color: p.border.withValues(alpha: 0.8))),
-        ),
+        width: 272,
+        color: AppColors.sidebar,
         child: Material(type: MaterialType.transparency, child: content),
       );
     }
-    return Drawer(width: (MediaQuery.of(context).size.width * 0.85).clamp(0, 288).toDouble(), shape: const RoundedRectangleBorder(), child: content);
+    return Drawer(
+      width: (MediaQuery.of(context).size.width * 0.85).clamp(0, 288).toDouble(),
+      backgroundColor: AppColors.sidebar,
+      shape: const RoundedRectangleBorder(),
+      child: content,
+    );
   }
 
   /// "Settings" opens a dropdown; each option is its own page.
   Widget _settingsGroup(AdminSection section) {
-    final p = Palette.of(context);
     final inside = _insideSettings;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -589,28 +618,30 @@ class _DrawerState extends State<_Drawer> {
         ),
         if (settingsOpen)
           Container(
-            margin: const EdgeInsets.only(left: 24, top: 4),
-            padding: const EdgeInsets.only(left: 12),
-            decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: p.border)),
-            ),
+            margin: const EdgeInsets.only(left: 22, top: 2),
+            padding: const EdgeInsets.only(left: 10),
+            decoration: const BoxDecoration(border: Border(left: BorderSide(color: AppColors.sidebarActive))),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final page in section.pages)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.only(bottom: 2),
                     child: Material(
-                      color: page.id == widget.current.id ? p.stone100 : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
+                      color: page.id == widget.current.id ? AppColors.sidebarActive : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         onTap: () => widget.onSelect(page),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                           child: Text(
                             page.label,
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: page.id == widget.current.id ? p.text : p.muted),
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: page.id == widget.current.id ? FontWeight.w700 : FontWeight.w500,
+                              color: page.id == widget.current.id ? Colors.white : AppColors.sidebarText,
+                            ),
                           ),
                         ),
                       ),
@@ -624,8 +655,7 @@ class _DrawerState extends State<_Drawer> {
   }
 }
 
-/// `flex gap-3 px-4 py-2.5 rounded-xl text-sm font-bold`; the active page is
-/// the dark gradient pill.
+/// One page in the dark side menu; the open page sits on a lighter pill.
 class _NavItem extends StatelessWidget {
   const _NavItem({required this.icon, required this.label, required this.active, required this.onTap, this.trailing, this.danger = false, this.iconSize = 18});
 
@@ -639,40 +669,33 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = Palette.of(context);
     final color = active
         ? Colors.white
         : danger
-        ? AppColors.red600
-        : p.textSecondary;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: active ? AppColors.brandGradient : null,
+        ? const Color(0xFFF87171)
+        : AppColors.sidebarText;
+    return Material(
+      color: active ? AppColors.sidebarActive : Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: active ? AppColors.shadowMd : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: IconTheme(
-              data: IconThemeData(color: color),
-              child: Row(
-                children: [
-                  Icon(icon, size: iconSize),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color),
-                    ),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: IconTheme(
+            data: IconThemeData(color: active ? Colors.white : (danger ? color : AppColors.sidebarMuted)),
+            child: Row(
+              children: [
+                Icon(icon, size: iconSize),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 14.5, fontWeight: active ? FontWeight.w700 : FontWeight.w500, color: color),
                   ),
-                  ?trailing,
-                ],
-              ),
+                ),
+                ?trailing,
+              ],
             ),
           ),
         ),

@@ -10,22 +10,22 @@ import '../ui/validation.dart';
 import '../root/role_switcher.dart';
 
 // The website's admin sign-in colours (Tailwind stone / gray / red).
-const _page = Color(0xFFF5F6F8);
-const _gray900 = Color(0xFF111827);
-const _slate = Color(0xFF1F2937);
+const _page = Color(0xFFF6F5F2);
+const _gray900 = Color(0xFF1C1917);
+const _slate = Color(0xFF1C1917);
 const _stone100 = Color(0xFFF5F5F4);
-const _stone200 = Color(0xFFE7E5E4);
+const _stone200 = Color(0xFFE7E5E1);
 const _stone400 = Color(0xFFA8A29E);
 const _stone500 = Color(0xFF78716C);
 const _stone600 = Color(0xFF57534E);
 const _red50 = Color(0xFFFEF2F2);
 const _red200 = Color(0xFFFECACA);
 const _red700 = Color(0xFFB91C1C);
-const _gradient = LinearGradient(colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF0B1220)]);
+const _gradient = LinearGradient(colors: [Color(0xFF1C1917), Color(0xFF292524)]);
 const _diagonal = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF0B1220)],
+  colors: [Color(0xFFC2410C), Color(0xFF9A3412)],
 );
 const _shadowMd = [
   BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 4), spreadRadius: -1),
