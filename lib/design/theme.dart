@@ -6,7 +6,8 @@ import 'tokens.dart';
 /// The one Material theme every role starts from, built from [KLColors].
 /// Material widgets drawn with the defaults (bars, fields, buttons, sheets,
 /// dialogs, tabs, switches) all get the same shapes, type and colours.
-ThemeData klTheme(KLColors c, {List<ThemeExtension<dynamic>> extensions = const []}) {
+ThemeData klTheme(KLColors c, {KLRole? role, List<ThemeExtension<dynamic>> extensions = const []}) {
+  final r = role ?? (c.isDark ? KLRole.brandDark : KLRole.brandLight);
   final scheme = ColorScheme(
     brightness: c.brightness,
     primary: c.primary,
@@ -51,7 +52,7 @@ ThemeData klTheme(KLColors c, {List<ThemeExtension<dynamic>> extensions = const 
   const buttonText = TextStyle(fontFamily: KLFont.sans, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.1);
 
   return base.copyWith(
-    extensions: extensions,
+    extensions: [r, ...extensions],
     canvasColor: c.surface,
     // A thin chevron for "back", like iOS, in every role.
     actionIconTheme: ActionIconThemeData(
@@ -59,6 +60,9 @@ ThemeData klTheme(KLColors c, {List<ThemeExtension<dynamic>> extensions = const 
       closeButtonIconBuilder: (context) => const Icon(Icons.close_rounded, size: 22),
     ),
     splashFactory: InkSparkle.constantTurbulenceSeedSplashFactory,
+    // A faint warm wash under the pointer on lists, chips and icon buttons.
+    hoverColor: c.ink.withValues(alpha: c.isDark ? 0.06 : 0.04),
+    focusColor: c.accent.withValues(alpha: 0.18),
     // iOS-style pages on every phone: slide in from the right, swipe back.
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -161,7 +165,7 @@ ThemeData klTheme(KLColors c, {List<ThemeExtension<dynamic>> extensions = const 
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: c.surface,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: c.accentSoft,
+      indicatorColor: r.soft,
       shadowColor: Colors.transparent,
       elevation: 0,
       height: 64,
@@ -171,11 +175,11 @@ ThemeData klTheme(KLColors c, {List<ThemeExtension<dynamic>> extensions = const 
           fontFamily: KLFont.sans,
           fontSize: 11,
           fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
-          color: states.contains(WidgetState.selected) ? c.primary : c.inkTertiary,
+          color: states.contains(WidgetState.selected) ? r.accent : c.inkTertiary,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
-        (states) => IconThemeData(size: 24, color: states.contains(WidgetState.selected) ? c.primary : c.inkTertiary),
+        (states) => IconThemeData(size: 24, color: states.contains(WidgetState.selected) ? r.accent : c.inkTertiary),
       ),
     ),
     tabBarTheme: TabBarThemeData(

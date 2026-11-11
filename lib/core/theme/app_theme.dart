@@ -17,24 +17,24 @@ class AppColors {
   static const creamDeep = Color(0xFFF5EBE1);
 }
 
-/// The delivery worker's brand colours. They used to be the website's moss
-/// green; the app now uses one espresso brand for every role, and green only
-/// means "online" (the go-online switch).
+/// The delivery worker's olive (the role accent, [KLRole.driverLight]): the
+/// selected tab, the online card, the earnings card and the route line.
+/// Buttons stay espresso, like every role.
 class DriverColors {
   const DriverColors._();
 
-  static const moss950 = Color(0xFF1C0A03);
-  static const moss900 = Color(0xFF2B1609);
-  static const brand = Color(0xFF542813);
-  static const accent = Color(0xFF8A5332);
-  static const leaf = Color(0xFFDDAE7E);
-  static const sage = Color(0xFFEBD7C5);
-  static const mist = Color(0xFFF8F4EE);
-  static const mistDeep = Color(0xFFF3E6D7);
+  static const moss950 = Color(0xFF1F2715);
+  static const moss900 = Color(0xFF2F3B20);
+  static const brand = Color(0xFF55693A);
+  static const accent = Color(0xFF6E8550);
+  static const leaf = Color(0xFFAFC58F);
+  static const sage = Color(0xFFD5DFC6);
+  static const mist = Color(0xFFF4F6EE);
+  static const mistDeep = Color(0xFFE6EBDA);
 
-  /// "Online": the go-online switch and its card.
-  static const online = Color(0xFF2E7A4B);
-  static const onlineDeep = Color(0xFF1F5A35);
+  /// "Online": the go-online card.
+  static const online = Color(0xFF55693A);
+  static const onlineDeep = Color(0xFF34421F);
 }
 
 /// Meaning of a status colour, resolved against the current theme.
@@ -89,7 +89,7 @@ class AppTheme {
   static ThemeData dark() => klTheme(KLColors.dark);
 
   /// The delivery worker screens (lib/driver).
-  static ThemeData driverLight() => klTheme(KLColors.light);
+  static ThemeData driverLight() => klTheme(KLColors.light, role: KLRole.driverLight);
 
-  static ThemeData driverDark() => klTheme(KLColors.dark);
+  static ThemeData driverDark() => klTheme(KLColors.dark, role: KLRole.driverDark);
 }

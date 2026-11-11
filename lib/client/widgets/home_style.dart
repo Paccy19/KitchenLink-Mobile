@@ -83,52 +83,67 @@ class HomeTopBar extends StatelessWidget {
   }
 
   Widget _location() => Semantics(
-        button: true,
-        label: '${location.isGps ? 'Delivering to your location' : 'Deliver to'} ${location.label}. Change location',
-        excludeSemantics: true,
-        child: PressScale(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onLocation();
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    button: true,
+    label: '${location.isGps ? 'Delivering to your location' : 'Deliver to'} ${location.label}. Change location',
+    excludeSemantics: true,
+    child: PressScale(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onLocation();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(location.isGps ? Icons.near_me_rounded : Icons.location_on_rounded, size: 13, color: K.brown500),
-                      const SizedBox(width: 4),
-                      Text(location.isGps ? 'Delivering to you' : 'Deliver to', style: kText(12, weight: FontWeight.w600, color: K.stone500)),
-                    ],
-                  ),
-                  const SizedBox(height: 1),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(child: Text(location.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(16, weight: w900, spacing: -0.3))),
-                      const SizedBox(width: 2),
-                      Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: K.stone700),
-                    ],
+                  Icon(location.isGps ? Icons.near_me_rounded : Icons.location_on_rounded, size: 13, color: K.brown500),
+                  const SizedBox(width: 4),
+                  Text(
+                    location.isGps ? 'Delivering to you' : 'Deliver to',
+                    style: kText(12, weight: FontWeight.w600, color: K.stone500),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 1),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      location.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: kText(16, weight: w900, spacing: -0.3),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: K.stone700),
+                ],
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _iconButton(IconData icon, String tooltip, VoidCallback onTap) => IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        style: IconButton.styleFrom(backgroundColor: K.surface, minimumSize: const Size(40, 40), fixedSize: const Size(40, 40), shape: CircleBorder(side: BorderSide(color: K.stone200, width: 0.6))),
-        icon: Icon(icon, size: 20, color: K.stone800),
-      );
+    tooltip: tooltip,
+    onPressed: onTap,
+    style: IconButton.styleFrom(
+      backgroundColor: K.surface,
+      minimumSize: const Size(40, 40),
+      fixedSize: const Size(40, 40),
+      shape: CircleBorder(side: BorderSide(color: K.stone200, width: 0.6)),
+    ),
+    icon: Icon(icon, size: 20, color: K.stone800),
+  );
 
   Widget _bell() {
     final count = unreadNotifications ?? 0;
@@ -145,8 +160,16 @@ class HomeTopBar extends StatelessWidget {
               child: Container(
                 constraints: const BoxConstraints(minWidth: 18),
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(color: K.red500, borderRadius: BorderRadius.circular(99), border: Border.all(color: K.page, width: 2)),
-                child: Text(count > 9 ? '9+' : '$count', textAlign: TextAlign.center, style: kText(10, weight: w900, color: Colors.white)),
+                decoration: BoxDecoration(
+                  color: K.red500,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: K.page, width: 2),
+                ),
+                child: Text(
+                  count > 9 ? '9+' : '$count',
+                  textAlign: TextAlign.center,
+                  style: kText(10, weight: w900, color: Colors.white),
+                ),
               ),
             ),
         ],
@@ -170,10 +193,15 @@ class HomeGreeting extends StatelessWidget {
     return Semantics(
       header: true,
       child: Text.rich(
-        TextSpan(children: [
-          TextSpan(text: name.isEmpty ? '$part.\n' : '$part, $name.\n'),
-          TextSpan(text: 'What are we eating?', style: kDisplay(30, color: K.brown500)),
-        ]),
+        TextSpan(
+          children: [
+            TextSpan(text: name.isEmpty ? '$part.\n' : '$part, $name.\n'),
+            TextSpan(
+              text: 'What are we eating?',
+              style: kDisplay(30, color: K.brown500),
+            ),
+          ],
+        ),
         style: kDisplay(30),
       ),
     );
@@ -252,7 +280,17 @@ class _PromoCarouselState extends State<PromoCarousel> {
                 HapticFeedback.selectionClick();
                 setState(() => _index = i);
               },
-              itemBuilder: (context, i) => Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: _HeroCard(slide: slides[i])),
+              itemBuilder: (context, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                // The photo drifts slower than the card as it swipes (parallax).
+                child: AnimatedBuilder(
+                  animation: _pages,
+                  builder: (context, _) {
+                    final page = _pages.hasClients && _pages.position.haveDimensions ? (_pages.page ?? 0) : _index.toDouble();
+                    return _HeroCard(slide: slides[i], drift: reduceMotion(context) ? 0 : (page - i).clamp(-1.0, 1.0));
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -282,9 +320,12 @@ class _PromoCarouselState extends State<PromoCarousel> {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.slide});
+  const _HeroCard({required this.slide, this.drift = 0});
 
   final PromoSlide slide;
+
+  /// −1…1: how far the card is from the centre of the carousel.
+  final double drift;
 
   @override
   Widget build(BuildContext context) {
@@ -313,18 +354,42 @@ class _HeroCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(right: -40, top: 0, bottom: 0, child: Center(child: _photo())),
+                Positioned(
+                  right: -40 - drift * 70,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: Transform.rotate(angle: drift * 0.25, child: _photo()),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 18, 124, 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(slide.tag.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(10.5, weight: w900, color: caramel, spacing: 1.2)),
+                      Text(
+                        slide.tag.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: kText(10.5, weight: w900, color: caramel, spacing: 1.2),
+                      ),
                       const SizedBox(height: 8),
-                      Text(slide.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: kDisplay(23, color: cream, height: 1.08)),
+                      Text(
+                        slide.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: kDisplay(23, color: cream, height: 1.08),
+                      ),
                       const SizedBox(height: 6),
-                      Flexible(child: Text(slide.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(12, color: cream.withValues(alpha: 0.72), height: 1.35))),
+                      Flexible(
+                        child: Text(
+                          slide.text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: kText(12, color: cream.withValues(alpha: 0.72), height: 1.35),
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
@@ -332,7 +397,14 @@ class _HeroCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Flexible(child: Text(slide.action, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(12.5, weight: w900, color: const Color(0xFF2B1206)))),
+                            Flexible(
+                              child: Text(
+                                slide.action,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: kText(12.5, weight: w900, color: const Color(0xFF2B1206)),
+                              ),
+                            ),
                             const SizedBox(width: 4),
                             const Icon(Icons.arrow_forward_rounded, size: 15, color: Color(0xFF2B1206)),
                           ],
@@ -351,7 +423,10 @@ class _HeroCard extends StatelessWidget {
 
   Widget _photo() {
     const size = 156.0;
-    final ring = BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0x33DDAE7E), width: 6));
+    final ring = BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: const Color(0x33DDAE7E), width: 6),
+    );
     final icon = Container(
       width: size,
       height: size,
@@ -364,8 +439,12 @@ class _HeroCard extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: ring.copyWith(boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, 10))]),
-      child: ClipOval(child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => icon)),
+      decoration: ring.copyWith(
+        boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, 10))],
+      ),
+      child: ClipOval(
+        child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => icon),
+      ),
     );
   }
 }
@@ -414,9 +493,19 @@ class OfferBanner extends StatelessWidget {
                             style: kText(10.5, weight: w900, color: K.brown500, spacing: 1.1),
                           ),
                           const SizedBox(height: 6),
-                          Text(offer.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: kDisplay(22, color: K.brown850, height: 1.05)),
+                          Text(
+                            offer.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: kDisplay(22, color: K.brown850, height: 1.05),
+                          ),
                           const SizedBox(height: 6),
-                          Text(offer.vendor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(12, weight: FontWeight.w600, color: K.stone600)),
+                          Text(
+                            offer.vendor.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: kText(12, weight: FontWeight.w600, color: K.stone600),
+                          ),
                         ],
                       ),
                     ),
@@ -457,8 +546,8 @@ class PreviousOrderCard extends StatelessWidget {
     final (statusFg, statusBg) = cancelled
         ? (K.rose600, K.red50)
         : live
-            ? (K.amber800, K.amber200)
-            : (K.forest700, K.forest100);
+        ? (K.amber800, K.amber200)
+        : (K.forest700, K.forest100);
     return PressScale(
       pressedScale: 0.98,
       child: Material(
@@ -468,7 +557,10 @@ class PreviousOrderCard extends StatelessWidget {
         child: InkWell(
           onTap: onOpen,
           child: Ink(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: K.stone200.withValues(alpha: 0.7))),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: K.stone200.withValues(alpha: 0.7)),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -480,7 +572,12 @@ class PreviousOrderCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(order.vendorName, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(15, weight: w900, spacing: -0.2)),
+                            Text(
+                              order.vendorName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: kText(15, weight: w900, spacing: -0.2),
+                            ),
                             const SizedBox(height: 2),
                             Text(
                               [order.orderNumber, if (date != null) DateFormat('EEE d MMM').format(date.toLocal())].where((s) => s.isNotEmpty).join(' · '),
@@ -495,7 +592,10 @@ class PreviousOrderCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(99)),
-                        child: Text(live ? 'On its way' : orderStatusLabel(order.status), style: kText(11.5, weight: w900, color: statusFg)),
+                        child: Text(
+                          live ? 'On its way' : orderStatusLabel(order.status),
+                          style: kText(11.5, weight: w900, color: statusFg),
+                        ),
                       ),
                     ],
                   ),
@@ -505,7 +605,12 @@ class PreviousOrderCard extends StatelessWidget {
                       for (final item in items.take(3)) ...[
                         SizedBox(
                           width: 44,
-                          child: NetImage(url: item.image.isEmpty ? null : media(item.image), aspect: 1, radius: BorderRadius.circular(12), fallback: Icon(Icons.restaurant, size: 16, color: K.stone400)),
+                          child: NetImage(
+                            url: item.image.isEmpty ? null : media(item.image),
+                            aspect: 1,
+                            radius: BorderRadius.circular(12),
+                            fallback: Icon(Icons.restaurant, size: 16, color: K.stone400),
+                          ),
                         ),
                         const SizedBox(width: 6),
                       ],
@@ -515,14 +620,20 @@ class PreviousOrderCard extends StatelessWidget {
                           height: 44,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(color: K.stone100, borderRadius: BorderRadius.circular(12)),
-                          child: Text('+${items.length - 3}', style: kText(12, weight: w900, color: K.stone600)),
+                          child: Text(
+                            '+${items.length - 3}',
+                            style: kText(12, weight: w900, color: K.stone600),
+                          ),
                         ),
                       const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text('Total', style: kText(11, color: K.stone500)),
-                          Text(rwf(order.total), style: kText(15, weight: w900).copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+                          Text(
+                            rwf(order.total),
+                            style: kText(15, weight: w900).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                          ),
                         ],
                       ),
                     ],
@@ -587,7 +698,11 @@ class DishGridCard extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             child: Ink(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: K.stone200.withValues(alpha: 0.6)), boxShadow: K.dark ? null : K.shadowSm),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: K.stone200.withValues(alpha: 0.6)),
+                boxShadow: K.dark ? null : K.shadowSm,
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
@@ -597,13 +712,15 @@ class DishGridCard extends StatelessWidget {
                       children: [
                         NetImage(url: url, aspect: 1.08, radius: BorderRadius.circular(16)),
                         if (!dish.isAvailable)
-                          Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(16)))),
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
                         Positioned(
                           left: 8,
                           top: 8,
-                          child: dish.isAvailable
-                              ? (dish.rating >= 4.5 ? _tag('Top rated') : const SizedBox.shrink())
-                              : _tag('Sold out', dark: true),
+                          child: dish.isAvailable ? (dish.rating >= 4.5 ? _tag('Top rated') : const SizedBox.shrink()) : _tag('Sold out', dark: true),
                         ),
                         Positioned(
                           right: 6,
@@ -619,7 +736,16 @@ class DishGridCard extends StatelessWidget {
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(7),
-                                child: Icon(saved ? Icons.favorite_rounded : Icons.favorite_border_rounded, size: 17, color: saved ? K.rose600 : K.stone700, semanticLabel: saved ? 'Remove from saved' : 'Save dish'),
+                                child: Bump(
+                                  value: saved,
+                                  scale: 1.35,
+                                  child: Icon(
+                                    saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                    size: 17,
+                                    color: saved ? K.rose600 : K.stone700,
+                                    semanticLabel: saved ? 'Remove from saved' : 'Save dish',
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -631,9 +757,19 @@ class DishGridCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(dish.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(14.5, weight: w900, spacing: -0.2)),
+                          Text(
+                            dish.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: kText(14.5, weight: w900, spacing: -0.2),
+                          ),
                           const SizedBox(height: 2),
-                          Text(kitchen.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(11.5, color: K.stone500)),
+                          Text(
+                            kitchen.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: kText(11.5, color: K.stone500),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -646,7 +782,10 @@ class DishGridCard extends StatelessWidget {
                                         children: [
                                           const Icon(Icons.star_rounded, size: 13, color: K.amber400),
                                           const SizedBox(width: 2),
-                                          Text(numText(dish.rating), style: kText(11, weight: FontWeight.w700, color: K.stone600)),
+                                          Text(
+                                            numText(dish.rating),
+                                            style: kText(11, weight: FontWeight.w700, color: K.stone600),
+                                          ),
                                         ],
                                       ),
                                     Text(
@@ -659,7 +798,12 @@ class DishGridCard extends StatelessWidget {
                                 ),
                               ),
                               if (quantity == 0)
-                                _round(Icons.add_rounded, canAdd ? 'Add ${dish.name} to basket' : 'Sold out', filled: true, onTap: canAdd ? () => addDishToCart(context, menuDish, kitchen) : null),
+                                _round(
+                                  Icons.add_rounded,
+                                  canAdd ? 'Add ${dish.name} to basket' : 'Sold out',
+                                  filled: true,
+                                  onTap: canAdd ? () => addDishToCart(context, menuDish, kitchen) : null,
+                                ),
                             ],
                           ),
                           if (quantity > 0) ...[
@@ -670,7 +814,14 @@ class DishGridCard extends StatelessWidget {
                                 children: [
                                   _round(Icons.remove_rounded, 'One less', onTap: () => cart.setQuantity(dish.id, quantity - 1)),
                                   Expanded(
-                                    child: Text('$quantity', textAlign: TextAlign.center, style: kText(14, weight: w900).copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+                                    child: Bump(
+                                      value: quantity,
+                                      child: Text(
+                                        '$quantity',
+                                        textAlign: TextAlign.center,
+                                        style: kText(14, weight: w900).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                                      ),
+                                    ),
                                   ),
                                   _round(Icons.add_rounded, 'One more', filled: true, onTap: () => cart.setQuantity(dish.id, quantity + 1)),
                                 ],
@@ -691,33 +842,36 @@ class DishGridCard extends StatelessWidget {
   }
 
   Widget _tag(String text, {bool dark = false}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: dark ? K.fillStone800.withValues(alpha: 0.9) : const Color(0xE62B1609), borderRadius: BorderRadius.circular(99)),
-        child: Text(text.toUpperCase(), style: kText(9, weight: w900, color: const Color(0xFFFBF3EA), spacing: 0.8)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(color: dark ? K.fillStone800.withValues(alpha: 0.9) : const Color(0xE62B1609), borderRadius: BorderRadius.circular(99)),
+    child: Text(
+      text.toUpperCase(),
+      style: kText(9, weight: w900, color: const Color(0xFFFBF3EA), spacing: 0.8),
+    ),
+  );
 
   Widget _round(IconData icon, String tooltip, {bool filled = false, VoidCallback? onTap}) => Tooltip(
-        message: tooltip,
-        child: Semantics(
-          button: true,
-          label: tooltip,
-          excludeSemantics: true,
-          child: Material(
-            color: filled ? (onTap == null ? K.stone200 : K.fillBrown700) : Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap == null
-                  ? null
-                  : () {
-                      HapticFeedback.lightImpact();
-                      onTap();
-                    },
-              child: SizedBox(width: 34, height: 34, child: Icon(icon, size: 19, color: filled ? (onTap == null ? K.stone400 : Colors.white) : K.stone800)),
-            ),
-          ),
+    message: tooltip,
+    child: Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: Material(
+        color: filled ? (onTap == null ? K.stone200 : K.fillBrown700) : Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap == null
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  onTap();
+                },
+          child: SizedBox(width: 34, height: 34, child: Icon(icon, size: 19, color: filled ? (onTap == null ? K.stone400 : Colors.white) : K.stone800)),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 // ---- Bottom bar -------------------------------------------------------------------
@@ -790,32 +944,40 @@ class MarketBottomBar extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     onCart();
                   },
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2B1609),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: K.page, width: 4),
-                      boxShadow: K.brownShadow,
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(Icons.shopping_bag_outlined, color: Color(0xFFFBF3EA), size: 24),
-                        if (cartCount > 0)
-                          Positioned(
-                            right: 6,
-                            top: 6,
-                            child: Container(
-                              constraints: const BoxConstraints(minWidth: 18),
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(color: const Color(0xFFDDAE7E), borderRadius: BorderRadius.circular(99)),
-                              child: Text(cartCount > 99 ? '99+' : '$cartCount', textAlign: TextAlign.center, style: kText(10, weight: w900, color: K.brown950)),
+                  child: Bump(
+                    value: cartCount,
+                    scale: 1.14,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2B1609),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: K.page, width: 4),
+                        boxShadow: K.brownShadow,
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.shopping_bag_outlined, color: Color(0xFFFBF3EA), size: 24),
+                          if (cartCount > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                constraints: const BoxConstraints(minWidth: 18),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(color: const Color(0xFFDDAE7E), borderRadius: BorderRadius.circular(99)),
+                                child: Text(
+                                  cartCount > 99 ? '99+' : '$cartCount',
+                                  textAlign: TextAlign.center,
+                                  style: kText(10, weight: w900, color: K.brown950),
+                                ),
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -828,24 +990,29 @@ class MarketBottomBar extends StatelessWidget {
   }
 
   Widget _item(IconData icon, String label, VoidCallback onTap, {bool active = false}) => Expanded(
-        child: Semantics(
-          button: true,
-          selected: active,
-          child: InkResponse(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onTap();
-            },
-            radius: 32,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 24, color: active ? K.brown700 : K.stone400),
-                const SizedBox(height: 3),
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(10.5, weight: active ? w900 : FontWeight.w600, color: active ? K.brown700 : K.stone500)),
-              ],
+    child: Semantics(
+      button: true,
+      selected: active,
+      child: InkResponse(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        radius: 32,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: active ? K.brown700 : K.stone400),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: kText(10.5, weight: active ? w900 : FontWeight.w600, color: active ? K.brown700 : K.stone500),
             ),
-          ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

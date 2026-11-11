@@ -28,9 +28,14 @@ One Flutter app, **KitchenLink**, for every kind of user. Its single entry point
 One look for every role, so the four halves read as one app:
 - `tokens.dart`: `KLColors.light` / `.dark` (warm ivory and espresso by day, roasted brown and caramel at night), the type scale (`KLType`: Plus Jakarta Sans for everything people read, DM Serif Display only for large display titles), spacing, radii and shadows.
 - `theme.dart`: `klTheme(colors)` is the Material theme every role builds from: `AppTheme` (kitchen, delivery worker), `buildAdminTheme` / `buildTheme` (admin, root) and `buildClientTheme` (marketplace). It sets iOS-style page transitions and back chevron, filled borderless fields, 14 px buttons, 20 px cards and 28 px sheets.
-- `motion.dart`: springs, `PressScale` (press feedback on touch-down) and reduce-motion handling, shared by all roles.
+- Role accents (`KLRole`, a theme extension): espresso for customers and kitchens, olive for delivery workers, warm graphite with caramel for admins. They colour only wayfinding (the selected tab, the role's hero card, the route line). Buttons stay espresso in every role.
+- `motion.dart`, shared by all roles, and every piece respects the phone's reduce-motion setting:
+  - springs
+  - `PressScale`: press on touch-down, plus a hover lift and hand cursor for mouse users
+  - `Reveal`: a staggered fade-and-rise when a section first appears, with no timers
+  - `Bump`: a spring pop when a value changes, used on basket counts and saved hearts
+  - `SoftSwitcher`: a cross-fade between two states
 - The marketplace's `K` palette (`lib/client/client_theme.dart`) and the admin's `Palette` keep their names, but their values are these tokens. Add new colours to the tokens, not to a screen. `K.strong` / `K.onStrong` are the selected-state fill (espresso by day, caramel at night).
-- Green means "online" or success only (`DriverColors.online`), not a role's brand.
 - Design review screenshots: `flutter test tool/shots/market_shots_test.dart --update-goldens` (also `roles_` and `admin_shots_test.dart`) renders real screens at iPhone size in light and dark into `tool/shots/out/` (git-ignored). `SHOTS_IMAGES=<folder of .jpg>` serves photos to the marketplace shots.
 
 ## Commands

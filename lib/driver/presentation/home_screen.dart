@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/motion.dart';
 import '../../design/tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -138,11 +139,15 @@ class HomeScreen extends ConsumerWidget {
         sliver: SliverList.separated(
           itemCount: list.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => OfferCard(
-            key: ValueKey(list[index].id),
-            delivery: list[index],
-            // One trip at a time keeps pickups on schedule.
-            blockedReason: trip != null ? 'Finish your current delivery first' : null,
+          itemBuilder: (context, index) => Reveal(
+            key: ValueKey('reveal-${list[index].id}'),
+            index: index,
+            child: OfferCard(
+              key: ValueKey(list[index].id),
+              delivery: list[index],
+              // One trip at a time keeps pickups on schedule.
+              blockedReason: trip != null ? 'Finish your current delivery first' : null,
+            ),
           ),
         ),
       ),

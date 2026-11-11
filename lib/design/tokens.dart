@@ -141,6 +141,54 @@ class KLColors {
   static KLColors of(Brightness brightness) => brightness == Brightness.dark ? dark : light;
 }
 
+/// A role's own accent, used only for wayfinding (the selected tab, the
+/// role's hero card, the route line), never for buttons: those stay espresso
+/// in every role so the app reads as one product.
+class KLRole extends ThemeExtension<KLRole> {
+  const KLRole({required this.accent, required this.soft, required this.onAccent, required this.deep});
+
+  /// Selected tab icon and label, small highlights.
+  final Color accent;
+
+  /// Selected tab pill, tinted washes.
+  final Color soft;
+
+  /// Text and icons on [accent] / [deep].
+  final Color onAccent;
+
+  /// The role's hero card (the delivery worker's online card).
+  final Color deep;
+
+  /// Customers and kitchens: espresso and latte.
+  static const brandLight = KLRole(accent: Color(0xFF542813), soft: Color(0xFFF3E6D7), onAccent: Colors.white, deep: Color(0xFF2B1609));
+  static const brandDark = KLRole(accent: Color(0xFFDDAE7E), soft: Color(0xFF3A2A1F), onAccent: Color(0xFF2B1206), deep: Color(0xFF2A1A11));
+
+  /// Delivery workers: olive, a nod to the website's moss driver pages.
+  static const driverLight = KLRole(accent: Color(0xFF55693A), soft: Color(0xFFE6EBDA), onAccent: Colors.white, deep: Color(0xFF34421F));
+  static const driverDark = KLRole(accent: Color(0xFFAFC58F), soft: Color(0xFF283120), onAccent: Color(0xFF1A220F), deep: Color(0xFF2C3A1C));
+
+  /// Admins: warm graphite with caramel, an operations console.
+  static const adminLight = KLRole(accent: Color(0xFF3A302A), soft: Color(0xFFECE5DE), onAccent: Colors.white, deep: Color(0xFF221C18));
+  static const adminDark = KLRole(accent: Color(0xFFDDAE7E), soft: Color(0xFF332A23), onAccent: Color(0xFF2B1206), deep: Color(0xFF221C18));
+
+  static KLRole of(BuildContext context) =>
+      Theme.of(context).extension<KLRole>() ?? (Theme.of(context).brightness == Brightness.dark ? brandDark : brandLight);
+
+  @override
+  KLRole copyWith({Color? accent, Color? soft, Color? onAccent, Color? deep}) =>
+      KLRole(accent: accent ?? this.accent, soft: soft ?? this.soft, onAccent: onAccent ?? this.onAccent, deep: deep ?? this.deep);
+
+  @override
+  KLRole lerp(KLRole? other, double t) => other == null
+      ? this
+      : KLRole(
+          accent: Color.lerp(accent, other.accent, t)!,
+          soft: Color.lerp(soft, other.soft, t)!,
+          onAccent: Color.lerp(onAccent, other.onAccent, t)!,
+          deep: Color.lerp(deep, other.deep, t)!,
+        );
+}
+
 /// Font families. Plus Jakarta Sans (the website's) for everything people
 /// read and tap; DM Serif Display only for large display titles.
 class KLFont {

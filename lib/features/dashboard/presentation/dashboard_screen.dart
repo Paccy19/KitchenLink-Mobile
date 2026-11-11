@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../design/motion.dart';
 import '../../../design/tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,23 +50,23 @@ class DashboardScreen extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
               children: [
-                _Header(vendor: vendor),
+                Reveal(child: _Header(vendor: vendor)),
                 const SizedBox(height: 14),
-                _StoreCard(vendor: vendor),
+                Reveal(index: 1, child: _StoreCard(vendor: vendor)),
                 const SizedBox(height: 14),
-                stats.when(
+                Reveal(index: 2, child: stats.when(
                   loading: () => const _StatsSkeleton(),
                   error: (error, _) => SizedBox(
                     height: 260,
                     child: ErrorState(error: error, onRetry: () => ref.invalidate(dashboardProvider)),
                   ),
                   data: (data) => _StatsSection(stats: data),
-                ),
+                )),
                 SectionHeader('Recent orders', action: 'See all', onAction: () {
                   ref.read(ordersFilterProvider.notifier).set(null);
                   context.go('/orders');
                 }),
-                const _RecentOrders(),
+                const Reveal(index: 3, child: _RecentOrders()),
               ],
             ),
           ),

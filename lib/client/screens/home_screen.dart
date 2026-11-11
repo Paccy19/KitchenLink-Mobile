@@ -11,6 +11,7 @@ import '../client_theme.dart';
 import '../customer_api.dart';
 import '../location.dart';
 import '../models.dart';
+import '../../design/motion.dart';
 import '../widgets/cards.dart';
 import '../widgets/home_style.dart';
 import '../widgets/home_bars.dart';
@@ -208,7 +209,12 @@ class _HomeScreenState extends State<HomeScreen> {
   /// A dish opens its details here, with a link to its kitchen (the website's DishCard).
   void _openDish(Dish dish) {
     if (dish.vendorId.isEmpty) return;
-    showDishSheet(context, MenuDish.fromDish(dish), KitchenRef(id: dish.vendorId, name: dish.vendorName.isEmpty ? 'Kitchen' : dish.vendorName), showKitchenLink: true);
+    showDishSheet(
+      context,
+      MenuDish.fromDish(dish),
+      KitchenRef(id: dish.vendorId, name: dish.vendorName.isEmpty ? 'Kitchen' : dish.vendorName),
+      showKitchenLink: true,
+    );
   }
 
   /// The header's moon / sun button: light or dark, remembered on the device.
@@ -220,14 +226,17 @@ class _HomeScreenState extends State<HomeScreen> {
       await _accountSheet(session);
       return;
     }
-    await showSignInChooser(context, onCustomerSignIn: () async {
-      final signedIn = await showCustomerSignIn(context);
-      if (signedIn && mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Welcome, ${context.read<CustomerSession>().firstName}!')));
-      }
-    });
+    await showSignInChooser(
+      context,
+      onCustomerSignIn: () async {
+        final signedIn = await showCustomerSignIn(context);
+        if (signedIn && mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text('Welcome, ${context.read<CustomerSession>().firstName}!')));
+        }
+      },
+    );
   }
 
   Future<void> _accountSheet(CustomerSession session) async {
@@ -301,7 +310,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ListTile(
                   minTileHeight: 50,
                   leading: Icon(Icons.logout_rounded, color: K.rose600, size: 22),
-                  title: Text('Sign out', style: kText(15, weight: FontWeight.w700, color: K.rose600)),
+                  title: Text(
+                    'Sign out',
+                    style: kText(15, weight: FontWeight.w700, color: K.rose600),
+                  ),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
                     await session.logout();
@@ -379,12 +391,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             if (_query.isEmpty) ...[
-                              HomeGreeting(firstName: signedIn ? customerSession.firstName : null),
+                              Reveal(
+                                key: const ValueKey('greeting'),
+                                child: HomeGreeting(firstName: signedIn ? customerSession.firstName : null),
+                              ),
                               const SizedBox(height: 18),
                             ],
                             Row(
                               children: [
-                                Expanded(child: MarketSearchBar(controller: _search, onChanged: _onQuery, recent: _recent)),
+                                Expanded(
+                                  child: MarketSearchBar(controller: _search, onChanged: _onQuery, recent: _recent),
+                                ),
                                 const SizedBox(width: 10),
                                 Tooltip(
                                   message: 'Nearby Map',
@@ -402,7 +419,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 20),
                             if (_location.isUsingFallback && !_location.primerOpen && _query.isEmpty) _fallbackNotice(),
-                            if (_query.isNotEmpty) _searchResults() else _feedBody(width),
+                            SoftSwitcher(
+                              child: KeyedSubtree(key: ValueKey(_query.isEmpty), child: _query.isNotEmpty ? _searchResults() : _feedBody(width)),
+                            ),
                           ],
                         ),
                       ),
@@ -515,33 +534,53 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PromoCarousel(slides: _promos(specials, offers)),
+        Reveal(
+          key: const ValueKey('hero'),
+          index: 1,
+          child: PromoCarousel(slides: _promos(specials, offers)),
+        ),
         const SizedBox(height: gap),
 
-        CategoryBar(
-          categories: categories,
-          loading: _categories.loading,
-          media: _api.media,
-          onSelect: (category) => MarketNav.kitchens(context, categoryId: category?.id, categoryName: category?.name, vendorTypes: _vendorTypes),
+        Reveal(
+          key: const ValueKey('categories'),
+          index: 2,
+          child: CategoryBar(
+            categories: categories,
+            loading: _categories.loading,
+            media: _api.media,
+            onSelect: (category) => MarketNav.kitchens(context, categoryId: category?.id, categoryName: category?.name, vendorTypes: _vendorTypes),
+          ),
         ),
         const SizedBox(height: 16),
-        KitchenTypeFilter(value: _vendorTypes, onChanged: _setTypes),
+        Reveal(
+          key: const ValueKey('types'),
+          index: 3,
+          child: KitchenTypeFilter(value: _vendorTypes, onChanged: _setTypes),
+        ),
 
         // The latest order, with "Order again".
         if (lastOrder != null) ...[
           const SizedBox(height: gap),
           SectionHeader(title: 'Your last order', linkLabel: 'Order history', onLink: () => MarketNav.orders(context)),
-          PreviousOrderCard(
-            order: lastOrder,
-            media: _api.media,
-            onOpen: () => MarketNav.order(context, lastOrder.id),
-            onReorder: () => reorderDishes(context, lastOrder),
+          Reveal(
+            key: const ValueKey('last-order'),
+            index: 4,
+            child: PreviousOrderCard(
+              order: lastOrder,
+              media: _api.media,
+              onOpen: () => MarketNav.order(context, lastOrder.id),
+              onReorder: () => reorderDishes(context, lastOrder),
+            ),
           ),
         ],
 
         // Popular dishes, added straight to the basket.
         const SizedBox(height: gap),
-        SectionHeader(title: 'Popular picks near you', linkLabel: 'Browse menus', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
+        SectionHeader(
+          title: 'Popular picks near you',
+          linkLabel: 'Browse menus',
+          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
+        ),
         if (dishes.isEmpty && _feed.loading)
           _hScroll(const [DishCardSkeleton(), DishCardSkeleton(), DishCardSkeleton()], pad)
         else if (dishes.isEmpty)
@@ -555,7 +594,15 @@ class _HomeScreenState extends State<HomeScreen> {
         else if (width >= smWidth)
           _columns(width, [for (final d in dishes) DishGridCard(dish: d, media: _api.media, onTap: () => _openDish(d))])
         else
-          _hScroll([for (final d in dishes) DishGridCard(dish: d, width: 158, media: _api.media, onTap: () => _openDish(d))], pad),
+          _hScroll([
+            for (final (i, d) in dishes.indexed)
+              Reveal(
+                key: ValueKey('dish-${d.id}'),
+                index: 5 + i,
+                distance: 12,
+                child: DishGridCard(dish: d, width: 158, media: _api.media, onTap: () => _openDish(d)),
+              ),
+          ], pad),
 
         // The next offer day, as a banner.
         if (offers.isNotEmpty) ...[
@@ -565,7 +612,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Featured / nearby kitchens.
         const SizedBox(height: gap),
-        SectionHeader(title: 'Top kitchens near you', linkLabel: 'See all kitchens', onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes)),
+        SectionHeader(
+          title: 'Top kitchens near you',
+          linkLabel: 'See all kitchens',
+          onLink: () => MarketNav.kitchens(context, vendorTypes: _vendorTypes),
+        ),
         if (_feed.error != null)
           ErrorCard(onRetry: _loadFeed, retrying: _feed.loading)
         else if (featured.isEmpty && !_feed.loading)
@@ -580,16 +631,23 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         else
           _hScroll([
-            for (final v in featured) VendorCard(vendor: v, tile: true, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
+            for (final v in featured)
+              VendorCard(vendor: v, tile: true, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
             if (_feed.loading && featured.isEmpty) ...const [VendorTileSkeleton(), VendorTileSkeleton(), VendorTileSkeleton()],
           ], pad),
 
         // Tomorrow's specials and the other offer days.
         if (specials.isNotEmpty || offers.length > 1) ...[
           const SizedBox(height: gap),
-          SectionHeader(title: "Tomorrow's specials", subtitle: 'Order today, delivered tomorrow', linkLabel: 'See all specials', onLink: () => MarketNav.specials(context)),
+          SectionHeader(
+            title: "Tomorrow's specials",
+            subtitle: 'Order today, delivered tomorrow',
+            linkLabel: 'See all specials',
+            onLink: () => MarketNav.specials(context),
+          ),
           _hScroll([
-            for (final s in specials) SpecialCard(entry: s, media: _api.media, onTap: () => MarketNav.kitchen(context, s.vendor.id), onPreorder: () => preorderSpecial(context, s)),
+            for (final s in specials)
+              SpecialCard(entry: s, media: _api.media, onTap: () => MarketNav.kitchen(context, s.vendor.id), onPreorder: () => preorderSpecial(context, s)),
             for (final o in offers.skip(1)) OfferDayCard(offer: o, media: _api.media, onTap: () => MarketNav.kitchen(context, o.vendor.id)),
           ], pad),
         ],
@@ -607,7 +665,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ErrorCard(onRetry: () => _allVendors.run(() => _api.allVendors(_location, _vendorTypes), _changed), retrying: _allVendors.loading)
         else
           _grid([
-            for (final v in _allVendors.data!.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
+            for (final v in _allVendors.data!.vendors)
+              VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
           ], gap: 16),
       ],
     );
@@ -824,7 +883,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   onAction: () => setState(() => _tab = 'dishes'),
                 )
               : _grid([
-                  for (final v in data.vendors) VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
+                  for (final v in data.vendors)
+                    VendorCard(vendor: v, media: _api.media, showDistance: _location.isGps, onTap: () => MarketNav.kitchen(context, v.id)),
                 ], gap: 20),
       ],
     );
@@ -852,9 +912,19 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: kText(14, weight: FontWeight.w700, color: active ? K.gray900 : K.stone500))),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: kText(14, weight: FontWeight.w700, color: active ? K.gray900 : K.stone500),
+                ),
+              ),
               const SizedBox(width: 6),
-              Text('$count', style: kText(13, weight: w900, color: active ? K.brown600 : K.stone400)),
+              Text(
+                '$count',
+                style: kText(13, weight: w900, color: active ? K.brown600 : K.stone400),
+              ),
             ],
           ),
         ),

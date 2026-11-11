@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../design/motion.dart';
 import '../design/tokens.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -1310,7 +1311,8 @@ class PageBody extends StatelessWidget {
     final list = ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(edge, edge, edge, 64),
-      children: spaced(children, gap),
+      // Sections arrive one after another the first time the page opens.
+      children: spaced([for (final (i, child) in children.indexed) Reveal(index: i, child: child)], gap),
     );
     return onRefresh == null ? list : RefreshIndicator(onRefresh: onRefresh!, child: list);
   }

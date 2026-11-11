@@ -28,7 +28,7 @@ LinearGradient get _gradient => LinearGradient(colors: [_slate, _slate]);
 const _diagonal = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF542813), Color(0xFF2B1609)],
+  colors: [Color(0xFF3A302A), Color(0xFF221C18)],
 );
 const _shadowMd = [BoxShadow(color: Color(0x142B1206), blurRadius: 24, offset: Offset(0, 8))];
 

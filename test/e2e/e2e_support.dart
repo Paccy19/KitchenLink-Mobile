@@ -162,7 +162,14 @@ extension E2eTester on WidgetTester {
   Future<bool> until(Finder finder, {int seconds = 20}) async {
     final deadline = DateTime.now().add(Duration(seconds: seconds));
     while (DateTime.now().isBefore(deadline)) {
-      if (finder.evaluate().isNotEmpty) return true;
+      if (finder.evaluate().isNotEmpty) {
+        // Let the page finish sliding in (iOS-style transitions take ~0.5 s)
+        // so the next tap lands where the user would tap.
+        for (var i = 0; i < 6; i++) {
+          await pump(const Duration(milliseconds: 100));
+        }
+        return true;
+      }
       await runAsync(() => Future<void>.delayed(const Duration(milliseconds: 150)));
       await pump(const Duration(milliseconds: 120));
     }

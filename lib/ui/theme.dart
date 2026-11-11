@@ -20,7 +20,7 @@ class AppColors {
   static const brandDiagonal = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF542813), Color(0xFF2B1609)],
+    colors: [Color(0xFF3A302A), Color(0xFF221C18)],
   );
 
   /// The admin `Button` primary: `from-[#2b1206] via-[#481f0d] to-[#200d05]`.
@@ -31,14 +31,14 @@ class AppColors {
   // actions, and a dark side menu.
 
   /// Primary buttons and the active filter chip ("Export report").
-  static const ink = Color(0xFF2B1609);
+  static const ink = Color(0xFF3A302A);
 
   /// Brand tile, urgent actions ("Send surge bonus"), active tab on a phone.
   static const orange = Color(0xFF9A5B2E);
 
   /// The dark side menu and its active item.
-  static const sidebar = Color(0xFF1C130E);
-  static const sidebarActive = Color(0xFF33251C);
+  static const sidebar = Color(0xFF221C18);
+  static const sidebarActive = Color(0xFF362D27);
   static const sidebarText = Color(0xFFF3E9DE);
   static const sidebarMuted = Color(0xFF9E8B7D);
 
@@ -216,7 +216,7 @@ Tone statusTone(String? status) => _statusTones[status] ?? Tone.slate;
 /// [Palette] extension and its dark side menu.
 ThemeData buildAdminTheme(Brightness brightness) {
   final p = brightness == Brightness.dark ? Palette.adminDark : Palette.adminLight;
-  final base = klTheme(KLColors.of(brightness), extensions: [p]);
+  final base = klTheme(KLColors.of(brightness), role: brightness == Brightness.dark ? KLRole.adminDark : KLRole.adminLight, extensions: [p]);
   return base.copyWith(
     drawerTheme: const DrawerThemeData(backgroundColor: AppColors.sidebar, surfaceTintColor: Colors.transparent, width: 288),
   );
