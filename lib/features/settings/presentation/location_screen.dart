@@ -10,6 +10,7 @@ import '../../../core/widgets/forms.dart';
 import '../../auth/application/session.dart';
 import '../application/settings_providers.dart';
 import 'widgets/place_search_field.dart';
+import '../../../core/widgets/kitchen_location_map.dart';
 
 /// The registered kitchen location. An open store appears to customers at
 /// these coordinates; the phone's own position is never used.
@@ -128,6 +129,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               ),
             ),
           ]),
+          const SizedBox(height: 12),
+          KitchenLocationMap(latitude: _lat, longitude: _lng, enabled: canAct),
           const SizedBox(height: 8),
           FilledButton(onPressed: (!canAct || _saving) ? null : _save, child: Text(_saving ? 'Saving…' : 'Save location')),
         ]),

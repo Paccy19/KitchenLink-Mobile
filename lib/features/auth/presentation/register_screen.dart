@@ -22,6 +22,7 @@ import '../application/registration.dart';
 import '../models/registration.dart';
 import '../models/vendor_account.dart';
 import 'widgets/operating_hours_editor.dart';
+import '../../../core/widgets/kitchen_location_map.dart';
 
 /// Registers a new kitchen in six short steps, then uploads everything in a
 /// single multipart request.
@@ -434,6 +435,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ]),
+        const SizedBox(height: 12),
+        // Tap or drag the pin to set the coordinates, like the website.
+        KitchenLocationMap(latitude: _latitude, longitude: _longitude),
       ]);
 
   // ----------------------------------------------------------------- step 4
