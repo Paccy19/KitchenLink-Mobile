@@ -1,22 +1,35 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// A file the vendor chose, ready to be sent as a real multipart part.
 class PickedUpload {
-  const PickedUpload({required this.path, required this.name, required this.sizeBytes});
+  const PickedUpload({required this.path, required this.name, required this.sizeBytes, this.readBytes});
 
+  /// Where the file is: a path on disk, or the picker's address for it
+  /// (`content://…` on Android, `blob:…` on the web). Also tells two picks
+  /// of the same file apart.
   final String path;
   final String name;
   final int sizeBytes;
+
+  /// Reads the file's contents. Files picked on Android often have no path
+  /// on disk, and on the web never do, so the contents are read this way.
+  final Future<Uint8List> Function()? readBytes;
 
   String get mimeType => mimeTypeForName(name);
   bool get isPdf => mimeType == 'application/pdf';
   bool get isImage => mimeType.startsWith('image/');
 
-  /// Reads the file from disk when the request is sent.
-  Future<MultipartFile> toMultipart() =>
-      MultipartFile.fromFile(path, filename: name, contentType: DioMediaType.parse(mimeType));
+  /// Reads the file when the request is sent.
+  Future<MultipartFile> toMultipart() async {
+    final contentType = DioMediaType.parse(mimeType);
+    final read = readBytes;
+    if (read != null) return MultipartFile.fromBytes(await read(), filename: name, contentType: contentType);
+    return MultipartFile.fromFile(path, filename: name, contentType: contentType);
+  }
 
   /// Why this file cannot be sent, or null when it is fine.
   String? validate(UploadRules rules) {
@@ -105,7 +118,7 @@ class DeviceMediaPicker implements MediaPicker {
     );
     if (file == null) return null;
     final name = file.name.isNotEmpty ? file.name : file.path.split('/').last;
-    return PickedUpload(path: file.path, name: name, sizeBytes: await file.length());
+    return PickedUpload(path: file.path, name: name, sizeBytes: await file.length(), readBytes: file.readAsBytes);
   }
 
   @override
@@ -116,9 +129,10 @@ class DeviceMediaPicker implements MediaPicker {
     );
     final picked = <PickedUpload>[];
     for (final file in files) {
-      final path = file.path;
-      if (path == null) continue;
-      picked.add(PickedUpload(path: path, name: file.name, sizeBytes: await file.length() ?? 0));
+      // Android's picker usually hands back a content:// address and the web
+      // a blob, neither with a path on disk: keep them and read their bytes.
+      final size = await file.length() ?? (await file.readAsBytes()).length;
+      picked.add(PickedUpload(path: file.path ?? file.uri.toString(), name: file.name, sizeBytes: size, readBytes: file.readAsBytes));
     }
     return picked;
   }

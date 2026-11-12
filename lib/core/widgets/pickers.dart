@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 
 import '../utils/uploads.dart';
 import 'feedback.dart';
@@ -75,7 +76,7 @@ class ImagePickerBox extends StatelessWidget {
     final theme = Theme.of(context);
     Widget content;
     if (picked != null) {
-      content = Image.file(File(picked!.path), fit: BoxFit.cover, width: double.infinity, height: height);
+      content = _PickedImage(picked: picked!, height: height);
     } else if (existingWidget != null) {
       content = SizedBox(width: double.infinity, height: height, child: existingWidget);
     } else {
@@ -112,4 +113,43 @@ class ImagePickerBox extends StatelessWidget {
         ),
     ]);
   }
+}
+
+/// A just-picked photo. Shown from its bytes, read once, so it works where
+/// the file has no path on disk (Android content addresses, the web).
+class _PickedImage extends StatefulWidget {
+  const _PickedImage({required this.picked, required this.height});
+
+  final PickedUpload picked;
+  final double height;
+
+  @override
+  State<_PickedImage> createState() => _PickedImageState();
+}
+
+class _PickedImageState extends State<_PickedImage> {
+  late Future<Uint8List> _bytes = _read();
+
+  Future<Uint8List> _read() => (widget.picked.readBytes ?? () => XFile(widget.picked.path).readAsBytes())();
+
+  @override
+  void didUpdateWidget(_PickedImage old) {
+    super.didUpdateWidget(old);
+    if (old.picked.path != widget.picked.path) _bytes = _read();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        height: widget.height,
+        child: FutureBuilder<Uint8List>(
+          future: _bytes,
+          builder: (context, snapshot) {
+            final bytes = snapshot.data;
+            if (bytes != null) return Image.memory(bytes, fit: BoxFit.cover, width: double.infinity, height: widget.height);
+            if (snapshot.hasError) return const Center(child: Icon(Icons.broken_image_outlined));
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+          },
+        ),
+      );
 }

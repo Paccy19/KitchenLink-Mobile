@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitchenlink_mobile/app/router.dart';
 import 'package:kitchenlink_mobile/core/config/app_config.dart';
@@ -65,6 +67,22 @@ void main() {
       const pdf = PickedUpload(path: '/x/id.pdf', name: 'id.pdf', sizeBytes: 1000);
       expect(pdf.validate(UploadRules.document), isNull);
       expect(pdf.validate(UploadRules.image), isNotNull);
+    });
+    test('a document with no path on disk (Android content://, web blob) is sent from its bytes', () async {
+      final bytes = Uint8List.fromList([0x25, 0x50, 0x44, 0x46, 0x2D]); // "%PDF-"
+      final document = PickedUpload(
+        path: 'content://com.android.providers.downloads.documents/document/42',
+        name: 'licence.pdf',
+        sizeBytes: bytes.length,
+        readBytes: () async => bytes,
+      );
+      expect(document.validate(UploadRules.document), isNull);
+      final part = await document.toMultipart();
+      expect(part.filename, 'licence.pdf');
+      expect(part.contentType.toString(), 'application/pdf');
+      expect(part.length, bytes.length);
+      final sent = await part.finalize().expand((chunk) => chunk).toList();
+      expect(sent, bytes);
     });
     test('mime type comes from the extension', () {
       expect(mimeTypeForName('Photo.JPEG'), 'image/jpeg');
