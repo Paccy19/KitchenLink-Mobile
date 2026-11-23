@@ -863,7 +863,14 @@ class CustomerOrder {
       _map(raw['payment_details'] ?? _payment['details']);
   Json? get refund => raw['refund'] is Map ? _map(raw['refund']) : null;
   Json? get deposit => raw['deposit'] is Map ? _map(raw['deposit']) : null;
-  String get deliveryCode => _str(_delivery['proof_of_delivery_code']);
+  // The delivery code itself is never sent to the app (it goes only to the
+  // customer's verified email, or SMS): only where it went and whether it
+  // can be sent again.
+  bool get deliveryCodeIssued => _delivery['code_issued'] == true;
+  String get deliveryCodeSentVia => _str(_delivery['code_sent_via']);
+  String get deliveryCodeSentTo => _str(_delivery['code_sent_to']);
+  bool get deliveryCodeNeedsChannel => _delivery['code_needs_channel'] == true;
+  bool get canResendDeliveryCode => _delivery['can_resend_code'] == true;
   bool get deliveryConfirmed => _delivery['otp_verified'] == true;
   String get dropOff => _str(deliveryLocation['address']);
   Json? get rider =>

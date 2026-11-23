@@ -14,7 +14,6 @@ import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/forms.dart';
 import '../../../core/widgets/pickers.dart';
 import '../../../core/widgets/server_address.dart';
-import '../../menu/application/menu_providers.dart';
 import '../../settings/presentation/widgets/place_search_field.dart';
 import '../../settings/application/settings_providers.dart';
 import '../../wallet/application/wallet_providers.dart';
@@ -59,7 +58,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _longitude = TextEditingController();
 
   // Step 4
-  final Set<String> _categoryIds = {};
   List<OperatingHour> _hours = OperatingHour.defaultWeek();
 
   // Step 5
@@ -95,7 +93,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               : 'Choose your kitchen type.';
         }
       case 3:
-        if (_categoryIds.isEmpty) return 'Choose at least one food category.';
         if (_hours.every((hour) => hour.isClosed)) return 'Your kitchen must be open at least one day.';
         for (final hour in _hours.where((hour) => !hour.isClosed)) {
           if (hour.openTime.compareTo(hour.closeTime) >= 0) {
@@ -133,7 +130,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         neighborhood: _neighborhood.text,
         latitude: double.parse(_latitude.text.trim()),
         longitude: double.parse(_longitude.text.trim()),
-        foodCategoryIds: _categoryIds.toList(),
         operatingHours: _hours,
         payment: PaymentInformation(
           payoutMethod: _bankPayout ? 'bank_transfer' : 'mobile_money',
@@ -206,7 +202,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           title: Text(_titles[_step]),
           actions: [ServerAddressButton(onChanged: () {
             ref.invalidate(vendorTypesProvider);
-            ref.invalidate(foodCategoriesProvider);
             ref.invalidate(bankListProvider);
           })],
           leading: IconButton(
@@ -443,31 +438,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   // ----------------------------------------------------------------- step 4
 
   Widget _foodStep() {
-    final categories = ref.watch(foodCategoriesProvider);
+    // Food categories come from the kitchen type (as on the website): the
+    // backend assigns them; there is nothing to pick.
+    final types = ref.watch(vendorTypesProvider);
     final theme = Theme.of(context);
+    final type = types.asData?.value.where((t) => t.code == _vendorType).firstOrNull;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('Food categories', style: theme.textTheme.titleMedium),
       const SizedBox(height: 4),
-      Text('Pick everything you sell.', style: theme.textTheme.bodySmall),
-      const SizedBox(height: 10),
-      categories.when(
-        loading: () => const SkeletonBox(height: 90, radius: 14),
-        error: (error, _) => _LoadFailure(
-          what: 'food categories',
-          error: error,
-          onRetry: () => ref.invalidate(foodCategoriesProvider),
-        ),
-        data: (list) => Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final category in list)
-            FilterChip(
-              label: Text(category.name),
-              selected: _categoryIds.contains(category.id),
-              onSelected: (selected) => setState(
-                () => selected ? _categoryIds.add(category.id) : _categoryIds.remove(category.id),
-              ),
-            ),
-        ]),
+      Text(
+        type == null
+            ? 'Assigned automatically from your kitchen type.'
+            : 'Assigned automatically for a ${type.label.toLowerCase()}. Your menu can still include any dish.',
+        style: theme.textTheme.bodySmall,
       ),
+      const SizedBox(height: 10),
+      if (types.isLoading)
+        const SkeletonBox(height: 40, radius: 14)
+      else if (type != null && type.defaultCategories.isNotEmpty)
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final name in type.defaultCategories)
+            Chip(avatar: const Icon(Icons.check_rounded, size: 16), label: Text(name)),
+        ]),
       const SizedBox(height: 24),
       Text('Opening hours', style: theme.textTheme.titleMedium),
       const SizedBox(height: 8),

@@ -23,6 +23,9 @@ Future<void> openNotification(BuildContext context, Json notification) async {
       final chat = uri.queryParameters['chat'];
       return chat == null ? MarketNav.messages(context) : MarketNav.chat(context, chat);
     }
+    if (parts.isNotEmpty && parts.first == 'special-deliveries') {
+      return parts.length >= 2 ? MarketNav.specialDelivery(context, parts[1]) : MarketNav.specialDeliveries(context);
+    }
     if (parts.isNotEmpty && parts.first == 'support') return MarketNav.support(context);
     if (parts.isNotEmpty && parts.first == 'orders') return MarketNav.orders(context);
     if (parts.isNotEmpty && parts.first == 'wishlist') return MarketNav.wishlist(context);

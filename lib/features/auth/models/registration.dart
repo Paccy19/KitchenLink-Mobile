@@ -17,7 +17,6 @@ class RegistrationData {
     required this.address,
     required this.latitude,
     required this.longitude,
-    required this.foodCategoryIds,
     required this.operatingHours,
     required this.payment,
     required this.documents,
@@ -36,7 +35,6 @@ class RegistrationData {
   final String neighborhood;
   final double latitude;
   final double longitude;
-  final List<String> foodCategoryIds;
   final List<OperatingHour> operatingHours;
   final PaymentInformation payment;
   final PickedUpload? banner;
@@ -67,7 +65,6 @@ class RegistrationData {
         'address': address.trim(),
         'neighborhood': neighborhood.trim(),
       }),
-      'food_categories': jsonEncode(foodCategoryIds),
       'operating_hours': jsonEncode([for (final hour in operatingHours) hour.toJson()]),
       'payment_information': jsonEncode(payout.toJson()),
     };

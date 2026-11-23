@@ -74,6 +74,11 @@ String? notificationRoute(AppNotification notification) {
         final id = uri.queryParameters['ticket'];
         return id == null ? '/support' : '/support/$id';
       }
+      if (path.startsWith('/vendor-dashboard/special-deliveries')) {
+        final id = uri.queryParameters['request'];
+        return id == null ? '/special-deliveries' : '/special-deliveries/$id';
+      }
+      if (path.startsWith('/vendor-dashboard/delivery-coverage')) return '/settings/coverage';
       if (path.startsWith('/vendor-dashboard/wallet')) return '/wallet';
       if (path.startsWith('/vendor-dashboard/profile')) return '/settings';
       if (path.startsWith('/vendor-dashboard/notifications')) return '/notifications';

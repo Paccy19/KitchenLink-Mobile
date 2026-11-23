@@ -31,12 +31,14 @@ void main() {
     return opened;
   }
 
-  testWidgets('Sign in offers the same four roles as the website', (tester) async {
+  testWidgets('Sign in offers the same three roles as the website (no public Admin)', (tester) async {
     await pumpChooser(tester);
     expect(find.text('How do you want to sign in?'), findsOneWidget);
-    for (final role in ['Customer', 'Vendor', 'Delivery Worker', 'Admin']) {
+    for (final role in ['Customer', 'Vendor', 'Delivery Worker']) {
       expect(find.text(role), findsOneWidget);
     }
+    // Admins sign in from Customer with their verified phone.
+    expect(find.text('Admin'), findsNothing);
   });
 
   testWidgets('choosing Delivery Worker opens the delivery worker sign-in', (tester) async {
@@ -47,16 +49,11 @@ void main() {
     expect(find.text('How do you want to sign in?'), findsNothing);
   });
 
-  testWidgets('choosing Vendor or Admin opens their sign-in', (tester) async {
-    var opened = await pumpChooser(tester);
+  testWidgets('choosing Vendor opens the vendor sign-in', (tester) async {
+    final opened = await pumpChooser(tester);
     await tester.tap(find.text('Vendor'));
     await tester.pumpAndSettle();
     expect(opened, [AppRole.vendor]);
-
-    opened = await pumpChooser(tester);
-    await tester.tap(find.text('Admin'));
-    await tester.pumpAndSettle();
-    expect(opened, [AppRole.admin]);
   });
 
   testWidgets('choosing Customer opens customer sign-in without changing role', (tester) async {

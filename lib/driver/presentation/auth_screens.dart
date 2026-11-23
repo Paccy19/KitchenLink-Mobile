@@ -165,7 +165,9 @@ class _DriverLoginScreenState extends ConsumerState<DriverLoginScreen> {
   int _cooldown = 0;
   Timer? _timer;
 
-  String get _localPhone => Validators.toLocalPhone(_phone.text);
+  /// What is sent: an email as typed, or the phone as 07XXXXXXXX.
+  String get _localPhone => Validators.toIdentifier(_phone.text);
+  bool get _byEmail => Validators.looksLikeEmail(_phone.text);
 
   @override
   void dispose() {
@@ -272,8 +274,8 @@ class _DriverLoginScreenState extends ConsumerState<DriverLoginScreen> {
                       const SizedBox(height: 6),
                       Text(
                         onCode
-                            ? 'We sent a 6-digit code by SMS to $_localPhone.'
-                            : 'Sign in with the phone number you registered as a delivery worker.',
+                            ? 'We sent a 6-digit code ${_byEmail ? 'by email' : 'by SMS'} to $_localPhone.'
+                            : 'Sign in with the phone number or email you registered as a delivery worker.',
                         style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.35),
                       ),
                     ],
@@ -305,7 +307,18 @@ class _DriverLoginScreenState extends ConsumerState<DriverLoginScreen> {
   Widget _phoneStep() => Form(
         key: _phoneForm,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          PhoneField(controller: _phone, label: 'Phone number', autofocus: true, onSubmitted: (_) => _sendCode()),
+          AppTextField(
+            label: 'Phone number or email',
+            controller: _phone,
+            hint: '07XXXXXXXX or name@example.com',
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            prefix: const Icon(Icons.alternate_email_rounded),
+            autofillHints: const [AutofillHints.username],
+            validator: Validators.identifier,
+            onSubmitted: (_) => _sendCode(),
+          ),
           const SizedBox(height: 18),
           AsyncButton(label: 'Send code', icon: Icons.sms_rounded, onPressed: _busy ? null : _sendCode),
         ]),

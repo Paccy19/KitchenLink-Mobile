@@ -100,7 +100,7 @@ class ReturnToRoleButton extends StatelessWidget {
   }
 }
 
-/// "How do you want to sign in?": the same four choices as the website.
+/// "How do you want to sign in?": the same three choices as the website.
 Future<void> showSignInChooser(BuildContext context, {required Future<void> Function() onCustomerSignIn}) {
   final switcher = RoleSwitcher.maybeOf(context);
   return showModalBottomSheet<void>(
@@ -153,13 +153,9 @@ Future<void> showSignInChooser(BuildContext context, {required Future<void> Func
               subtitle: 'Pick up and deliver orders, track your trips and earnings',
               onTap: () => choose(AppRole.driver),
             ),
-            _RoleTile(
-              icon: Icons.admin_panel_settings_rounded,
-              colors: const [Color(0xFF111827), Color(0xFF1F2937)],
-              title: 'Admin',
-              subtitle: 'Manage the marketplace, users, orders, payments and reports',
-              onTap: () => choose(AppRole.admin),
-            ),
+            // No public Admin choice (as on the website): admins sign in
+            // from Customer with their verified phone, then their admin
+            // email and password (AdminVerifyScreen).
           ]),
         ),
       );

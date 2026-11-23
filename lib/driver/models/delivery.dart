@@ -145,7 +145,7 @@ class Delivery {
     this.paidEarningsRwf,
     this.paymentMethod = '',
     this.otpRequired = true,
-    this.devOtp,
+    this.customerHasNoCodeChannel = false,
     this.kitchenReady = true,
     this.expectedReadyAt,
     this.pickupDueAt,
@@ -193,7 +193,7 @@ class Delivery {
       paidEarningsRwf: intOrNull(json['paid_earnings_rwf']),
       paymentMethod: str(json['payment_method']),
       otpRequired: boolOf(json['otp_required'], true),
-      devOtp: strOrNull(json['dev_otp']),
+      customerHasNoCodeChannel: json['otp_customer_has_no_channel'] == true,
       // Offered at placement: the kitchen may still be cooking.
       kitchenReady: json['kitchen_ready'] != false,
       expectedReadyAt: dateOrNull(json['expected_ready_at']),
@@ -239,8 +239,10 @@ class Delivery {
   final String paymentMethod;
   final bool otpRequired;
 
-  /// The customer's code, only on a development server.
-  final String? devOtp;
+  /// The customer's code is never sent to the worker. True when it could not
+  /// be sent to the customer either (no verified email, no SMS): support
+  /// completes the delivery then.
+  final bool customerHasNoCodeChannel;
   final bool kitchenReady;
   final DateTime? expectedReadyAt;
   final DateTime? pickupDueAt;

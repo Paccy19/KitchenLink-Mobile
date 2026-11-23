@@ -37,6 +37,18 @@ bool isValidEmail(String value) {
   return email.length <= emailMaxLength && !email.contains('..') && _email.hasMatch(email);
 }
 
+// One sign-in field for a phone number or an email address (the server
+// decides which, as on the website).
+const identifierPlaceholder = '07XXXXXXXX or name@example.com';
+const identifierError = 'Enter a valid phone number (07XXXXXXXX or +2507XXXXXXXX) or email address.';
+
+/// Anything with a letter or "@" is typed as an email; otherwise as a phone.
+bool looksLikeEmail(String value) => RegExp(r'[@a-zA-Z]').hasMatch(value);
+
+String sanitizeIdentifierInput(String value) => looksLikeEmail(value) ? sanitizeEmailInput(value) : sanitizePhoneInput(value);
+
+bool isValidIdentifier(String value) => looksLikeEmail(value) ? isValidEmail(value) : isValidRwandaPhone(value);
+
 /// "jean paul" → "Jean Paul" as the user types, capped at [nameMaxLength].
 String formatNameInput(String value) {
   var next = value.replaceFirst(RegExp(r'^\s+'), '').replaceAll(RegExp(r'\s{2,}'), ' ');

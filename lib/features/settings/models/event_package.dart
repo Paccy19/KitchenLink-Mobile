@@ -170,7 +170,6 @@ class EventPackageSettings {
   Json toJson() => {
         'enabled': enabled,
         'packages': [for (final pkg in packages) pkg.toJson()],
-        'delivery_fee_ranges': [for (final range in deliveryFeeRanges) range.toJson()],
         'delivery_details': deliveryDetails.trim(),
       };
 }
@@ -293,13 +292,8 @@ class EventPackageValidator {
         return '$label: list what is on the plate, or turn the package off.';
       }
     }
-    final rangeError = feeRanges(settings.deliveryFeeRanges, limits);
-    if (rangeError != null) return rangeError;
     if (settings.enabled && !settings.packages.any((pkg) => pkg.enabled)) {
       return 'Turn on at least one event package before turning big events on.';
-    }
-    if (settings.enabled && settings.deliveryFeeRanges.isEmpty) {
-      return 'Set your delivery fee by distance before turning big events on.';
     }
     return null;
   }

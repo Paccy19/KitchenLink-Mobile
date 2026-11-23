@@ -15,6 +15,8 @@ import '../../design/motion.dart';
 import '../widgets/cards.dart';
 import '../widgets/home_style.dart';
 import '../widgets/home_bars.dart';
+import '../widgets/big_events_card.dart';
+import '../widgets/sign_out.dart';
 import '../customer_session.dart';
 import '../market_models.dart';
 import '../market_nav.dart';
@@ -244,8 +246,11 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       backgroundColor: K.surface,
       showDragHandle: true,
+      // Tall enough for every entry, and scrollable on short phones, so
+      // "Sign out" at the bottom is always reachable.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -277,12 +282,16 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 decoration: BoxDecoration(color: K.dark ? K.page : K.stone100.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16)),
                 clipBehavior: Clip.antiAlias,
-                child: Column(
+                // Its own Material, so the rows' ripple shows on the tinted card.
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Column(
                   children: [
                     for (final (i, (icon, label, open)) in [
                       (Icons.person_outline_rounded, 'My profile', MarketNav.profile),
                       (Icons.receipt_long_outlined, 'Order history', MarketNav.orders),
                       (Icons.delivery_dining_outlined, 'Track order', MarketNav.track),
+                      (Icons.local_shipping_outlined, 'Special deliveries', MarketNav.specialDeliveries),
                       (Icons.chat_bubble_outline_rounded, 'Messages', MarketNav.messages),
                       (Icons.favorite_border_rounded, 'Saved dishes', MarketNav.wishlist),
                       (Icons.support_agent_rounded, 'Help & Support', (BuildContext c) => MarketNav.support(c)),
@@ -301,25 +310,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(color: K.dark ? K.page : K.stone100.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16)),
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  minTileHeight: 50,
-                  leading: Icon(Icons.logout_rounded, color: K.rose600, size: 22),
-                  title: Text(
-                    'Sign out',
-                    style: kText(15, weight: FontWeight.w700, color: K.rose600),
-                  ),
-                  onTap: () async {
-                    Navigator.of(sheetContext).pop();
-                    await session.logout();
-                  },
-                ),
-              ),
+              SignOutPanel(onSignedOut: () => Navigator.of(sheetContext).pop()),
             ],
           ),
         ),
@@ -490,14 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
           imageUrl: photo(specials.first.vendor),
           onTap: () => MarketNav.specials(context),
         ),
-      PromoSlide(
-        tag: 'Big Event',
-        title: 'Feeding 50+ guests?',
-        text: 'Weddings, parties and meetings, cooked by local kitchens',
-        action: 'Plan an event',
-        icon: Icons.celebration_outlined,
-        onTap: () => MarketNav.bigEvent(context),
-      ),
+      // Big Events has its own card under the banner (BigEventsCard).
       PromoSlide(
         tag: 'Nearby Map',
         title: 'Kitchens around you',
@@ -538,6 +526,13 @@ class _HomeScreenState extends State<HomeScreen> {
           key: const ValueKey('hero'),
           index: 1,
           child: PromoCarousel(slides: _promos(specials, offers)),
+        ),
+        const SizedBox(height: 16),
+        // Big Events, easy to find (the website's banner under the benefits).
+        Reveal(
+          key: const ValueKey('big-events'),
+          index: 2,
+          child: BigEventsCard(onTap: () => MarketNav.bigEvent(context)),
         ),
         const SizedBox(height: gap),
 

@@ -6,20 +6,28 @@ import '../../api/api_client.dart';
 import '../../ui/validation.dart';
 import '../client_theme.dart';
 import '../customer_session.dart';
+import '../screens/admin_verify_screen.dart';
 import 'market_dialog.dart';
 
-/// The website's customer sign-in popup (AuthModal): name + phone, then the
-/// 6-digit SMS code. Returns true once signed in.
+/// The website's customer sign-in popup (AuthModal): name + phone number or
+/// email, then the 6-digit code. Returns true once signed in as a customer.
+///
+/// When the server says the verified phone is an admin's, the admin step
+/// (their email + password) opens instead: it either opens the admin screens
+/// or, if they choose, signs in to the customer account.
 Future<bool> showCustomerSignIn(BuildContext context) async {
   final session = context.read<CustomerSession>();
-  final signedIn = await showMarketDialog<bool>(
+  final result = await showMarketDialog<Object>(
     context,
     (_) => ChangeNotifierProvider.value(
       value: session,
       child: const _CustomerAuthDialog(),
     ),
   );
-  return signedIn ?? false;
+  if (result is AdminChallenge && context.mounted) {
+    return await openAdminVerification(context, result);
+  }
+  return result == true;
 }
 
 class _CustomerAuthDialog extends StatefulWidget {
@@ -31,18 +39,24 @@ class _CustomerAuthDialog extends StatefulWidget {
 
 class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
   final _name = TextEditingController();
+  // One field: a phone number or an email address (the server decides which).
+  final _identifier = TextEditingController();
+  // Email sign-up only: an optional phone (checked by the server, saved unverified).
   final _phone = TextEditingController();
   final _code = TextEditingController();
 
   bool _otpStep = false;
   bool _busy = false;
   String _error = '';
-  String _pendingPhone = '';
+  String _pendingIdentifier = '';
+  String _sentTo = '';
+  bool _sentByEmail = false;
   String _devOtp = '';
 
   @override
   void dispose() {
     _name.dispose();
+    _identifier.dispose();
     _phone.dispose();
     _code.dispose();
     super.dispose();
@@ -54,7 +68,12 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
       setState(() => _error = 'Enter your full name.');
       return;
     }
-    if (!isValidRwandaPhone(_phone.text)) {
+    if (!isValidIdentifier(_identifier.text)) {
+      setState(() => _error = identifierError);
+      return;
+    }
+    final emailMode = looksLikeEmail(_identifier.text);
+    if (emailMode && _phone.text.trim().isNotEmpty && !isValidRwandaPhone(_phone.text)) {
       setState(() => _error = phoneError);
       return;
     }
@@ -64,12 +83,15 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
     });
     try {
       final sent = await context.read<CustomerSession>().sendOtp(
-        _phone.text,
+        _identifier.text,
         _name.text,
+        registrationPhone: emailMode ? _phone.text : '',
       );
       if (!mounted) return;
       setState(() {
-        _pendingPhone = sent.phone;
+        _pendingIdentifier = sent.identifier;
+        _sentTo = sent.sentTo;
+        _sentByEmail = sent.isEmail;
         _devOtp = sent.devOtp;
         _otpStep = true;
       });
@@ -91,12 +113,13 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
       _busy = true;
     });
     try {
-      await context.read<CustomerSession>().verifyOtp(
-        _pendingPhone,
+      final challenge = await context.read<CustomerSession>().verifyOtp(
+        _pendingIdentifier,
         _code.text,
         _name.text,
       );
-      if (mounted) Navigator.of(context).pop(true);
+      // An admin's phone: no session yet; the admin step comes next.
+      if (mounted) Navigator.of(context).pop(challenge ?? true);
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } finally {
@@ -122,7 +145,7 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
     _title('Welcome to KitchenLink'),
     const SizedBox(height: 4),
     Text(
-      'Enter your phone number to sign in or create your customer account',
+      'Enter your phone number or email to sign in or create your customer account',
       style: kText(12, color: K.stone500, height: 1.33),
     ),
     const SizedBox(height: 24),
@@ -143,16 +166,35 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
       style: kText(11, color: K.stone400, height: 1.4),
     ),
     const SizedBox(height: 16),
-    _label('Phone Number (MTN / Airtel)'),
+    _label('Phone Number or Email'),
     _field(
-      controller: _phone,
-      hint: phonePlaceholder,
-      keyboard: TextInputType.phone,
-      autofill: const [AutofillHints.telephoneNumber],
-      formatter: sanitizePhoneInput,
+      controller: _identifier,
+      hint: identifierPlaceholder,
+      keyboard: TextInputType.emailAddress,
+      autofill: const [AutofillHints.username],
+      formatter: sanitizeIdentifierInput,
       action: TextInputAction.done,
       onSubmit: _sendOtp,
+      onChanged: (_) => setState(() {}),
     ),
+    if (looksLikeEmail(_identifier.text)) ...[
+      const SizedBox(height: 16),
+      _label('Phone Number (optional, MTN / Airtel)'),
+      _field(
+        controller: _phone,
+        hint: phonePlaceholder,
+        keyboard: TextInputType.phone,
+        autofill: const [AutofillHints.telephoneNumber],
+        formatter: sanitizePhoneInput,
+        action: TextInputAction.done,
+        onSubmit: _sendOtp,
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'New accounts only. You verify it with a code later in your profile.',
+        style: kText(11, color: K.stone400, height: 1.4),
+      ),
+    ],
     const SizedBox(height: 16),
     _submit(
       'Continue & Send OTP',
@@ -179,9 +221,9 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
       Text.rich(
         TextSpan(
           children: [
-            const TextSpan(text: 'We sent a verification code to '),
+            TextSpan(text: _sentByEmail ? 'We emailed a verification code to ' : 'We sent a verification code to '),
             TextSpan(
-              text: _pendingPhone,
+              text: _sentTo,
               style: kText(
                 12,
                 weight: FontWeight.w700,
@@ -344,8 +386,10 @@ class _CustomerAuthDialogState extends State<_CustomerAuthDialog> {
     required TextInputAction action,
     TextCapitalization capitalization = TextCapitalization.none,
     VoidCallback? onSubmit,
+    ValueChanged<String>? onChanged,
   }) => TextField(
     controller: controller,
+    onChanged: onChanged,
     keyboardType: keyboard,
     autofillHints: autofill,
     textCapitalization: capitalization,

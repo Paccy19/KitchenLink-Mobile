@@ -30,12 +30,16 @@ class EventOrderScreen extends StatefulWidget {
     this.packageId,
     this.guests,
     this.pickup = false,
+    this.agreementId,
   });
 
   final String vendorId;
   final String? packageId;
   final int? guests;
   final bool pickup;
+
+  /// A special delivery agreed with the kitchen: its venue and fee are locked.
+  final String? agreementId;
 
   @override
   State<EventOrderScreen> createState() => _EventOrderScreenState();
@@ -68,6 +72,19 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
   int _request = 0;
   String? _quotedInputKey;
 
+  // Special delivery: an agreement to book with, or a request to send when
+  // the venue needs one (outside the kitchen's coverage, above the automatic
+  // price limit...). The server decides which; no fee is charged until the
+  // customer accepts the kitchen's quotation.
+  Json? _agreement;
+  String? _agreementError;
+  final _specialNote = TextEditingController();
+  bool _requesting = false;
+  String? _requestError;
+  String? _existingRequestId;
+
+  bool get _agreed => _agreement != null && !_pickup;
+
   int? get _guestCount {
     final n = int.tryParse(_guests.text.trim());
     return n != null && n >= 1 ? n : null;
@@ -83,7 +100,73 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
     if (location.isLocated) _venue = LatLng(location.lat, location.lng);
     _phone.text = localPhone(context.read<CustomerSession>().phone);
     _requote();
+    if (widget.agreementId != null) _loadAgreement();
   }
+
+  /// The agreed special delivery: its venue, event time and fee are used as they are.
+  Future<void> _loadAgreement() async {
+    try {
+      final request = await _api.specialDelivery(widget.agreementId!);
+      if (!mounted) return;
+      if (request['can_checkout'] != true) {
+        setState(() => _agreementError = 'This delivery agreement can no longer be used for booking.');
+        return;
+      }
+      final where = request['delivery_location'] is Map ? (request['delivery_location'] as Map).cast<String, dynamic>() : <String, dynamic>{};
+      final event = request['event'] is Map ? (request['event'] as Map).cast<String, dynamic>() : <String, dynamic>{};
+      final lat = (where['latitude'] as num?)?.toDouble();
+      final lng = (where['longitude'] as num?)?.toDouble();
+      setState(() {
+        _agreement = request;
+        _pickup = false;
+        _venueAddress.text = '${where['address'] ?? ''}';
+        if (lat != null && lng != null) _venue = LatLng(lat, lng);
+        _eventAt = DateTime.tryParse('${event['event_at'] ?? ''}')?.toLocal() ?? _eventAt;
+      });
+      _requote();
+    } catch (e) {
+      if (mounted) setState(() => _agreementError = e.toString());
+    }
+  }
+
+  /// Asks the kitchen for a special delivery (no fee is charged), then opens the request.
+  Future<void> _requestSpecialDelivery(Json quote, Json pkg) async {
+    setState(() {
+      _requestError = null;
+      _existingRequestId = null;
+    });
+    if (!await MarketNav.requireSignIn(context) || !mounted) return;
+    if (_eventAt == null) return setState(() => _requestError = 'Choose the date and time of your event first.');
+    if (_venueAddress.text.trim().isEmpty || _venue == null) {
+      return setState(() => _requestError = 'Enter the venue address and pin it on the map.');
+    }
+    setState(() => _requesting = true);
+    try {
+      final request = await _api.createSpecialDelivery({
+        'vendor_id': widget.vendorId,
+        'package_id': _packageId.isNotEmpty ? _packageId : quote['package_id'] ?? pkg['id'],
+        'guests': _guestCount,
+        'event_at': _eventAt!.toUtc().toIso8601String(),
+        'delivery_location': {'address': _venueAddress.text.trim(), 'latitude': _venue!.latitude, 'longitude': _venue!.longitude},
+        'instructions': _specialNote.text.trim(),
+      });
+      if (!mounted) return;
+      await MarketNav.specialDelivery(context, '${request['id']}');
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _requestError = e.message;
+          final existing = e.details['request_id'];
+          _existingRequestId = existing == null ? null : '$existing';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _requestError = e.toString());
+    } finally {
+      if (mounted) setState(() => _requesting = false);
+    }
+  }
+
 
   @override
   void dispose() {
@@ -92,6 +175,7 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
       _guests,
       _venueAddress,
       _note,
+      _specialNote,
       _phone,
       _card,
       _expiry,
@@ -249,6 +333,7 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
                 'longitude': _venue!.longitude,
               },
         'note': _note.text.trim(),
+        if (_agreed) 'special_delivery_request_id': _agreement!['id'],
         'payment_method': _method,
         'payment_details': payment.details,
       });
@@ -326,6 +411,23 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
     final menu = (pkg['menu'] is List ? pkg['menu'] as List : const []).join(
       ' · ',
     );
+    // Big-event delivery for the pinned venue, priced by KitchenLink:
+    // 'automatic', 'negotiation_required', 'unavailable' or 'pending_location'.
+    final delivery = m(data['delivery']);
+    final deliveryStatus = '${delivery['status'] ?? ''}';
+    final num? deliveryFee = _pickup
+        ? 0
+        : _agreed
+        ? n(_agreement!['agreed_fee_rwf'])
+        : deliveryStatus == 'automatic' && quote['delivery_fee_rwf'] != null
+        ? n(quote['delivery_fee_rwf'])
+        : null;
+    final needsSpecial = !_pickup && !_agreed && deliveryStatus == 'negotiation_required';
+    final noDelivery = !_pickup && !_agreed && deliveryStatus == 'unavailable';
+    // With an agreed fee the totals add up here (the server checks them again at checkout).
+    final totalRwf = n(quote['food_total_rwf']) + (deliveryFee ?? 0);
+    final depositRwf = _agreed ? (totalRwf * n(quote['deposit_percent'] ?? 50) / 100).round() : n(quote['deposit_rwf']);
+    final balanceRwf = _agreed ? totalRwf - depositRwf : n(quote['balance_rwf']);
 
     return MarketPage(
       title: 'Order for your event',
@@ -428,20 +530,98 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
                   const FieldLabel('Event venue address'),
                   TextField(
                     controller: _venueAddress,
+                    // Locked to the agreed special delivery's venue.
+                    readOnly: _agreed,
                     maxLength: 200,
                     decoration: marketInput(
                       'e.g. Kigali Serena Hotel, KN 3 Ave',
                     ).copyWith(counterText: ''),
                   ),
                   const SizedBox(height: 10),
-                  const FieldLabel('Pin the venue on the map'),
-                  VenuePicker(
-                    value: _venue,
-                    onChanged: (point) {
-                      setState(() => _venue = point);
-                      _requoteSoon();
-                    },
-                  ),
+                  if (_agreed)
+                    Notice(
+                      'Special delivery ${_agreement!['reference'] ?? ''}: ${rwf(n(_agreement!['agreed_fee_rwf']))} agreed with the kitchen for this venue. The venue and the delivery fee are locked.',
+                      tone: NoticeTone.success,
+                      icon: Icons.handshake_outlined,
+                    )
+                  else ...[
+                    const FieldLabel('Pin the venue on the map'),
+                    VenuePicker(
+                      value: _venue,
+                      onChanged: (point) {
+                        setState(() => _venue = point);
+                        _requoteSoon();
+                      },
+                    ),
+                  ],
+                  if (_agreementError != null) ...[
+                    const SizedBox(height: 8),
+                    Notice(_agreementError!),
+                  ],
+                  if (deliveryStatus == 'automatic' && !_agreed && delivery['starting_fee_rwf'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'KitchenLink big-event delivery: ${rwf(n(delivery['starting_fee_rwf']))} + ${delivery['per_meter_rwf']} RWF per meter of road${delivery['distance_km'] != null ? ' (${delivery['distance_km']} km)' : ''}.',
+                        style: kText(11.5, color: K.stone500),
+                      ),
+                    ),
+                  if (noDelivery) ...[
+                    const SizedBox(height: 8),
+                    Notice('${delivery['message'] ?? "This kitchen doesn't deliver big-event orders."}', tone: NoticeTone.warning),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(onPressed: () => _setPickup(true), child: const Text('Pick up instead')),
+                    ),
+                  ],
+                  if (needsSpecial) ...[
+                    const SizedBox(height: 10),
+                    Panel(
+                      color: K.brown50,
+                      border: K.brown200,
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(children: [
+                            Icon(Icons.handshake_outlined, size: 18, color: K.brown700),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text('Special delivery needed', style: kText(13, weight: w900, color: K.brown850))),
+                          ]),
+                          const SizedBox(height: 6),
+                          Text('${delivery['message'] ?? ''}', style: kText(12, color: K.stone700, height: 1.4)),
+                          for (final reason in (delivery['reason_messages'] is List ? delivery['reason_messages'] as List : const []))
+                            Text('• $reason', style: kText(11.5, color: K.stone500, height: 1.4)),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _specialNote,
+                            maxLines: 2,
+                            maxLength: 1000,
+                            decoration: marketInput('Delivery instructions for the kitchen (access, unloading, contact on site…)'),
+                          ),
+                          if (_requestError != null) ...[
+                            Notice(_requestError!),
+                            if (_existingRequestId != null)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  onPressed: () => MarketNav.specialDelivery(context, _existingRequestId!),
+                                  child: const Text('Open it'),
+                                ),
+                              ),
+                          ],
+                          const SizedBox(height: 6),
+                          GradientButton(
+                            label: _requesting ? 'Sending…' : 'Request special delivery',
+                            onTap: _requesting ? null : () => _requestSpecialDelivery(quote, pkg),
+                          ),
+                          const SizedBox(height: 6),
+                          Text("No delivery fee is charged until you accept the kitchen's quotation.", style: kText(11, color: K.stone500)),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   if ('${offer['delivery_details'] ?? ''}'.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -517,25 +697,32 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
                   _pickup
                       ? const MoneyRow('Pick up', 'No delivery fee')
                       : MoneyRow(
-                          quote['distance_km'] != null
+                          _agreed
+                              ? 'Delivery (agreed)'
+                              : quote['distance_km'] != null
                               ? 'Delivery (${quote['distance_km']} km)'
                               : 'Delivery',
-                          quote['delivery_fee_rwf'] != null
-                              ? rwf(n(quote['delivery_fee_rwf']))
+                          deliveryFee != null
+                              ? rwf(deliveryFee)
+                              : needsSpecial
+                              ? 'Special delivery'
+                              : noDelivery
+                              ? 'Not available'
                               : 'Pin the venue',
                         ),
-                  MoneyRow('Total', rwf(n(quote['total_rwf'])), strong: true),
-                  if (_pickup || quote['delivery_fee_rwf'] != null) ...[
+                  MoneyRow('Total', rwf(totalRwf), strong: true),
+                  if (deliveryFee != null) ...[
                     MoneyRow(
                       'Pay now (${quote['deposit_percent']}%)',
-                      rwf(n(quote['deposit_rwf'])),
+                      rwf(depositRwf),
                       color: K.brown750,
                     ),
                     MoneyRow(
                       'Balance, ${dueAt != null ? 'by ${DateFormat('EEE d MMM, HH:mm').format(dueAt)}' : 'a day before the event'}',
-                      rwf(n(quote['balance_rwf'])),
+                      rwf(balanceRwf),
                     ),
                   ],
+
                 ] else
                   Text(
                     _quoteError ??
@@ -550,14 +737,14 @@ class _EventOrderScreenState extends State<EventOrderScreen> {
                 GradientButton(
                   label: _submitting
                       ? 'Placing your order…'
-                      : quoteMatches
-                      ? 'Place order · pay ${rwf(n(quote['deposit_rwf']))} now'
+                      : quoteMatches && deliveryFee != null
+                      ? 'Place order · pay ${rwf(depositRwf)} now'
                       : 'Place order',
                   onTap:
                       _submitting ||
                           _quoting ||
                           !quoteMatches ||
-                          (!_pickup && quote['delivery_fee_rwf'] == null)
+                          deliveryFee == null
                       ? null
                       : () => _placeOrder(quote, pkg),
                 ),

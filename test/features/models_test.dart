@@ -178,15 +178,11 @@ void main() {
       ], limits, 'Wedding');
       expect(error, contains('overlap'));
     });
-    test('delivery fees start at 0 km, have no gaps and end open', () {
-      expect(EventPackageValidator.feeRanges(const [FeeRange(fromKm: 0, toKm: 5, feeRwf: 2000), FeeRange(fromKm: 5, feeRwf: 4000)], limits), isNull);
-      expect(EventPackageValidator.feeRanges(const [FeeRange(fromKm: 1, feeRwf: 2000)], limits), contains('0 km'));
-      expect(EventPackageValidator.feeRanges(const [FeeRange(fromKm: 0, toKm: 5, feeRwf: 2000), FeeRange(fromKm: 6, feeRwf: 4000)], limits), contains('Gap'));
-      expect(EventPackageValidator.feeRanges(const [FeeRange(fromKm: 0, toKm: 5, feeRwf: 2000)], limits), contains('no end'));
-    });
-    test('big events cannot be switched on without a package and delivery fees', () {
+    test('big events cannot be switched on without a package; delivery fees are never the kitchen\'s', () {
       const settings = EventPackageSettings(enabled: true);
-      expect(EventPackageValidator.settings(settings), isNotNull);
+      expect(EventPackageValidator.settings(settings), contains('package'));
+      // KitchenLink prices big-event delivery: the kitchen's settings never carry fees.
+      expect(settings.toJson().containsKey('delivery_fee_ranges'), isFalse);
     });
   });
 
@@ -218,7 +214,6 @@ void main() {
         neighborhood: 'Kimironko',
         latitude: -1.9441,
         longitude: 30.0619,
-        foodCategoryIds: ['c1'],
         operatingHours: [OperatingHour(day: 'monday')],
         payment: PaymentInformation(payoutMethod: 'mobile_money', accountName: 'Keza'),
         documents: [],
@@ -227,7 +222,8 @@ void main() {
       expect(fields['phone'], '0788111222');
       expect(jsonDecode(fields['location']!)['latitude'], -1.9441);
       expect(jsonDecode(fields['payment_information']!)['mobile_money_number'], '0788111222');
-      expect(jsonDecode(fields['food_categories']!), ['c1']);
+      // Categories come from the kitchen type: the app never sends them.
+      expect(fields.containsKey('food_categories'), isFalse);
       expect(fields.containsKey('email'), isFalse);
       expect(data.validateFiles(), contains('verification document'));
     });

@@ -6,7 +6,26 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../api/api_client.dart';
 import 'market_models.dart';
 
-/// The signed-in customer (phone + SMS code), like the website's AuthContext:
+/// Where a sign-in (or verification) code went. [devOtp] is only ever an SMS
+/// code from a development server; email codes are never returned.
+class OtpSent {
+  const OtpSent({required this.identifier, required this.sentTo, required this.isEmail, required this.devOtp});
+
+  final String identifier;
+  final String sentTo;
+  final bool isEmail;
+  final String devOtp;
+}
+
+/// The verified phone belongs to an admin: their email + password come next.
+class AdminChallenge {
+  const AdminChallenge({required this.token, required this.expiresInSeconds});
+
+  final String token;
+  final int expiresInSeconds;
+}
+
+/// The signed-in customer (phone or email + code), like the website's AuthContext:
 /// the profile from the server, plus delivery addresses kept on this device.
 class CustomerSession extends ChangeNotifier {
   CustomerSession(this.client) {
@@ -33,6 +52,12 @@ class CustomerSession extends ChangeNotifier {
   String phone = '';
   String email = '';
   String avatarUrl = '';
+
+  /// Only a verified email signs in and receives delivery codes.
+  bool emailVerified = false;
+
+  /// A phone given at email sign-up, not verified yet (never used to sign in).
+  String pendingPhone = '';
   List<SavedAddress> addresses = [];
 
   /// True after the server signed this customer out (shown once on screen).
@@ -68,9 +93,12 @@ class CustomerSession extends ChangeNotifier {
 
   void _applyCustomer(Map customer) {
     name = (customer['name'] ?? name).toString();
-    phone = (customer['phone_number'] ?? phone).toString();
+    // Null for a customer who signed up with an email and has no verified phone yet.
+    phone = (customer['phone_number'] ?? '').toString();
     email = (customer['email'] ?? '').toString();
     avatarUrl = (customer['profile_image_url'] ?? '').toString();
+    emailVerified = customer['email_verified'] == true;
+    pendingPhone = (customer['pending_phone_number'] ?? '').toString();
   }
 
   /// GET /auth/me: the latest name, phone, email and photo.
@@ -114,30 +142,42 @@ class CustomerSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// POST /auth/send-otp. Returns the number the code went to and, on a
-  /// development server, the code itself.
-  Future<({String phone, String devOtp})> sendOtp(
-    String phoneNumber,
-    String fullName,
-  ) async {
+  /// POST /auth/send-otp with one sign-in field: a phone number or an email
+  /// address (the server decides which). [registrationPhone] is the optional
+  /// phone of a new customer signing up with an email. Returns where the code
+  /// went and, for an SMS code on a development server only, the code itself
+  /// (email codes are never returned).
+  Future<OtpSent> sendOtp(
+    String identifier,
+    String fullName, {
+    String registrationPhone = '',
+  }) async {
     final data = await client.request(
       '/auth/send-otp',
       method: 'POST',
       body: {
-        'phone_number': phoneNumber,
+        'identifier': identifier.trim(),
         if (fullName.trim().isNotEmpty) 'name': fullName.trim(),
+        if (registrationPhone.trim().isNotEmpty) 'phone_number': registrationPhone.trim(),
       },
     );
     final json = data is Map ? data : const {};
-    return (
-      phone: (json['phone_number'] ?? phoneNumber).toString(),
-      devOtp: (json['dev_otp'] ?? '').toString(),
+    final isEmail = json['identifier_type'] == 'email';
+    return OtpSent(
+      identifier: (json['identifier'] ?? json['phone_number'] ?? identifier).toString(),
+      sentTo: (json['sent_to'] ?? json['phone_number'] ?? identifier).toString(),
+      isEmail: isEmail,
+      devOtp: isEmail ? '' : (json['dev_otp'] ?? '').toString(),
     );
   }
 
   /// POST /auth/verify-otp: signs in (creating the account the first time).
-  Future<void> verifyOtp(
-    String phoneNumber,
+  ///
+  /// Returns null once signed in, or an [AdminChallenge] when the server says
+  /// this verified phone is an admin's: no session exists then, and the admin
+  /// must give their email and password next (or continue as a customer).
+  Future<AdminChallenge?> verifyOtp(
+    String identifier,
     String code,
     String fullName,
   ) async {
@@ -145,26 +185,57 @@ class CustomerSession extends ChangeNotifier {
       '/auth/verify-otp',
       method: 'POST',
       body: {
-        'phone_number': phoneNumber,
+        'identifier': identifier.trim(),
         'code': code,
         if (fullName.trim().isNotEmpty) 'name': fullName.trim(),
       },
     );
     final json = data is Map ? data : const {};
+    if (json['admin_verification_required'] == true) {
+      return AdminChallenge(
+        token: (json['challenge_token'] ?? '').toString(),
+        expiresInSeconds: (json['expires_in_seconds'] as num?)?.toInt() ?? 300,
+      );
+    }
+    await _startSession(json, fallbackName: fullName);
+    return null;
+  }
+
+  /// From the admin step: sign in to this phone's customer account instead
+  /// (POST /auth/continue-as-customer uses the one-time challenge up).
+  Future<void> continueAsCustomer(String challengeToken) async {
+    final data = await client.request('/auth/continue-as-customer', method: 'POST', body: {'challenge_token': challengeToken});
+    await _startSession(data is Map ? data : const {});
+  }
+
+  /// Stage 2 of the admin sign-in (POST /admin/auth/phone-login): the
+  /// admin's own email and password for the admin the verified phone belongs
+  /// to. The admin session is saved where the admin screens read it.
+  Future<void> completeAdminSignIn(String challengeToken, String adminEmail, String password) async {
+    final data = await client.request(
+      '/admin/auth/phone-login',
+      method: 'POST',
+      body: {'challenge_token': challengeToken, 'email': adminEmail.trim(), 'password': password},
+    );
+    final adminToken = data is Map ? (data['token'] ?? '').toString() : '';
+    if (adminToken.isEmpty) throw ApiException('Sign-in failed. Please try again.');
+    await _storage.write(key: adminTokenKey, value: adminToken);
+  }
+
+  /// Where the admin screens keep their session (AdminSession).
+  static const adminTokenKey = 'ofk_admin_token';
+
+  Future<void> _startSession(Map json, {String fallbackName = ''}) async {
     final newToken = (json['token'] ?? '').toString();
     if (newToken.isEmpty) {
       throw ApiException('Sign-in failed. Please try again.');
     }
-    final customer = json['customer'] is Map
-        ? json['customer'] as Map
-        : const {};
+    final customer = json['customer'] is Map ? json['customer'] as Map : const {};
     token = newToken;
     client.token = newToken;
     expired = false;
-    name = (customer['name'] ?? fullName).toString();
-    phone = (customer['phone_number'] ?? phoneNumber).toString();
-    email = (customer['email'] ?? '').toString();
-    avatarUrl = (customer['profile_image_url'] ?? '').toString();
+    name = (customer['name'] ?? fallbackName).toString();
+    _applyCustomer(customer);
     try {
       await Future.wait([
         _storage.write(key: _tokenKey, value: token),
@@ -177,6 +248,51 @@ class CustomerSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- A new phone or email: only saved once its code is verified ----
+
+  /// POST /auth/me/phone/send-code. Refused if the number is another
+  /// customer's. Returns where the code went (and the development SMS code).
+  Future<OtpSent> startPhoneChange(String phoneNumber) async {
+    final data = await client.request('/auth/me/phone/send-code', method: 'POST', body: {'phone_number': phoneNumber.trim()});
+    final json = data is Map ? data : const {};
+    return OtpSent(
+      identifier: (json['pending_phone_number'] ?? phoneNumber).toString(),
+      sentTo: (json['sent_to'] ?? phoneNumber).toString(),
+      isEmail: false,
+      devOtp: (json['dev_otp'] ?? '').toString(),
+    );
+  }
+
+  /// POST /auth/me/phone/verify: the new phone replaces the old one.
+  Future<void> confirmPhoneChange(String code) => _confirm('/auth/me/phone/verify', code);
+
+  /// POST /auth/me/email/send-code (a new email, or the current unverified one).
+  Future<OtpSent> startEmailVerification(String address) async {
+    final data = await client.request('/auth/me/email/send-code', method: 'POST', body: {'email': address.trim()});
+    final json = data is Map ? data : const {};
+    return OtpSent(identifier: address.trim(), sentTo: (json['sent_to'] ?? address).toString(), isEmail: true, devOtp: '');
+  }
+
+  /// POST /auth/me/email/verify: the email becomes the account's verified email.
+  Future<void> confirmEmailVerification(String code) => _confirm('/auth/me/email/verify', code);
+
+  Future<void> _confirm(String path, String code) async {
+    final data = await client.request(path, method: 'POST', body: {'code': code.trim()});
+    final customer = data is Map ? data['customer'] : null;
+    if (customer is Map) _applyCustomer(customer);
+    await _persistProfile();
+    notifyListeners();
+  }
+
+  /// Signs this account out on every device (POST /auth/logout-all, as the
+  /// kitchen and delivery worker apps offer), then on this one. Throws the
+  /// server's message if it can't, leaving this device signed in.
+  Future<void> logoutEverywhere() async {
+    await client.request('/auth/logout-all', method: 'POST', body: <String, dynamic>{});
+    // This token stays valid on the server ("keep this device"); end it too.
+    await logout();
+  }
+
   Future<void> logout() async {
     final old = token;
     token = null;
@@ -185,6 +301,8 @@ class CustomerSession extends ChangeNotifier {
     phone = '';
     email = '';
     avatarUrl = '';
+    emailVerified = false;
+    pendingPhone = '';
     addresses = [];
     notifyListeners();
     // Sign the token out on the server too, so a copy of it stops working.

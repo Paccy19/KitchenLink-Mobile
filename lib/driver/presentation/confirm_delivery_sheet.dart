@@ -103,7 +103,6 @@ class _ConfirmDeliverySheetState extends ConsumerState<_ConfirmDeliverySheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final success = toneColors(context, Tone.brand);
-    final devCode = widget.delivery.devOtp;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -115,19 +114,17 @@ class _ConfirmDeliverySheetState extends ConsumerState<_ConfirmDeliverySheet> {
             Text('Hand over the order', style: theme.textTheme.headlineSmall?.copyWith(letterSpacing: -0.5)),
             const SizedBox(height: 4),
             Text(
-              'Ask ${widget.delivery.customer.name} for the 6-digit code in their KitchenLink app.',
+              'Ask ${widget.delivery.customer.name} for the 6-digit code we sent them, once they have their food.',
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 20),
             _CodeBoxes(controller: _code, focusNode: _focus, enabled: !_busy, onChanged: () => setState(() => _error = null)),
-            if (kDebugMode && devCode != null) ...[
-              const SizedBox(height: 10),
-              Center(
-                child: ActionChip(
-                  avatar: const Icon(Icons.bug_report_rounded, size: 18),
-                  label: Text('Development code: $devCode (tap to fill)'),
-                  onPressed: () => setState(() => _code.text = devCode),
-                ),
+            if (widget.delivery.customerHasNoCodeChannel) ...[
+              const SizedBox(height: 12),
+              const NoteBox(
+                message: 'The customer couldn\'t be sent a code (no verified email). Ask them to verify their email and tap "Send my delivery code" in their order, or contact support to complete this delivery.',
+                tone: Tone.warning,
+                icon: Icons.mark_email_unread_outlined,
               ),
             ],
             AnimatedSize(

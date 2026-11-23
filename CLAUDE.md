@@ -6,8 +6,9 @@ One Flutter app, **KitchenLink**, for every kind of user. Its single entry point
 
 **The front door (`lib/root/`), modelled on the website:**
 - The app opens on the public marketplace.
-- **Sign in** opens "How do you want to sign in?", the same four choices as the website's `RoleSelectModal.jsx`: Customer, Vendor, Delivery Worker and Admin.
-- Each choice leads to that role's own sign-in. Each role has its own endpoint and token, as on the backend.
+- **Sign in** opens "How do you want to sign in?", the same three choices as the website's `RoleSelectModal.jsx`: Customer, Vendor and Delivery Worker. There is no public Admin choice.
+- Each choice leads to that role's own sign-in. Each role has its own endpoint and token, as on the backend. Every sign-in field takes a phone number or an email address (`identifier`; the server decides which). Email codes are never shown; SMS codes only come back (`dev_otp`) from a development server.
+- **Admins** sign in from Customer with their verified phone. After the code, `/auth/verify-otp` answers `admin_verification_required` with a one-time challenge (no session). `AdminVerifyScreen` (`lib/client/screens/admin_verify_screen.dart`) then takes the admin's email and password (`POST /admin/auth/phone-login`), saves the admin token under `ofk_admin_token` and opens the admin role. It can also "Continue as a customer" (`/auth/continue-as-customer`). A remembered admin role still opens the admin screens directly.
 - Every role's sign-in screen has an "Other ways to sign in" button (`OtherSignInButton`) back to the marketplace.
 - `KitchenLinkRoot` remembers the last role (`ofk_app_role` in secure storage), so a kitchen or delivery worker reopening the app goes straight to their screens.
 - Switching role rebuilds that role's screens from scratch (`KeyedSubtree` per role).
@@ -100,6 +101,19 @@ It covers the website's delivery worker pages (`src/pages/driver/`, `src/context
 - `lib/nav/admin_nav.dart` maps website notification links (`/admin-dashboard/...`) to the app's pages.
 - Pages are in `lib/screens/pages/`, and shared UI (theme, format, validation, vendor types) is in `lib/ui/`.
 - **When you add or change an admin endpoint, update `lib/demo/demo_server.dart` too**, because the admin app runs on it by default.
+
+## Big-event delivery (customers and kitchens)
+
+- **Pricing:** KitchenLink prices big-event delivery (starting fee + road meters × rate, up to an automatic ceiling). Kitchens never set delivery prices.
+- **Kitchens:** More → Delivery coverage (`lib/features/special_delivery/`, `/vendor/delivery-coverage`) chooses where the kitchen delivers (districts or "within N km"). The event package screen has no fee ranges any more.
+- **Customers:** `EventOrderScreen` reads the quote's `delivery.status`:
+  - `automatic`: the fee comes from the quote.
+  - `negotiation_required`: "Request special delivery" (`POST /special-deliveries`).
+  - `unavailable`: pick up instead.
+  - `pending_location`: pin the venue first.
+- **Negotiation:** `SpecialDeliveryScreen` (customer) and `SpecialDeliveryDetailScreen` (kitchen) show only the server's `allowed_actions`: accept to negotiate / ask for information / decline, versioned quotations, and the chat.
+- **Booking:** an accepted quotation is booked with `EventOrderScreen(agreementId: …)`. Its venue and fee are locked, and `special_delivery_request_id` is sent at checkout.
+- **Delivery confirmation codes** go only to the customer's verified email (or SMS). They are never in the app: the order screen says where the code went and offers "Send my delivery code", and the delivery worker's sheet never shows it.
 
 ## Shared rules
 

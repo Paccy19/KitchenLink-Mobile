@@ -152,6 +152,9 @@ class CustomerApi {
   Future<CustomerOrder> cancelOrder(String id, String reason) async =>
       CustomerOrder(await _json('/orders/${_id(id)}/cancel', method: 'POST', body: {'reason': reason}));
   Future<Json> live(String id) => _json('/orders/${_id(id)}/live');
+
+  /// The delivery code again, to the customer's verified email (never returned here).
+  Future<Json> resendDeliveryCode(String id) => _json('/orders/${_id(id)}/delivery-code/resend', method: 'POST', body: <String, dynamic>{});
   Future<Json> payBalance(String id) => _json('/orders/${_id(id)}/pay-balance', method: 'POST', body: <String, dynamic>{});
   Future<Json> quoteSwitchToDelivery(String id, Json location) =>
       _json('/orders/${_id(id)}/switch-to-delivery/quote', method: 'POST', body: {'delivery_location': location});
@@ -160,6 +163,27 @@ class CustomerApi {
       _json('/orders/${_id(id)}/refund-destination', method: 'PUT', body: {'phone': phone});
   Future<Json> eventQuote(Json payload) => _json('/orders/event-quote', method: 'POST', body: payload);
   Future<CustomerOrder> eventCheckout(Json payload) async => CustomerOrder(await _json('/orders/event-checkout', method: 'POST', body: payload));
+
+  // Special deliveries (big events outside the automatic delivery pricing):
+  // the website's specialDeliveryApi. The server decides every step
+  // (`allowed_actions`) and every price; the app only shows and asks.
+  static String _sd(String id, [String rest = '']) => '/special-deliveries/${_id(id)}$rest';
+  Future<List<Json>> specialDeliveries() async => pickList(await client.request('/special-deliveries${ApiClient.qs({'limit': 50})}'), ['items']);
+  Future<Json> specialDelivery(String id) => _json(_sd(id));
+  Future<Json> createSpecialDelivery(Json payload) => _json('/special-deliveries', method: 'POST', body: payload);
+  Future<Json> cancelSpecialDelivery(String id, String reason) => _json(_sd(id, '/cancel'), method: 'POST', body: {'reason': reason});
+  Future<Json> provideSpecialDeliveryInformation(String id, String message) =>
+      _json(_sd(id, '/information'), method: 'POST', body: {'message': message});
+  Future<Json> acceptQuotation(String id, String quotationId) =>
+      _json(_sd(id, '/quotations/${_id(quotationId)}/accept'), method: 'POST', body: <String, dynamic>{});
+  Future<Json> requestQuotationRevision(String id, String quotationId, String note) =>
+      _json(_sd(id, '/quotations/${_id(quotationId)}/request-revision'), method: 'POST', body: {'note': note});
+  Future<Json> rejectQuotation(String id, String quotationId, String note) =>
+      _json(_sd(id, '/quotations/${_id(quotationId)}/reject'), method: 'POST', body: {'note': note});
+  Future<Json> disputeSpecialDelivery(String id, String reason) => _json(_sd(id, '/dispute'), method: 'POST', body: {'reason': reason});
+  Future<Json> specialDeliveryMessages(String id, {String? after}) => _json(_sd(id, '/messages${ApiClient.qs({'after': after})}'));
+  Future<Json> sendSpecialDeliveryMessage(String id, String body) => _json(_sd(id, '/messages'), method: 'POST', body: {'body': body});
+  Future<void> markSpecialDeliveryRead(String id) => client.request(_sd(id, '/read'), method: 'POST', body: <String, dynamic>{});
 
   // Chats with kitchens.
   Future<List<Json>> chats() async => pickList(await client.request('/chats'), ['conversations']);

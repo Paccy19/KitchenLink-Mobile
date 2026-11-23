@@ -89,7 +89,8 @@ class FakeBackend {
       'address': 'KG 11 Ave, blue gate',
       'neighborhood': 'Kimironko',
     },
-    'delivery': {'proof_of_delivery_code': '482913', 'otp_verified': false},
+    // The server never sends the delivery code: only where it went.
+    'delivery': {'code_issued': true, 'code_sent_via': 'email', 'code_sent_to': 'al•••@gmail.com', 'can_resend_code': true, 'otp_verified': false},
     if (orderStatus == 'cancelled')
       'refund': {
         'status': 'pending',
@@ -448,7 +449,8 @@ void main() {
         // The order page: status, the delivery code, the receipt.
         expect(find.text('Order KL-1001'), findsOneWidget);
         expect(find.text('Order placed'), findsWidgets);
-        expect(find.text('482913'), findsOneWidget);
+        expect(find.textContaining('We sent your code by email to al•••@gmail.com'), findsOneWidget);
+        expect(find.text('Send my delivery code'), findsOneWidget);
         expect(find.text('Order Receipt'), findsOneWidget);
         expect(
           tester.element(find.byType(Scaffold).last).read<Cart>().lines,

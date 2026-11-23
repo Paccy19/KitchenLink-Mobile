@@ -188,10 +188,10 @@ class _OrderScreenState extends State<OrderScreen> {
           ],
           if (order.kitchenDelivers && done) ...[const SizedBox(height: 14), const Notice('The kitchen delivered your order. Enjoy!', tone: NoticeTone.success, icon: Icons.check_circle_outline)],
           if (order.isPickup && done) ...[const SizedBox(height: 14), const Notice('You collected your order. Enjoy your meal!', tone: NoticeTone.success, icon: Icons.check_circle_outline)],
-          // The delivery confirmation code.
-          if (order.deliveryCode.isNotEmpty && !order.deliveryConfirmed) ...[
+          // The delivery confirmation code: where it was sent (never the code itself).
+          if (order.deliveryCodeIssued && !order.deliveryConfirmed) ...[
             const SizedBox(height: 14),
-            _CodeCard(title: 'Delivery confirmation code', code: order.deliveryCode, text: 'Give this to the delivery worker when your food arrives to confirm the delivery.'),
+            _DeliveryCodeCard(order: order),
           ],
           if (order.deliveryConfirmed) ...[const SizedBox(height: 14), const Notice('Delivery confirmed. Enjoy your meal!', tone: NoticeTone.success, icon: Icons.check_circle_outline)],
           // The live map, from the moment a delivery worker accepts.
@@ -363,6 +363,89 @@ class _CodeCard extends StatelessWidget {
           Text('Sent to your phone and stored here in your account', style: kText(10.5, color: K.brown300)),
         ]),
       ));
+}
+
+/// Where the customer's delivery confirmation code went (their verified
+/// email, or SMS). The code is never shown in the app: the customer gives it
+/// to the delivery worker only once the food is in their hands. "Send my
+/// delivery code" sends a new one, which replaces the old one.
+class _DeliveryCodeCard extends StatefulWidget {
+  const _DeliveryCodeCard({required this.order});
+
+  final CustomerOrder order;
+
+  @override
+  State<_DeliveryCodeCard> createState() => _DeliveryCodeCardState();
+}
+
+class _DeliveryCodeCardState extends State<_DeliveryCodeCard> {
+  bool _busy = false;
+  String? _message;
+  String? _error;
+  String _sentTo = '';
+
+  Future<void> _resend() async {
+    setState(() {
+      _busy = true;
+      _message = null;
+      _error = null;
+    });
+    try {
+      final result = await context.read<CustomerApi>().resendDeliveryCode(widget.order.id);
+      if (!mounted) return;
+      final to = '${result['sent_to'] ?? ''}';
+      setState(() {
+        _sentTo = to;
+        _message = 'A new code was sent${to.isNotEmpty ? ' to $to' : ''}. The previous code no longer works.';
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final order = widget.order;
+    final needsChannel = order.deliveryCodeNeedsChannel && _sentTo.isEmpty;
+    final where = _sentTo.isNotEmpty ? _sentTo : order.deliveryCodeSentTo;
+    final how = order.deliveryCodeSentVia == 'sms' && _sentTo.isEmpty ? 'by SMS' : 'by email';
+    return Panel(
+      color: needsChannel ? K.tone(const Color(0xFFFFFBEB)) : K.brown50,
+      border: needsChannel ? K.tone(const Color(0xFFFCD34D)) : K.brown200,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.verified_user_outlined, size: 16, color: K.brown600),
+          const SizedBox(width: 6),
+          Text('DELIVERY CONFIRMATION CODE', style: kText(11, weight: FontWeight.w800, color: K.brown600, spacing: 0.6)),
+        ]),
+        const SizedBox(height: 10),
+        if (needsChannel)
+          Text(
+            "We couldn't send your code: your account has no verified email. Verify your email in your profile, then tap \"Send my delivery code\".",
+            style: kText(13, color: K.stone700, height: 1.45),
+          )
+        else
+          Text(
+            'We sent your code $how${where.isNotEmpty ? ' to $where' : ''}. Give it to the delivery worker only after you receive your food. Never share it before.',
+            style: kText(13, color: K.stone700, height: 1.45),
+          ),
+        if (_message != null) ...[const SizedBox(height: 8), Notice(_message!, tone: NoticeTone.success)],
+        if (_error != null) ...[const SizedBox(height: 8), Notice(_error!)],
+        if (order.canResendDeliveryCode) ...[
+          const SizedBox(height: 12),
+          Row(children: [
+            OutlineAction(label: _busy ? 'Sending…' : 'Send my delivery code', icon: Icons.mail_outline, color: K.brown700, onTap: _busy ? null : _resend),
+            if (needsChannel) ...[
+              const SizedBox(width: 8),
+              OutlineAction(label: 'My profile', icon: Icons.person_outline, onTap: () => MarketNav.profile(context)),
+            ],
+          ]),
+        ],
+      ]),
+    );
+  }
 }
 
 /// Big events: the deposit is paid, the balance is due a day before.

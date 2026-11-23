@@ -185,11 +185,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Send code'), findsOneWidget);
-    // An invalid number is refused before any request is made.
+    // An invalid phone number (or email) is refused before any request is made.
     await tester.enterText(find.byType(TextFormField).first, '12345');
     await tester.tap(find.text('Send code'));
     await tester.pump();
-    expect(find.textContaining('valid Rwandan number'), findsOneWidget);
+    expect(find.textContaining('Enter a valid phone number'), findsOneWidget);
     expect(s.adapter.log, isEmpty);
   });
 }

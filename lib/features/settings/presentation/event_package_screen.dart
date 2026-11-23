@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
@@ -14,7 +15,7 @@ import '../application/settings_providers.dart';
 import '../models/event_package.dart';
 
 /// A kitchen's big-event offer: packages with guest ranges and plate prices,
-/// plus one delivery fee by distance.
+/// (delivery is priced by KitchenLink; where the kitchen delivers is its coverage).
 class EventPackageScreen extends ConsumerStatefulWidget {
   const EventPackageScreen({super.key});
 
@@ -56,13 +57,6 @@ class _EventPackageScreenState extends ConsumerState<EventPackageScreen> {
       list[index] = result;
     }
     setState(() => _draft = draft.copyWith(packages: list));
-  }
-
-  Future<void> _editRanges(EventPackageSettings draft) async {
-    final result = await Navigator.of(context).push<List<FeeRange>>(
-      MaterialPageRoute(builder: (_) => _FeeRangesEditor(initial: draft.deliveryFeeRanges, limits: draft.limits)),
-    );
-    if (result != null && mounted) setState(() => _draft = draft.copyWith(deliveryFeeRanges: result));
   }
 
   Future<void> _save() async {
@@ -155,19 +149,21 @@ class _EventPackageScreenState extends ConsumerState<EventPackageScreen> {
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('Add a package'),
                 ),
-                const SectionHeader('Delivery fee by distance'),
+                // KitchenLink prices big-event delivery; the kitchen only
+                // chooses where it delivers (the website's Delivery Coverage).
+                const SectionHeader('Delivery'),
                 AppCard(
-                  onTap: canAct ? () => _editRanges(draft) : null,
-                  child: Row(children: [
+                  onTap: () => context.push('/settings/coverage'),
+                  child: const Row(children: [
+                    Icon(Icons.map_outlined),
+                    SizedBox(width: 12),
                     Expanded(
-                      child: draft.deliveryFeeRanges.isEmpty
-                          ? const Text('Not set yet. Tap to add distance ranges.')
-                          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              for (final r in draft.deliveryFeeRanges)
-                                Text('${_km(r.fromKm)}${r.toKm == null ? ' km and more' : '–${_km(r.toKm!)} km'} · ${formatRwf(r.feeRwf)}'),
-                            ]),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Delivery coverage', style: TextStyle(fontWeight: FontWeight.w700)),
+                        Text('Choose where you deliver. KitchenLink sets the delivery price.'),
+                      ]),
                     ),
-                    const Icon(Icons.chevron_right_rounded),
+                    Icon(Icons.chevron_right_rounded),
                   ]),
                 ),
                 const SizedBox(height: 12),
@@ -185,7 +181,6 @@ class _EventPackageScreenState extends ConsumerState<EventPackageScreen> {
     );
   }
 
-  static String _km(double value) => value % 1 == 0 ? value.toInt().toString() : value.toString();
 }
 
 class _PackageEditor extends StatefulWidget {
@@ -323,102 +318,3 @@ class _PackageEditorState extends State<_PackageEditor> {
       );
 }
 
-class _FeeRow {
-  _FeeRow(FeeRange? range)
-      : from = TextEditingController(text: range == null ? '' : _fmt(range.fromKm)),
-        to = TextEditingController(text: range?.toKm == null ? '' : _fmt(range!.toKm!)),
-        fee = TextEditingController(text: range?.feeRwf.toString());
-  final TextEditingController from;
-  final TextEditingController to;
-  final TextEditingController fee;
-
-  static String _fmt(double v) => v % 1 == 0 ? v.toInt().toString() : v.toString();
-
-  void dispose() {
-    from.dispose();
-    to.dispose();
-    fee.dispose();
-  }
-}
-
-class _FeeRangesEditor extends StatefulWidget {
-  const _FeeRangesEditor({required this.initial, required this.limits});
-
-  final List<FeeRange> initial;
-  final EventLimits limits;
-
-  @override
-  State<_FeeRangesEditor> createState() => _FeeRangesEditorState();
-}
-
-class _FeeRangesEditorState extends State<_FeeRangesEditor> {
-  late final List<_FeeRow> _rows = [for (final r in widget.initial) _FeeRow(r)];
-
-  @override
-  void initState() {
-    super.initState();
-    if (_rows.isEmpty) _rows.add(_FeeRow(const FeeRange(fromKm: 0, feeRwf: 0)));
-  }
-
-  @override
-  void dispose() {
-    for (final row in _rows) {
-      row.dispose();
-    }
-    super.dispose();
-  }
-
-  void _done() {
-    final ranges = <FeeRange>[];
-    for (final row in _rows) {
-      final from = double.tryParse(row.from.text.trim());
-      final fee = int.tryParse(row.fee.text.trim());
-      final toText = row.to.text.trim();
-      final to = toText.isEmpty ? null : double.tryParse(toText);
-      if (from == null || fee == null || (toText.isNotEmpty && to == null)) {
-        showError(context, 'Fill in every distance and fee with numbers.');
-        return;
-      }
-      ranges.add(FeeRange(fromKm: from, toKm: to, feeRwf: fee));
-    }
-    final problem = EventPackageValidator.feeRanges(ranges, widget.limits);
-    if (problem != null) {
-      showError(context, problem);
-      return;
-    }
-    ranges.sort((a, b) => a.fromKm.compareTo(b.fromKm));
-    Navigator.pop(context, ranges);
-  }
-
-  Widget _field(TextEditingController c, String label, {String? hint, bool decimal = false}) => TextField(
-        controller: c,
-        keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-        inputFormatters: [FilteringTextInputFormatter.allow(decimal ? RegExp(r'[0-9.]') : RegExp(r'[0-9]'))],
-        decoration: InputDecoration(labelText: label, hintText: hint),
-      );
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Delivery fee by distance'), actions: [TextButton(onPressed: _done, child: const Text('Done'))]),
-        body: FormPage(children: [
-          const NoteBox(message: 'Start at 0 km, leave no gaps, and leave the last "to" empty so every distance has a fee.'),
-          const SizedBox(height: 14),
-          for (var i = 0; i < _rows.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: _field(_rows[i].from, 'From km', decimal: true)),
-                const SizedBox(width: 8),
-                Expanded(child: _field(_rows[i].to, 'To km', hint: 'and more', decimal: true)),
-                const SizedBox(width: 8),
-                Expanded(flex: 2, child: _field(_rows[i].fee, 'Fee (RWF)')),
-                IconButton(
-                  onPressed: _rows.length <= 1 ? null : () => setState(() => _rows.removeAt(i).dispose()),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ]),
-            ),
-          OutlinedButton.icon(onPressed: () => setState(() => _rows.add(_FeeRow(null))), icon: const Icon(Icons.add_rounded), label: const Text('Add a range')),
-        ]),
-      );
-}

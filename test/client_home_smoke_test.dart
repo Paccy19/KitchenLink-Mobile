@@ -99,6 +99,9 @@ void main() {
         ]) {
           expect(find.textContaining(text, findRichText: true), findsWidgets, reason: text);
         }
+        // Big Events has its own prominent card (as on the website).
+        expect(find.text('Planning something special?'), findsOneWidget);
+        expect(find.text('Explore Big Events'), findsOneWidget);
         // A dish is one tap from the basket.
         expect(find.byTooltip('Add Isombe with plantain to basket'), findsOneWidget);
         // Section links are "See all ›" whose full label is the tooltip.

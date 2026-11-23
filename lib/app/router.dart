@@ -21,6 +21,8 @@ import '../features/settings/presentation/event_package_screen.dart';
 import '../features/settings/presentation/location_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/shell/more_screen.dart';
+import '../features/special_delivery/presentation/coverage_screen.dart';
+import '../features/special_delivery/presentation/special_deliveries_screens.dart';
 import '../features/support/presentation/support_screens.dart';
 import '../features/wallet/presentation/wallet_screen.dart';
 import '../features/wallet/presentation/withdraw_screen.dart';
@@ -109,6 +111,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       _full('/settings/ordering', (_, _) => const OrderingSettingsScreen()),
       _full('/settings/nationwide', (_, _) => const NationwideScreen()),
       _full('/settings/events', (_, _) => const EventPackageScreen()),
+      // Big-event delivery: where the kitchen delivers, and requests outside that.
+      _full('/settings/coverage', (_, _) => const DeliveryCoverageScreen()),
+      _full('/special-deliveries', (_, _) => const SpecialDeliveriesScreen()),
+      _full('/special-deliveries/:id', (_, state) => SpecialDeliveryDetailScreen(requestId: state.pathParameters['id']!)),
     ],
   );
 });

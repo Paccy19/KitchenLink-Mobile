@@ -13,6 +13,7 @@ import '../market_state.dart';
 import '../models.dart';
 import '../widgets/cards.dart';
 import '../widgets/market_ui.dart';
+import '../widgets/sign_out.dart';
 import 'cart_sheet.dart';
 import 'checkout_screen.dart';
 import 'kitchen_screen.dart';
@@ -110,10 +111,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
+  final _code = TextEditingController();
+
+  /// A new phone or email waiting for its code (the old one stays until then).
+  _PendingContact? _pending;
+  bool _verifying = false;
+  String? _verifyError;
 
   @override
   void dispose() {
-    for (final c in [_name, _phone, _email]) {
+    for (final c in [_name, _phone, _email, _code]) {
       c.dispose();
     }
     super.dispose();
@@ -129,24 +136,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  /// The name saves straight away (and removing the email). A new phone or
+  /// email is saved only after the code sent to it is entered: the server
+  /// refuses another customer's number or address, and keeps the old one
+  /// until then.
   Future<void> _save() async {
     final session = context.read<CustomerSession>();
     if (_name.text.trim().length < 2) return setState(() => _error = 'Enter your full name.');
-    if (!isRwandaPhone(_phone.text)) return setState(() => _error = 'Enter a valid Rwandan phone number (e.g. 0788123456).');
+    final phone = _phone.text.trim();
+    if (phone.isNotEmpty && !isRwandaPhone(phone)) return setState(() => _error = 'Enter a valid Rwandan phone number (e.g. 0788123456).');
     final email = _email.text.trim();
     if (email.isNotEmpty && !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) return setState(() => _error = 'Enter a valid email address.');
+    final phoneChanged = phone.isNotEmpty && localPhone(phone) != localPhone(session.phone);
+    final emailChanged = email.isNotEmpty && email.toLowerCase() != session.email.toLowerCase();
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
-      // Keep the form open if the server refuses (e.g. the phone is used by another customer).
-      await session.updateProfile(newName: _name.text.trim(), newPhone: localPhone(_phone.text), newEmail: email);
+      await session.updateProfile(newName: _name.text.trim(), newEmail: email.isEmpty && session.email.isNotEmpty ? '' : null);
+      if (phoneChanged) {
+        await _requestCode(isEmail: false, target: phone);
+      } else if (emailChanged) {
+        await _requestCode(isEmail: true, target: email);
+      }
       if (mounted) setState(() => _editing = false);
     } catch (e) {
+      // e.g. "This phone number is already associated with another customer account…"
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Sends the code that proves a new phone or email (or the current, unverified email).
+  Future<void> _requestCode({required bool isEmail, required String target}) async {
+    final session = context.read<CustomerSession>();
+    final sent = isEmail ? await session.startEmailVerification(target) : await session.startPhoneChange(target);
+    if (!mounted) return;
+    _code.clear();
+    setState(() {
+      _verifyError = null;
+      _pending = _PendingContact(isEmail: isEmail, sentTo: sent.sentTo, devOtp: sent.devOtp);
+    });
+  }
+
+  Future<void> _requestCodeOrSay({required bool isEmail, required String target}) async {
+    try {
+      await _requestCode(isEmail: isEmail, target: target);
+    } catch (e) {
+      if (mounted) showMarketSnack(context, e.toString());
+    }
+  }
+
+  Future<void> _confirmCode() async {
+    final pending = _pending;
+    if (pending == null || _verifying) return;
+    if (!RegExp(r'^\d{6}$').hasMatch(_code.text.trim())) return setState(() => _verifyError = 'Enter the 6-digit code.');
+    setState(() {
+      _verifying = true;
+      _verifyError = null;
+    });
+    final session = context.read<CustomerSession>();
+    try {
+      if (pending.isEmail) {
+        await session.confirmEmailVerification(_code.text);
+      } else {
+        await session.confirmPhoneChange(_code.text);
+      }
+      if (!mounted) return;
+      setState(() => _pending = null);
+      showMarketSnack(context, pending.isEmail ? 'Email verified.' : 'Phone number changed.');
+    } catch (e) {
+      if (mounted) {
+        _code.clear();
+        setState(() => _verifyError = e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _verifying = false);
     }
   }
 
@@ -213,6 +280,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 10),
             Text(session.name, style: kDisplay(26)),
             Text([session.phone, session.email].where((s) => s.isNotEmpty).join(' · '), style: kText(12, color: K.stone500)),
+            // Unverified details never sign in or receive delivery codes.
+            if (session.email.isNotEmpty && !session.emailVerified && _pending == null)
+              TextButton(
+                onPressed: () => _requestCodeOrSay(isEmail: true, target: session.email),
+                child: Text('Email not verified: send a code to verify it', style: kText(12, weight: FontWeight.w700, color: K.tone(const Color(0xFFB45309)))),
+              ),
+            if (session.pendingPhone.isNotEmpty && _pending == null)
+              TextButton(
+                onPressed: () => _requestCodeOrSay(isEmail: false, target: session.pendingPhone),
+                child: Text('Verify your phone number ${localPhone(session.pendingPhone)}', style: kText(12, weight: FontWeight.w700, color: K.tone(const Color(0xFFB45309)))),
+              ),
             const SizedBox(height: 6),
             StatusPill('Verified Customer Account', background: K.tone(const Color(0xFFD1FAE5)), foreground: K.tone(const Color(0xFF065F46))),
             const SizedBox(height: 14),
@@ -222,6 +300,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
           ]),
         ),
+        if (_pending != null) ...[
+          const SizedBox(height: 14),
+          Panel(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text(_pending!.isEmail ? 'Verify your email address' : 'Verify your new phone number', style: kText(15, weight: w900)),
+              const SizedBox(height: 6),
+              Text(
+                'Enter the code we sent to ${_pending!.sentTo}. '
+                '${_pending!.isEmail ? 'Delivery codes are only sent to a verified email.' : 'Your current number stays on your account until then.'}',
+                style: kText(12, color: K.stone500, height: 1.4),
+              ),
+              if (_pending!.devOtp.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Notice('Development code: ${_pending!.devOtp}', tone: NoticeTone.warning),
+              ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: _code,
+                keyboardType: TextInputType.number,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                maxLength: 6,
+                decoration: marketInput('6-digit code').copyWith(counterText: ''),
+                onSubmitted: (_) => _confirmCode(),
+              ),
+              if (_verifyError != null) ...[const SizedBox(height: 8), Notice(_verifyError!)],
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: GradientButton(label: _verifying ? 'Verifying…' : 'Verify', onTap: _verifying ? null : _confirmCode)),
+                const SizedBox(width: 8),
+                OutlineAction(label: 'Later', onTap: () => setState(() => _pending = null)),
+              ]),
+            ]),
+          ),
+        ],
         if (_editing) ...[
           const SizedBox(height: 14),
           Panel(
@@ -233,6 +345,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 10),
               const FieldLabel('Phone number'),
               TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: marketInput('0788123456')),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('A new phone number or email is saved after you enter the code we send to it.', style: kText(11, color: K.stone400)),
+              ),
               const SizedBox(height: 10),
               const FieldLabel('Email'),
               TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: marketInput('name@example.com')),
@@ -295,8 +411,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
           ),
         ),
+        // Signing out from the profile too (not only from the account menu).
+        const SizedBox(height: 14),
+        SignOutPanel(onSignedOut: () {
+          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        }),
+        const SizedBox(height: 24),
       ]),
     );
   }
 }
 
+
+/// A phone or email waiting for its verification code.
+class _PendingContact {
+  const _PendingContact({required this.isEmail, required this.sentTo, required this.devOtp});
+
+  final bool isEmail;
+  final String sentTo;
+  final String devOtp;
+}

@@ -13,6 +13,7 @@ import 'screens/kitchens_map_screen.dart';
 import 'screens/kitchens_screen.dart';
 import 'screens/order_screen.dart';
 import 'screens/support_screens.dart';
+import 'screens/special_delivery_screens.dart';
 import 'widgets/customer_auth_sheet.dart';
 import 'widgets/market_ui.dart';
 
@@ -62,8 +63,14 @@ class MarketNav {
 
   static Future<void> map(BuildContext context) => _push(context, const KitchensMapScreen());
 
-  static Future<void> eventOrder(BuildContext context, {required String vendorId, String? packageId, int? guests, bool pickup = false}) =>
-      _push(context, EventOrderScreen(vendorId: vendorId, packageId: packageId, guests: guests, pickup: pickup));
+  /// [agreementId]: book with a special delivery fee agreed with the kitchen.
+  static Future<void> eventOrder(BuildContext context, {required String vendorId, String? packageId, int? guests, bool pickup = false, String? agreementId}) =>
+      _push(context, EventOrderScreen(vendorId: vendorId, packageId: packageId, guests: guests, pickup: pickup, agreementId: agreementId));
+
+  /// Special delivery requests (big events outside the automatic delivery pricing).
+  static Future<void> specialDeliveries(BuildContext context) => _push(context, const SpecialDeliveriesScreen());
+
+  static Future<void> specialDelivery(BuildContext context, String requestId) => _push(context, SpecialDeliveryScreen(requestId: requestId));
 
   static Future<void> messages(BuildContext context) => _push(context, const MessagesScreen());
 

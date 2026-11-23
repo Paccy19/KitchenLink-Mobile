@@ -53,6 +53,23 @@ class Validators {
     return isValidPhone(value) ? null : phoneError;
   }
 
+  // ---- One sign-in field: a phone number or an email address. The server
+  // decides which (as on the website); these only catch typos early. ----
+
+  static const String identifierError = 'Enter a valid phone number (07XXXXXXXX or +2507XXXXXXXX) or email address.';
+
+  /// Anything with a letter or "@" is typed as an email; otherwise a phone.
+  static bool looksLikeEmail(String value) => RegExp(r'[@a-zA-Z]').hasMatch(value);
+
+  static String? identifier(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Enter your phone number or email address.';
+    final ok = looksLikeEmail(value) ? isValidEmail(value) : isValidPhone(value);
+    return ok ? null : identifierError;
+  }
+
+  /// What is sent: a trimmed email, or the phone as 07XXXXXXXX.
+  static String toIdentifier(String value) => looksLikeEmail(value) ? value.trim() : toLocalPhone(value);
+
   static String? optionalEmail(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     return isValidEmail(value) ? null : emailError;

@@ -10,7 +10,7 @@ typedef Json = Map<String, dynamic>;
 
 /// An API failure with the message to show the user, as the website's ApiError.
 class ApiException implements Exception {
-  ApiException(this.message, {this.status = 0, this.path = '', this.code = ''});
+  ApiException(this.message, {this.status = 0, this.path = '', this.code = '', this.details = const {}});
 
   final String message;
   final int status;
@@ -18,6 +18,9 @@ class ApiException implements Exception {
 
   /// Machine-readable error code from the API (e.g. 'CHALLENGE_EXPIRED').
   final String code;
+
+  /// The API's `error.details` (e.g. `request_id` of an open special delivery).
+  final Map<String, dynamic> details;
 
   @override
   String toString() => message;
@@ -102,6 +105,7 @@ class ApiClient {
         status: response.statusCode,
         path: path,
         code: errorCode,
+        details: error is Map && error['details'] is Map ? (error['details'] as Map).cast<String, dynamic>() : const {},
       );
     }
     if (data == null && response.body.isNotEmpty) {
